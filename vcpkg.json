@@ -1,0 +1,21 @@
+{
+    "name": "yasno",
+    "version-string": "0.0.1",
+    "dependencies": [
+        {
+            "name": "imgui",
+            "features": [
+                "win32-binding",
+                "dx12-binding",
+                "docking-experimental"
+            ]
+        },
+        "tinygltf",
+        "tinyobjloader",
+        "stb",
+        "imguizmo",
+        "wil",
+        "aixlog",
+        "tracy"
+    ]
+}

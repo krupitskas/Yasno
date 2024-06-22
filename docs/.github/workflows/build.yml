@@ -1,0 +1,36 @@
+name: Build
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Debug, Profile, Release]
+        platform: [x64]
+    runs-on: windows-2022
+    env:
+      Solution_Path: Yasno.sln
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore vcpkg packages
+        working-directory: ${{env.GITHUB_WORKSPACE}}
+        run: vcpkg integrate install
+
+      - name: Restore NuGet packages
+        working-directory: ${{env.GITHUB_WORKSPACE}}
+        run: nuget restore ${{ env.Solution_Path }}
+
+      - name: Build solution
+        run: |
+          msbuild ${{ env.Solution_Path }} -p:Configuration=${{ env.Configuration }} -p:Platform=${{ env.Platform }}
+        env:
+          Configuration: ${{ matrix.configuration }}
+          Platform: ${{ matrix.platform }}

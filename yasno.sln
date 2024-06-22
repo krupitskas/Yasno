@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yasno", "src\yasno.vcxproj", "{71E86738-F503-4A57-B814-F657D688901B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Profile|x64 = Profile|x64
+		Profile|x86 = Profile|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{71E86738-F503-4A57-B814-F657D688901B}.Debug|x64.ActiveCfg = Debug|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Debug|x64.Build.0 = Debug|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Debug|x86.ActiveCfg = Debug|Win32
+		{71E86738-F503-4A57-B814-F657D688901B}.Debug|x86.Build.0 = Debug|Win32
+		{71E86738-F503-4A57-B814-F657D688901B}.Profile|x64.ActiveCfg = Profile|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Profile|x64.Build.0 = Profile|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Profile|x86.ActiveCfg = Profile|Win32
+		{71E86738-F503-4A57-B814-F657D688901B}.Profile|x86.Build.0 = Profile|Win32
+		{71E86738-F503-4A57-B814-F657D688901B}.Release|x64.ActiveCfg = Release|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Release|x64.Build.0 = Release|x64
+		{71E86738-F503-4A57-B814-F657D688901B}.Release|x86.ActiveCfg = Release|Win32
+		{71E86738-F503-4A57-B814-F657D688901B}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4BF9A839-DDD3-44C0-B257-176E1DDDA986}
+	EndGlobalSection
+EndGlobal
