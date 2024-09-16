@@ -15,8 +15,6 @@
         "imguizmo",
         "wil",
         "aixlog",
-        "tracy",
-        "joltphysics",
-        "entt" 
+        "tracy"
     ]
 }
