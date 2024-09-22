@@ -1,4 +1,5 @@
-﻿#include "D3D12Renderer.hpp"
+﻿
+#include "D3D12Renderer.hpp"
 
 #include <RHI/ShaderManager.hpp>
 #include <RHI/GenerateMipsSystem.hpp>

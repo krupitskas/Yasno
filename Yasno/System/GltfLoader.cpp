@@ -320,10 +320,9 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 		}
 
 		tinygltf::PbrMetallicRoughness& glTFPBRMetallicRoughness = GltfMaterial.pbrMetallicRoughness;
-		{
-			ysn::PBRMetallicRoughnessShader* pPBRMetallicRoughness =
-				static_cast<ysn::PBRMetallicRoughnessShader*>(RenderMaterial.pBufferData);
+		ysn::PBRMetallicRoughnessShader* pPBRMetallicRoughness = static_cast<ysn::PBRMetallicRoughnessShader*>(RenderMaterial.pBufferData);
 
+		{
 			DirectX::XMFLOAT4& baseColorFactor = pPBRMetallicRoughness->baseColorFactor;
 
 			baseColorFactor.x = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[0]);
@@ -331,7 +330,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			baseColorFactor.z = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[2]);
 			baseColorFactor.w = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[3]);
 
-			auto& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
+			tinygltf::TextureInfo& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
 
 			if (glTFBaseColorTexture.index >= 0)
 			{
@@ -347,7 +346,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			pPBRMetallicRoughness->metallicFactor = static_cast<float>(glTFPBRMetallicRoughness.metallicFactor);
 			pPBRMetallicRoughness->roughnessFactor = static_cast<float>(glTFPBRMetallicRoughness.roughnessFactor);
 
-			auto& glTFMetallicRoughnessTexture = glTFPBRMetallicRoughness.metallicRoughnessTexture;
+			tinygltf::TextureInfo& glTFMetallicRoughnessTexture = glTFPBRMetallicRoughness.metallicRoughnessTexture;
 
 			if (glTFMetallicRoughnessTexture.index >= 0)
 			{
@@ -360,7 +359,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 				pPBRMetallicRoughness->metallicRoughnessSamplerIndex = -1;
 			}
 
-			auto& GlTFNormalsTexture = GltfMaterial.normalTexture;
+			tinygltf::NormalTextureInfo& GlTFNormalsTexture = GltfMaterial.normalTexture;
 
 			if (GlTFNormalsTexture.index >= 0)
 			{
@@ -373,7 +372,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 				pPBRMetallicRoughness->normalSamplerIndex = -1;
 			}
 
-			auto& GlTFOcclusionTexture = GltfMaterial.occlusionTexture;
+			tinygltf::OcclusionTextureInfo& GlTFOcclusionTexture = GltfMaterial.occlusionTexture;
 
 			if (GlTFOcclusionTexture.index >= 0)
 			{
@@ -403,7 +402,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 		// TODO: Improve texture material handling
 
 		// Albedo
-		auto& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
+		tinygltf::TextureInfo& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
 		if (glTFBaseColorTexture.index >= 0)
 		{
 			const tinygltf::Texture& GltfTexture = pGltfModel->textures[glTFBaseColorTexture.index];
@@ -412,8 +411,10 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			RenderMaterial.srv_handle = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 			RenderMaterial.sampler_handle = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			auto& texture = pModelRenderContext->pTextures[GltfTexture.source];
+			ysn::Texture& texture = pModelRenderContext->pTextures[GltfTexture.source];
 			texture.descriptor_handle = RenderMaterial.srv_handle;
+
+			pPBRMetallicRoughness->basecolor_indirect_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(RenderMaterial.srv_handle);
 
 			auto resource = texture.gpuTexture;
 			auto resource_desc = resource->GetDesc();
@@ -679,7 +680,9 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
 		RootSignatureDesc.NumParameters			= 7;
 		RootSignatureDesc.pParameters			= &rootParams[0];
-		RootSignatureDesc.Flags					= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		RootSignatureDesc.Flags					= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT 
+			| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
+			| D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 		RootSignatureDesc.pStaticSamplers		= &shadow_static_sampler;
 		RootSignatureDesc.NumStaticSamplers		= 1;
 
@@ -1088,18 +1091,6 @@ void DrawNode(
 
 		for (const ysn::Primitive& primitive : mesh.primitives)
 		{
-			switch (PrimitivePipeline)
-			{
-				case ysn::PrimitivePipeline::ForwardPbr:
-					pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
-					pCommandList->SetPipelineState(primitive.pPipelineState.get());
-					break;
-				case ysn::PrimitivePipeline::Shadow:
-					pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
-					pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
-					break;
-			}
-
 			pCommandList->IASetPrimitiveTopology(primitive.primitiveTopology);
 
 			for (auto i = 0; i != primitive.RenderAttributes.size(); ++i)
@@ -1107,19 +1098,18 @@ void DrawNode(
 				pCommandList->IASetVertexBuffers(i, 1, &primitive.RenderAttributes[i].vertexBufferView);
 			}
 
-			pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
-			pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+			ID3D12DescriptorHeap* pDescriptorHeaps[] = {
+				p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
+				p_renderer->GetSamplerDescriptorHeap()->GetHeapPtr(),
+			};
+			pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
 			switch (PrimitivePipeline)
 			{
 				case ysn::PrimitivePipeline::ForwardPbr:
 				{
-					ID3D12DescriptorHeap* pDescriptorHeaps[] = {
-						p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
-						p_renderer->GetSamplerDescriptorHeap()->GetHeapPtr(),
-					};
-					pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-
+					pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
+					pCommandList->SetPipelineState(primitive.pPipelineState.get());
 					pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
 					pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
 					pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
@@ -1128,10 +1118,16 @@ void DrawNode(
 					break;
 				}
 				case ysn::PrimitivePipeline::Shadow:
+					pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
+					pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
 					break;
 				case ysn::PrimitivePipeline::ForwardNoMaterial:
 					break;
 			}
+
+			pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
+			pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+
 
 			if (primitive.indexCount)
 			{

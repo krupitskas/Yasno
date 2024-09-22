@@ -34,6 +34,8 @@ namespace ysn
 		int32_t occlusionSamplerIndex;
 		int32_t emissiveTextureIndex;
 		int32_t emissiveSamplerIndex;
+
+		int32_t basecolor_indirect_index;
 	};
 
 	struct PBRNormalShaderInput

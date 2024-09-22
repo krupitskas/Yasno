@@ -36,6 +36,8 @@ struct PBRMetallicRoughness
 	int occlusionSamplerIndex;
 	int emissiveTextureIndex;
 	int emissiveSamplerIndex;
+
+	int basecolor_indirect_index;
 };
 
 cbuffer CameraParameters : register(b0)
@@ -128,11 +130,13 @@ float4 main(RS2PS input) : SV_Target
 
 	if (pbrMetallicRoughness.baseColorTextureIndex >= 0)
 	{
-		baseColor *= textures[pbrMetallicRoughness.baseColorTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.baseColorSamplerIndex], uv);
+		//baseColor *= textures[pbrMetallicRoughness.baseColorTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.baseColorSamplerIndex], uv);
+		Texture2D base_color_texture = ResourceDescriptorHeap[pbrMetallicRoughness.basecolor_indirect_index];
+		baseColor = base_color_texture.Sample(MaterialSamplers[pbrMetallicRoughness.baseColorSamplerIndex], uv);
 
 		if(baseColor.a < 0.5)
 		{
-			discard;
+		//	discard;
 		}
 	}
 
