@@ -21,23 +21,25 @@ struct RS2PS
 #endif
 };
 
+#define ALBEDO_ENABLED_BITMASK				0
+#define METALLIC_ROUGHNESS_ENABLED_BITMASK	1
+#define NORMAL_ENABLED_BITMASK				2
+#define OCCLUSION_ENABLED_BITMASK			3
+#define EMISSIVE_ENABLED_BITMASK			4
+
 struct PBRMetallicRoughness
 {
 	float4 baseColorFactor;
-	int baseColorTextureIndex;
-	int baseColorSamplerIndex;
 	float metallicFactor;
 	float roughnessFactor;
-	int metallicRoughnessTextureIndex;
-	int metallicRoughnessSamplerIndex;
-	int normalTextureIndex;
-	int normalSamplerIndex;
-	int occlusionTextureIndex;
-	int occlusionSamplerIndex;
-	int emissiveTextureIndex;
-	int emissiveSamplerIndex;
 
-	int basecolor_indirect_index;
+	int albedo_texture_index;
+	int metallic_roughness_texture_index;
+	int normal_texture_index;
+	int occlusion_texture_index;
+	int emissive_texture_index;
+
+	int texture_enable_bitmask; // Encoded which textures are should be used
 };
 
 cbuffer CameraParameters : register(b0)
@@ -66,11 +68,10 @@ cbuffer SceneParameters : register(b3)
 };
 
 Texture2D textures[5]				: register(t0);
-SamplerState MaterialSamplers[5]	: register(s0);
-
-SamplerState ShadowSampler			: register(s5);
-
 Texture2D shadow_map				: register(t6);
+
+SamplerState ShadowSampler			: register(s0);
+SamplerState LinearSampler			: register(s1);
 
 float ShadowCalculation(float4 position)
 {
@@ -128,40 +129,47 @@ float4 main(RS2PS input) : SV_Target
 
 #ifdef HAS_TEXCOORD_0
 
-	if (pbrMetallicRoughness.baseColorTextureIndex >= 0)
+	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BITMASK))
 	{
-		//baseColor *= textures[pbrMetallicRoughness.baseColorTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.baseColorSamplerIndex], uv);
-		Texture2D base_color_texture = ResourceDescriptorHeap[pbrMetallicRoughness.basecolor_indirect_index];
-		baseColor = base_color_texture.Sample(MaterialSamplers[pbrMetallicRoughness.baseColorSamplerIndex], uv);
+		Texture2D albedo_texture = ResourceDescriptorHeap[pbrMetallicRoughness.albedo_texture_index];
+		baseColor *= albedo_texture.Sample(LinearSampler, uv);
 
 		if(baseColor.a < 0.5)
 		{
-		//	discard;
+			discard;
 		}
 	}
 
-	if (pbrMetallicRoughness.metallicRoughnessTextureIndex >= 0)
+	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << METALLIC_ROUGHNESS_ENABLED_BITMASK))
 	{
-		float4 metallicRoughnessResult = textures[pbrMetallicRoughness.metallicRoughnessTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.metallicRoughnessSamplerIndex], uv);
+		Texture2D metallic_roughness_texture = ResourceDescriptorHeap[pbrMetallicRoughness.metallic_roughness_texture_index];
+
+		float4 metallicRoughnessResult = metallic_roughness_texture.Sample(LinearSampler, uv);
 
 		metallicResult *= metallicRoughnessResult.b;
 		roughnessResult *= metallicRoughnessResult.g;
 	}
 
-	if (pbrMetallicRoughness.normalTextureIndex >= 0)
+	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << NORMAL_ENABLED_BITMASK))
 	{
-		normals = textures[pbrMetallicRoughness.normalTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.normalSamplerIndex], uv);
-		normals = 2.0f * normals - 1.0f;                                              // [0,1] ->[-1,1]
+		Texture2D normal_texture = ResourceDescriptorHeap[pbrMetallicRoughness.normal_texture_index];
+
+		normals = normal_texture.Sample(LinearSampler, uv);
+		normals = 2.0f * normals - 1.0f; // [0,1] ->[-1,1]
 	}
 
-	if (pbrMetallicRoughness.occlusionTextureIndex >= 0)
+	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BITMASK))
 	{
-		occlusion = textures[pbrMetallicRoughness.occlusionTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.occlusionSamplerIndex], uv);
+		Texture2D occlusion_texture = ResourceDescriptorHeap[pbrMetallicRoughness.occlusion_texture_index];
+
+		occlusion = occlusion_texture.Sample(LinearSampler, uv);
 	}
 
-	if (pbrMetallicRoughness.emissiveTextureIndex >= 0)
+	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BITMASK))
 	{
-		emissive = textures[pbrMetallicRoughness.emissiveTextureIndex].Sample(MaterialSamplers[pbrMetallicRoughness.emissiveSamplerIndex], uv).rgb;
+		Texture2D emissive_texture = ResourceDescriptorHeap[pbrMetallicRoughness.emissive_texture_index];
+
+		emissive = emissive_texture.Sample(LinearSampler, uv).rgb;
 	}
 
 #endif // HAS_TEXCOORD_0

@@ -252,7 +252,8 @@ namespace ysn
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
 
 		// TODO(last): Another command list?
-		LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
+		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
+		LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);

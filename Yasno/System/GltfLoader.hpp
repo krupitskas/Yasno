@@ -19,23 +19,25 @@ namespace ysn
 
 	class D3D12Renderer;
 
+	#define ALBEDO_ENABLED_BITMASK				0
+	#define METALLIC_ROUGHNESS_ENABLED_BITMASK	1
+	#define NORMAL_ENABLED_BITMASK				2
+	#define OCCLUSION_ENABLED_BITMASK			3
+	#define EMISSIVE_ENABLED_BITMASK			4
+
 	struct PBRMetallicRoughnessShader
 	{
 		DirectX::XMFLOAT4 baseColorFactor;
-		int32_t baseColorTextureIndex;
-		int32_t baseColorSamplerIndex;
 		float metallicFactor;
 		float roughnessFactor;
-		int32_t metallicRoughnessTextureIndex;
-		int32_t metallicRoughnessSamplerIndex;
-		int32_t normalTextureIndex;
-		int32_t normalSamplerIndex;
-		int32_t occlusionTextureIndex;
-		int32_t occlusionSamplerIndex;
-		int32_t emissiveTextureIndex;
-		int32_t emissiveSamplerIndex;
 
-		int32_t basecolor_indirect_index;
+		int32_t albedo_texture_index;
+		int32_t metallic_roughness_texture_index;
+		int32_t normal_texture_index;
+		int32_t occlusion_texture_index;
+		int32_t emissive_texture_index;
+
+		int32_t texture_enable_bitmask; // Encoded which textures are should be used
 	};
 
 	struct PBRNormalShaderInput

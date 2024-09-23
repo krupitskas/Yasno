@@ -334,13 +334,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 
 			if (glTFBaseColorTexture.index >= 0)
 			{
-				pPBRMetallicRoughness->baseColorTextureIndex = 0;
-				pPBRMetallicRoughness->baseColorSamplerIndex = 0;
-			}
-			else
-			{
-				pPBRMetallicRoughness->baseColorTextureIndex = -1;
-				pPBRMetallicRoughness->baseColorSamplerIndex = -1;
+				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BITMASK;
 			}
 
 			pPBRMetallicRoughness->metallicFactor = static_cast<float>(glTFPBRMetallicRoughness.metallicFactor);
@@ -350,52 +344,30 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 
 			if (glTFMetallicRoughnessTexture.index >= 0)
 			{
-				pPBRMetallicRoughness->metallicRoughnessTextureIndex = 1;
-				pPBRMetallicRoughness->metallicRoughnessSamplerIndex = 1;
-			}
-			else
-			{
-				pPBRMetallicRoughness->metallicRoughnessTextureIndex = -1;
-				pPBRMetallicRoughness->metallicRoughnessSamplerIndex = -1;
+				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BITMASK;
+
 			}
 
 			tinygltf::NormalTextureInfo& GlTFNormalsTexture = GltfMaterial.normalTexture;
 
 			if (GlTFNormalsTexture.index >= 0)
 			{
-				pPBRMetallicRoughness->normalTextureIndex = 2;
-				pPBRMetallicRoughness->normalSamplerIndex = 2;
-			}
-			else
-			{
-				pPBRMetallicRoughness->normalTextureIndex = -1;
-				pPBRMetallicRoughness->normalSamplerIndex = -1;
+				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BITMASK;
 			}
 
 			tinygltf::OcclusionTextureInfo& GlTFOcclusionTexture = GltfMaterial.occlusionTexture;
 
 			if (GlTFOcclusionTexture.index >= 0)
 			{
-				pPBRMetallicRoughness->occlusionTextureIndex = 3;
-				pPBRMetallicRoughness->occlusionSamplerIndex = 3;
-			}
-			else
-			{
-				pPBRMetallicRoughness->occlusionTextureIndex = -1;
-				pPBRMetallicRoughness->occlusionSamplerIndex = -1;
+				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BITMASK;
+
 			}
 
 			auto& GlTFEmissiveTexture = GltfMaterial.emissiveTexture;
 
 			if (GlTFEmissiveTexture.index >= 0)
 			{
-				pPBRMetallicRoughness->emissiveTextureIndex = 4;
-				pPBRMetallicRoughness->emissiveSamplerIndex = 2;
-			}
-			else
-			{
-				pPBRMetallicRoughness->emissiveTextureIndex = -1;
-				pPBRMetallicRoughness->emissiveSamplerIndex = -1;
+				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BITMASK;
 			}
 		}
 
@@ -414,7 +386,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			ysn::Texture& texture = pModelRenderContext->pTextures[GltfTexture.source];
 			texture.descriptor_handle = RenderMaterial.srv_handle;
 
-			pPBRMetallicRoughness->basecolor_indirect_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(RenderMaterial.srv_handle);
+			pPBRMetallicRoughness->albedo_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(RenderMaterial.srv_handle);
 
 			auto resource = texture.gpuTexture;
 			auto resource_desc = resource->GetDesc();
@@ -444,6 +416,7 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
 
 			texture.descriptor_handle = SrvDescriptor;
+			pPBRMetallicRoughness->metallic_roughness_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(SrvDescriptor);
 
 			texture.gpuTexture->SetName(L"MetallicRoughness");
 
@@ -461,8 +434,12 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			const tinygltf::Texture& GltfTexture = pGltfModel->textures[gltfNormalTexture.index];
 			ID3D12Resource* pTexture = pModelRenderContext->pTextures[GltfTexture.source].gpuTexture.get();
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu;
+			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
 			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+
+			pPBRMetallicRoughness->normal_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
 
 			pTexture->SetName(L"Normal");
 
@@ -479,8 +456,12 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfOcclusionTexture.index];
 			ID3D12Resource* pTexture = pModelRenderContext->pTextures[gltfTexture.source].gpuTexture.get();
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu;
+			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
 			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+
+			pPBRMetallicRoughness->occlusion_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
 
 			p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
 
@@ -495,8 +476,12 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfEmissiveTexture.index];
 			ID3D12Resource* pTexture = pModelRenderContext->pTextures[gltfTexture.source].gpuTexture.get();
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu;
+			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
 			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+
+			pPBRMetallicRoughness->emissive_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
 
 			p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
 
@@ -632,10 +617,6 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		SrvDescriptorRange.NumDescriptors = 5;
 		SrvDescriptorRange.BaseShaderRegister = 0;
 
-		D3D12_DESCRIPTOR_RANGE SamplerDescriptorRange = {};
-		SamplerDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		SamplerDescriptorRange.NumDescriptors = 5;
-
 		D3D12_DESCRIPTOR_RANGE DepthInputDescriptorRange = {};
 		DepthInputDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		DepthInputDescriptorRange.NumDescriptors = 1;
@@ -647,25 +628,18 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		srv_range.DescriptorTable.NumDescriptorRanges = 1;
 		srv_range.DescriptorTable.pDescriptorRanges = &SrvDescriptorRange;
 
-		D3D12_ROOT_PARAMETER sampler_range;
-		sampler_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		sampler_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		sampler_range.DescriptorTable.NumDescriptorRanges = 1;
-		sampler_range.DescriptorTable.pDescriptorRanges = &SamplerDescriptorRange;
-
 		D3D12_ROOT_PARAMETER depth_range;
 		depth_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 		depth_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		depth_range.DescriptorTable.NumDescriptorRanges = 1;
 		depth_range.DescriptorTable.pDescriptorRanges = &DepthInputDescriptorRange;
 
-		D3D12_ROOT_PARAMETER rootParams[7] = {
+		D3D12_ROOT_PARAMETER rootParams[6] = {
 			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL },
 			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
 			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
 			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_ALL },
 			srv_range,
-			sampler_range,
 			depth_range
 		};
 
@@ -675,16 +649,20 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		rootParams[2].Descriptor.RegisterSpace = 0;
 		rootParams[3].Descriptor.RegisterSpace = 0;
 
-		CD3DX12_STATIC_SAMPLER_DESC shadow_static_sampler(5, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+		// 0 ShadowSampler
+		// 1 LinearSampler
+		CD3DX12_STATIC_SAMPLER_DESC static_sampler[2];
+		static_sampler[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+		static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, 0, D3D12_COMPARISON_FUNC_NONE);
 
 		D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-		RootSignatureDesc.NumParameters			= 7;
+		RootSignatureDesc.NumParameters			= 6;
 		RootSignatureDesc.pParameters			= &rootParams[0];
 		RootSignatureDesc.Flags					= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT 
 			| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
 			| D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
-		RootSignatureDesc.pStaticSamplers		= &shadow_static_sampler;
-		RootSignatureDesc.NumStaticSamplers		= 1;
+		RootSignatureDesc.pStaticSamplers		= &static_sampler[0];
+		RootSignatureDesc.NumStaticSamplers		= 2;
 
 		result = renderer->CreateRootSignature(&RootSignatureDesc, &pRenderPrimitive->pRootSignature);
 		assert(SUCCEEDED(result));
@@ -1100,7 +1078,6 @@ void DrawNode(
 
 			ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 				p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
-				p_renderer->GetSamplerDescriptorHeap()->GetHeapPtr(),
 			};
 			pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
@@ -1113,8 +1090,7 @@ void DrawNode(
 					pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
 					pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
 					pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-					pCommandList->SetGraphicsRootDescriptorTable(5, primitive.pMaterial->sampler_handle.gpu);
-					pCommandList->SetGraphicsRootDescriptorTable(6, p_shadow_map_buffer->srv_handle.gpu);
+					pCommandList->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
 					break;
 				}
 				case ysn::PrimitivePipeline::Shadow:
