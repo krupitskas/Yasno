@@ -5,7 +5,7 @@
 **Personal DirectX 12 research renderer oriented for fast iterations and easy usage**
 
 </div>
-## Current Features
+## Features
 
 * Forward renderer  
 * GLTF format support loading

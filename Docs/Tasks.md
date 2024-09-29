@@ -1,9 +1,12 @@
 # Tasks
 
+## Working note
+
+Should I split in streams, probably - more storage while not optimized but faster access anyway
 
 ## To-Do
 
-* Finish vertex pulling <-
+* Finish vertex pulling <- 
 * Shader reflection
 * Reverse Z
 * Provide material indices in path tracing
@@ -28,6 +31,8 @@
 * Add gizmos and scene description to actually manipulate it
 * Add loading saving of the scene
 
+Clean up and open source it
+
 ## Visual fancy stuff
 
 * ACES
@@ -48,10 +53,9 @@
 * Sampler feedback
 * Work Graph
 * Direct SR
-* 
+
+
+## Known issues which I don't care:
 
 
 
-## Known issues:
-
-* 
