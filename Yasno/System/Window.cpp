@@ -6,10 +6,10 @@
 #include <d3dx12.h>
 
 #include <System/Application.hpp>
-#include <RHI/CommandQueue.hpp>
+#include <Renderer/CommandQueue.hpp>
 #include <System/Game.hpp>
 #include <System/Helpers.hpp>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/DxRenderer.hpp>
 
 namespace ysn
 {

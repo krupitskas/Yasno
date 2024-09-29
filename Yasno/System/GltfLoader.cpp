@@ -5,18 +5,20 @@
 
 #include <dxcapi.h>
 
-#include <RHI/D3D12Renderer.hpp>
-#include <Graphics/Techniques/CascadedShadowMaps.hpp>
-#include <RHI/GenerateMipsSystem.hpp>
+#include <Renderer/DxRenderer.hpp>
+#include <Graphics/Techniques/ShadowMapPass.hpp>
+#include <Renderer/GenerateMipsSystem.hpp>
 #include <System/Filesystem.hpp>
 #include <System/String.hpp>
 #include <System/Math.hpp>
 
 using namespace Microsoft::WRL;
 
+/*
+
 void BuildBuffers(
 	ysn::ModelRenderContext* pModelRenderContext,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
+	std::shared_ptr<ysn::DxRenderer> p_renderer,
 	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList,
 	tinygltf::Model* pModel,
 	std::vector<wil::com_ptr<ID3D12Resource>>* pStagingResources)
@@ -80,8 +82,7 @@ void BuildBuffers(
 			resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 			resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-			hr = p_renderer->GetDevice()->CreateCommittedResource(
-				&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pSrcBuffer));
+			hr = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pSrcBuffer));
 
 			assert(SUCCEEDED(hr));
 			pStagingResources->push_back(pSrcBuffer);
@@ -230,7 +231,7 @@ void FindAllSrgbTextures(ysn::ModelRenderContext* model_renderer_context, tinygl
 	}
 }
 
-void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_ptr<ysn::D3D12Renderer> p_renderer, wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList, tinygltf::Model* pGltfModel)
+void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_ptr<ysn::DxRenderer> p_renderer, wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList, tinygltf::Model* pGltfModel)
 {
 	HRESULT hr = S_OK;
 
@@ -608,7 +609,7 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::vector<y
 	return InputElementDescs;
 }
 
-bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12Renderer> renderer)
+bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
 {
 	HRESULT result = S_OK;
 	{
@@ -674,7 +675,7 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
 		vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
 
-		const auto vs_shader_result = renderer->GetShaderManager()->CompileShader(&vs_parameters);
+		const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
 
 		if (!vs_shader_result.has_value())
 		{
@@ -687,7 +688,7 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelLighting.hlsl");
 		ps_parameters.defines = vs_parameters.defines;
 
-		const auto ps_shader_result = renderer->GetShaderManager()->CompileShader(&ps_parameters);
+		const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
 
 		if (!ps_shader_result.has_value())
 		{
@@ -739,7 +740,7 @@ bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D1
 	return true;
 }
 
-bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12Renderer> renderer)
+bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
 {
 	HRESULT result = S_OK;
 
@@ -770,7 +771,7 @@ bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12
 		vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
 		vs_parameters.defines.emplace_back(L"SHADOW_PASS");
 
-		const auto vs_shader_result = renderer->GetShaderManager()->CompileShader(&vs_parameters);
+		const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
 
 		if (!vs_shader_result.has_value())
 		{
@@ -783,7 +784,7 @@ bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12
 		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelGray.hlsl");
 		ps_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
 
-		const auto ps_shader_result = renderer->GetShaderManager()->CompileShader(&ps_parameters);
+		const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
 
 		if (!ps_shader_result.has_value())
 		{
@@ -837,7 +838,7 @@ bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12
 	return true;
 }
 
-void BuildPipelines(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::D3D12Renderer> renderer)
+void BuildPipelines(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
 {
 	// 1. Forward pass
 	if (pRenderPrimitive->pMaterial != nullptr)
@@ -888,8 +889,7 @@ void BuildIndexBuffer(
 		const tinygltf::BufferView& GltfBufferView = pGltfModel->bufferViews[GltfAccessor.bufferView];
 		// const tinygltf::Buffer& glTFBuffer = pModel->buffers[glTFBufferView.buffer];
 
-		pRenderPrimitive->indexBufferView.BufferLocation = pBuffers[GltfBufferView.buffer]->GetGPUVirtualAddress() +
-			GltfBufferView.byteOffset +
+		pRenderPrimitive->indexBufferView.BufferLocation = pBuffers[GltfBufferView.buffer]->GetGPUVirtualAddress() + GltfBufferView.byteOffset +
 			GltfAccessor.byteOffset; // TODO: double byteoffset?
 		pRenderPrimitive->indexBufferView.SizeInBytes = static_cast<UINT>(GltfBufferView.byteLength - GltfAccessor.byteOffset);
 
@@ -973,7 +973,7 @@ void BuildAttributesAccessors(
 	}
 }
 
-void BuildMeshes(ysn::ModelRenderContext* pModelRenderContext, tinygltf::Model* pGltfModel, std::shared_ptr<ysn::D3D12Renderer> renderer)
+void BuildMeshes(ysn::ModelRenderContext* pModelRenderContext, tinygltf::Model* pGltfModel, std::shared_ptr<ysn::DxRenderer> renderer)
 {
 	for (tinygltf::Mesh& GltfMesh : pGltfModel->meshes)
 	{
@@ -1052,7 +1052,7 @@ void BuildNodes(ysn::ModelRenderContext* ModelRenderContext, wil::com_ptr<ID3D12
 
 void DrawNode(
 	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
+	std::shared_ptr<ysn::DxRenderer> p_renderer,
 	tinygltf::Model* pModel,
 	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
 	wil::com_ptr<ID3D12Resource> pCameraBuffer,
@@ -1125,7 +1125,7 @@ void DrawNode(
 
 void ysn::RenderGLTF(
 	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
+	std::shared_ptr<ysn::DxRenderer> p_renderer,
 	tinygltf::Model* pModel,
 	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
 	wil::com_ptr<ID3D12Resource> pCameraBuffer,
@@ -1186,10 +1186,10 @@ static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
 
 void BuildImages(
 	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
+	std::shared_ptr<ysn::DxRenderer> p_renderer,
 	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList,
 	tinygltf::Model* pModel,
-	std::vector<wil::com_ptr<ID3D12Resource>>* pStagingResources)
+	)
 {
 	HRESULT hr = S_OK;
 
@@ -1300,55 +1300,57 @@ void BuildImages(
 	}
 }
 
-void BuildGLTFResources(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList,
-	tinygltf::Model* pModel)
-{
-	ModelRenderContext->stagingResources.reserve(256);
+*/
+//
+//void ReadModel(RenderScene& render_scene, const tinygltf::Model& gltf_model)
+//{
+//	//Application::Get().GetRenderer();
+//	//wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+//
+//	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
+//	staging_resources.reserve(256);
+//
+//	//BuildBuffers(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
+//	//FindAllSrgbTextures(ModelRenderContext, pModel);
+//	//BuildImages(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
+//	//BuildSamplerDescs(ModelRenderContext, pModel);
+//	//BuildMaterials(ModelRenderContext, p_renderer, pCopyCommandList, pModel);
+//	//BuildMeshes(ModelRenderContext, pModel, p_renderer);
+//	//BuildNodes(ModelRenderContext, p_renderer->GetDevice(), pModel);
+//}
 
-	BuildBuffers(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
-	FindAllSrgbTextures(ModelRenderContext, pModel);
-	BuildImages(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
-	BuildSamplerDescs(ModelRenderContext, pModel);
-	BuildMaterials(ModelRenderContext, p_renderer, pCopyCommandList, pModel);
-	BuildMeshes(ModelRenderContext, pModel, p_renderer);
-	BuildNodes(ModelRenderContext, p_renderer->GetDevice(), pModel);
+namespace ysn
+{
+	bool LoadGltfFromFile(RenderScene& render_scene, const std::wstring& load_path, const LoadingParameters& loading_parameters)
+	{
+		tinygltf::Model gltf_model;
+		tinygltf::TinyGLTF gltf_loader;
+
+		std::string error_str;
+		std::string warning_str;
+		const std::string load_path_str = ysn::WStringToString(load_path);
+
+		const bool result = gltf_loader.LoadASCIIFromFile(&gltf_model, &error_str, &warning_str, load_path_str.c_str());
+
+		if (!warning_str.empty())
+		{
+			LogWarning << "GLTF loading: " << warning_str.c_str() << "\n";
+		}
+
+		if (!error_str.empty())
+		{
+			LogError << "GLTF loading: " << error_str.c_str() << "\n";
+		}
+
+		if (!result)
+		{
+			LogError << "Failed to read: " << load_path_str << "\n";
+			return false;
+		}
+
+		//ReadModel(render_scene, &model);
+
+		return true;
+	}
 }
 
-// TODO: Split into CPU loading and GPU initialization passes?
-void ysn::LoadGLTFModel(
-	ysn::ModelRenderContext* ModelRenderContext,
-	const std::wstring& path,
-	std::shared_ptr<ysn::D3D12Renderer> p_renderer,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList)
-{
-	tinygltf::Model model;
-	tinygltf::TinyGLTF loader;
-	std::string err;
-	std::string warn;
-	std::string str_path = ysn::WStringToString(path);
-
-	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, str_path.c_str());
-
-	if (!warn.empty())
-	{
-		printf("Warn: %s\n", warn.c_str());
-	}
-
-	if (!err.empty())
-	{
-		printf("Err: %s\n", err.c_str());
-	}
-
-	if (!ret)
-	{
-		printf("Failed to parse glTF\n");
-	}
-
-	ModelRenderContext->gltfModel = model;
-
-	// GPU initialization part
-	BuildGLTFResources(ModelRenderContext, p_renderer, pCopyCommandList, &model);
-}

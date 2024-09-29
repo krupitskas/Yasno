@@ -1,7 +1,12 @@
 #pragma once
 
+#include <Graphics/RenderScene.hpp>
+
 namespace ysn
 {
-	class ForwardPass
-	{};
+	struct ForwardPass
+	{
+	
+		void Render(const RenderScene& scene);
+	};
 }

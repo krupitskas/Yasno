@@ -8,7 +8,6 @@
 
 namespace ysn
 {
-
 	class CommandQueue
 	{
 	public:

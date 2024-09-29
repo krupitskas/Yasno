@@ -10,7 +10,7 @@
 namespace ysn
 {
 
-	class D3D12Renderer;
+	class DxRenderer;
 	class Window;
 	class Game;
 	class CommandQueue;
@@ -42,7 +42,7 @@ namespace ysn
 		std::shared_ptr<CommandQueue> GetComputeQueue() const;
 		std::shared_ptr<CommandQueue> GetCopyQueue() const;
 
-		std::shared_ptr<ysn::D3D12Renderer> GetRenderer() const;
+		std::shared_ptr<ysn::DxRenderer> GetRenderer() const;
 
 		void Flush();
 
@@ -56,7 +56,7 @@ namespace ysn
 
 		HINSTANCE m_hInstance;
 
-		std::shared_ptr<ysn::D3D12Renderer> m_d3d12renderer;
+		std::shared_ptr<ysn::DxRenderer> m_dx_renderer;
 
 		bool is_initialized = false;
 	};

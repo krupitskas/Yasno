@@ -6,15 +6,17 @@
 #include <dxgi1_6.h>
 #include <wil/com.h>
 
-#include <RHI/CommandQueue.hpp>
-#include <RHI/DescriptorHeap.hpp>
-#include <RHI/ShaderManager.hpp>
+#include <Renderer/CommandQueue.hpp>
+#include <Renderer/DescriptorHeap.hpp>
+#include <Renderer/ShaderStorage.hpp>
+#include <Renderer/IndexStorage.hpp>
+#include <Renderer/VertexStorage.hpp>
 
 namespace ysn
 {
 	class GenerateMipsSystem;
 
-	class D3D12Renderer
+	class DxRenderer
 	{
 	public:
 		bool Initialize();
@@ -33,7 +35,7 @@ namespace ysn
 		std::shared_ptr<RtvDescriptorHeap> GetRtvDescriptorHeap() const;
 		std::shared_ptr<DsvDescriptorHeap> GetDsvDescriptorHeap() const;
 
-		std::shared_ptr<ShaderManager> GetShaderManager() const;
+		std::shared_ptr<ShaderStorage> GetShaderStorage() const;
 		std::shared_ptr<GenerateMipsSystem> GetMipGenerator() const;
 
 		DXGI_FORMAT GetHdrFormat() const;
@@ -54,8 +56,10 @@ namespace ysn
 		wil::com_ptr<IDXGIAdapter4> m_dxgi_adapter;
 		wil::com_ptr<IDXGISwapChain4> m_swap_chain;
 
-		// High level objects
-		std::shared_ptr<ShaderManager> m_shader_manager;
+		// Data
+		VertexStorage m_vertex_storage;
+		IndexStorage m_index_storage;
+		std::shared_ptr<ShaderStorage> m_shader_storage;
 
 		// Formats
 		DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;

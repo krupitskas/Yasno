@@ -8,26 +8,26 @@
 #include <d3d12.h>
 #include <dxcapi.h>
 
-#include <RHI/nv_helpers_dx12/ShaderBindingTableGenerator.h>
+#include <Renderer/nv_helpers_dx12/ShaderBindingTableGenerator.h>
 
 namespace ysn
 {
-	class D3D12Renderer;
+	class DxRenderer;
 	struct RaytracingContext;
 	struct DescriptorHandle;
 
 	class RaytracingPass
 	{
 	public:
-		bool Initialize(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
-		bool CreateRaytracingPipeline(std::shared_ptr<ysn::D3D12Renderer> renderer);
-		bool CreateShaderBindingTable(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
+		bool Initialize(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
+		bool CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer);
+		bool CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
 
-		void Execute(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer);
+		void Execute(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer);
 
-		wil::com_ptr<ID3D12RootSignature> CreateRayGenSignature(std::shared_ptr<ysn::D3D12Renderer> renderer);
-		wil::com_ptr<ID3D12RootSignature> CreateMissSignature(std::shared_ptr<ysn::D3D12Renderer> renderer);
-		wil::com_ptr<ID3D12RootSignature> CreateHitSignature(std::shared_ptr<ysn::D3D12Renderer> renderer);
+		wil::com_ptr<ID3D12RootSignature> CreateRayGenSignature(std::shared_ptr<ysn::DxRenderer> renderer);
+		wil::com_ptr<ID3D12RootSignature> CreateMissSignature(std::shared_ptr<ysn::DxRenderer> renderer);
+		wil::com_ptr<ID3D12RootSignature> CreateHitSignature(std::shared_ptr<ysn::DxRenderer> renderer);
 
 		wil::com_ptr<IDxcBlob> m_ray_gen_library;
 		wil::com_ptr<IDxcBlob> m_hit_library;

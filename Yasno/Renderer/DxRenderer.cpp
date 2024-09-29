@@ -1,8 +1,7 @@
-﻿
-#include "D3D12Renderer.hpp"
+﻿#include "DxRenderer.hpp"
 
-#include <RHI/ShaderManager.hpp>
-#include <RHI/GenerateMipsSystem.hpp>
+#include <Renderer/ShaderManager.hpp>
+#include <Renderer/GenerateMipsSystem.hpp>
 #include <System/Helpers.hpp>
 #include <System/Result.hpp>
 
@@ -122,7 +121,7 @@ namespace
 namespace ysn
 {
 
-	bool D3D12Renderer::Initialize()
+	bool DxRenderer::Initialize()
 	{
 	#if defined(_DEBUG)
 			// Always enable the debug layer before doing anything DX12 related
@@ -157,7 +156,7 @@ namespace ysn
 		m_compute_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
 		m_copy_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
 
-		m_shader_manager = std::make_shared<ShaderManager>();
+		m_shader_storage = std::make_shared<ShaderStorage>();
 
 		// Create descriptor heaps
 		// TODO: Save somewhere budgets, make them dynamic?
@@ -168,7 +167,7 @@ namespace ysn
 
 		m_is_raytracing_supported = CheckRaytracingSupport();
 
-		if (!m_shader_manager->Initialize())
+		if (!m_shader_storage->Initialize())
 		{
 			LogError << "Can't create shader manager\n";
 			return false;
@@ -185,10 +184,10 @@ namespace ysn
 		return true;
 	}
 
-	void D3D12Renderer::Shutdown()
+	void DxRenderer::Shutdown()
 	{}
 
-	bool D3D12Renderer::CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const
+	bool DxRenderer::CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const
 	{
 		HRESULT hr = S_OK;
 
@@ -221,12 +220,12 @@ namespace ysn
 		return true;
 	}
 
-	bool D3D12Renderer::IsTearingSupported()
+	bool DxRenderer::IsTearingSupported()
 	{
 		return m_tearing_supported;
 	}
 
-	bool D3D12Renderer::CheckRaytracingSupport()
+	bool DxRenderer::CheckRaytracingSupport()
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 
@@ -247,69 +246,69 @@ namespace ysn
 		return true;
 	}
 
-	wil::com_ptr<ID3D12Device5> D3D12Renderer::GetDevice() const
+	wil::com_ptr<ID3D12Device5> DxRenderer::GetDevice() const
 	{
 		return m_device;
 	}
 
-	DXGI_FORMAT D3D12Renderer::GetHdrFormat() const
+	DXGI_FORMAT DxRenderer::GetHdrFormat() const
 	{
 		return hdr_format;
 	}
 
-	DXGI_FORMAT D3D12Renderer::GetBackBufferFormat() const
+	DXGI_FORMAT DxRenderer::GetBackBufferFormat() const
 	{
 		return backbuffer_format;
 	}
 
-	void D3D12Renderer::FlushQueues()
+	void DxRenderer::FlushQueues()
 	{
 		m_direct_command_queue->Flush();
 		m_compute_command_queue->Flush();
 		m_copy_command_queue->Flush();
 	}
 
-	std::shared_ptr<CommandQueue> D3D12Renderer::GetDirectQueue() const
+	std::shared_ptr<CommandQueue> DxRenderer::GetDirectQueue() const
 	{
 		return m_direct_command_queue;
 	}
 
-	std::shared_ptr<CommandQueue> D3D12Renderer::GetComputeQueue() const
+	std::shared_ptr<CommandQueue> DxRenderer::GetComputeQueue() const
 	{
 		return m_compute_command_queue;
 	}
 
-	std::shared_ptr<CommandQueue> D3D12Renderer::GetCopyQueue() const
+	std::shared_ptr<CommandQueue> DxRenderer::GetCopyQueue() const
 	{
 		return m_copy_command_queue;
 	}
 
-	std::shared_ptr<CbvSrvUavDescriptorHeap> D3D12Renderer::GetCbvSrvUavDescriptorHeap() const
+	std::shared_ptr<CbvSrvUavDescriptorHeap> DxRenderer::GetCbvSrvUavDescriptorHeap() const
 	{
 		return m_cbv_srv_uav_descriptor_heap;
 	}
 
-	std::shared_ptr<SamplerDescriptorHeap> D3D12Renderer::GetSamplerDescriptorHeap() const
+	std::shared_ptr<SamplerDescriptorHeap> DxRenderer::GetSamplerDescriptorHeap() const
 	{
 		return m_sampler_descriptor_heap;
 	}
 
-	std::shared_ptr<RtvDescriptorHeap> D3D12Renderer::GetRtvDescriptorHeap() const
+	std::shared_ptr<RtvDescriptorHeap> DxRenderer::GetRtvDescriptorHeap() const
 	{
 		return m_rtv_descriptor_heap;
 	}
 
-	std::shared_ptr<DsvDescriptorHeap> D3D12Renderer::GetDsvDescriptorHeap() const
+	std::shared_ptr<DsvDescriptorHeap> DxRenderer::GetDsvDescriptorHeap() const
 	{
 		return m_dsv_descriptor_heap;
 	}
 
-	std::shared_ptr<ShaderManager> D3D12Renderer::GetShaderManager() const
+	std::shared_ptr<ShaderStorage> DxRenderer::GetShaderStorage() const
 	{
-		return m_shader_manager;
+		return m_shader_storage;
 	}
 
-	std::shared_ptr<GenerateMipsSystem> D3D12Renderer::GetMipGenerator() const
+	std::shared_ptr<GenerateMipsSystem> DxRenderer::GetMipGenerator() const
 	{
 		return m_generate_mips_system;
 	}

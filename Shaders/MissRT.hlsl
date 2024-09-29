@@ -9,19 +9,17 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo
 {
-	float4 colorAndDistance;
+	float4 color_distance;
 };
 
-// Attributes output by the raytracing when hitting a surface,
-// here the barycentric coordinates
+// Attributes output by the raytracing when hitting a surface, here the barycentric coordinates
 struct Attributes
 {
 	float2 bary;
 };
 
-
 [shader("miss")]
 void Miss(inout HitInfo payload : SV_RayPayload)
 {
-    payload.colorAndDistance = float4(0.2f, 0.2f, 0.8f, -1.f);
+    payload.color_distance = float4(0.2f, 0.2f, 0.8f, -1.f);
 }

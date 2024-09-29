@@ -4,8 +4,8 @@
 #include <imgui_impl_win32.h>
 
 #include <System/Window.hpp>
-#include <RHI/GpuMarker.hpp>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/GpuMarker.hpp>
+#include <Renderer/DxRenderer.hpp>
 
 namespace ysn
 {
@@ -16,7 +16,7 @@ namespace ysn
 		ImGui::StyleColorsDark();
 	}
 
-	void InitializeImgui(std::shared_ptr<Window> window, std::shared_ptr<D3D12Renderer> renderer)
+	void InitializeImgui(std::shared_ptr<Window> window, std::shared_ptr<DxRenderer> renderer)
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();

@@ -4,7 +4,7 @@
 
 namespace ysn
 {
-    SHADER_STRUCT GpuCamera
+    YSN_SHADER_STRUCT GpuCamera
     {
         DirectX::XMFLOAT4X4 view_projection;
         DirectX::XMFLOAT4X4 view;

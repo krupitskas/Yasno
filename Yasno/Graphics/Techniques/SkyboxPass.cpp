@@ -1,10 +1,10 @@
 #include "SkyboxPass.hpp"
 
-#include <RHI/CommandQueue.hpp>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/CommandQueue.hpp>
+#include <Renderer/DxRenderer.hpp>
 #include <System/Application.hpp>
 #include <System/Filesystem.hpp>
-#include <RHI/GpuMarker.hpp>
+#include <Renderer/GpuMarker.hpp>
 
 namespace ysn
 {
@@ -41,7 +41,7 @@ namespace ysn
 		vs_parameters.shader_type = ysn::ShaderType::Vertex;
 		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/Skybox_VS.hlsl");
 
-		const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderManager()->CompileShader(&vs_parameters);
+		const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(&vs_parameters);
 
 		if (!vs_shader_result.has_value())
 		{
@@ -53,7 +53,7 @@ namespace ysn
 		ps_parameters.shader_type = ysn::ShaderType::Pixel;
 		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/Skybox_PS.hlsl");
 
-		const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderManager()->CompileShader(&ps_parameters);
+		const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(&ps_parameters);
 
 		if (!ps_shader_result.has_value())
 		{

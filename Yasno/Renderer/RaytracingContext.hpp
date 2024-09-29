@@ -6,13 +6,13 @@
 #include <wil/com.h>
 #include <d3d12.h>
 
-#include <RHI/nv_helpers_dx12/TopLevelASGenerator.h>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/nv_helpers_dx12/TopLevelASGenerator.h>
+#include <Renderer/DxRenderer.hpp>
+
+#include <Graphics/RenderScene.hpp>
 
 namespace ysn
 {
-	struct ModelRenderContext;
-
 	struct AccelerationStructureBuffers
 	{
 		wil::com_ptr<ID3D12Resource> scratch; // Scratch memory for AS builder
@@ -51,7 +51,7 @@ namespace ysn
 			wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
 			const std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>>& instances);
 
-		void CreateTlasSrv(std::shared_ptr<ysn::D3D12Renderer> renderer);
+		void CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer);
 
 		/// Create all acceleration structures, bottom and top
 		void CreateAccelerationStructures(
@@ -66,4 +66,5 @@ namespace ysn
 		AccelerationStructureBuffers tlas_buffers;
 		std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>> instances;
 	};
-} // namespace ysn
+
+} 

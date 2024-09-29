@@ -5,22 +5,20 @@
 
 #include <System/Game.hpp>
 #include <System/Window.hpp>
-#include <RHI/GpuTexture.hpp>
-#include <Yasno/Camera.hpp>
-#include <System/GltfLoader.hpp>
-#include <Yasno/CameraController.hpp>
 #include <System/GameInput.hpp>
-#include <Graphics/Techniques/CascadedShadowMaps.hpp>
+#include <System/GltfLoader.hpp>
+#include <Renderer/RaytracingContext.hpp>
+#include <Renderer/GpuTexture.hpp>
+#include <Graphics/Techniques/ShadowMapPass.hpp>
 #include <Graphics/Techniques/TonemapPostprocess.hpp>
 #include <Graphics/Techniques/RaytracingPass.hpp>
 #include <Graphics/Techniques/ConvertToCubemap.hpp>
 #include <Graphics/Techniques/SkyboxPass.hpp>
-#include <RHI/RayTracing.hpp>
-#include <Yasno/Lights.hpp>
+#include <Graphics/Techniques/ForwardPass.hpp>
 
 namespace ysn
 {
-	SHADER_STRUCT GpuSceneParameters
+	YSN_SHADER_STRUCT GpuSceneParameters
 	{
 		DirectX::XMFLOAT4X4 shadow_matrix;
 		DirectX::XMFLOAT4	directional_light_color		= {0.0f, 0.0f, 0.0f, 0.0f};
@@ -54,6 +52,7 @@ namespace ysn
 
 	private:
 		GameInput game_input;
+		RenderScene m_render_scene;
 
 		bool CreateGpuCameraBuffer();
 		bool CreateGpuSceneParametersBuffer();
@@ -84,19 +83,14 @@ namespace ysn
 		DescriptorHandle m_depth_dsv_descriptor_handle;
 		DescriptorHandle m_hdr_rtv_descriptor_handle;
 
-		ModelRenderContext m_gltf_draw_context;
 		RaytracingContext m_raytracing_context;
-		DirectionalLight m_directional_light;
-		EnvironmentLight m_environment_light;
-
-		Texture m_environment_texture;
-		wil::com_ptr<ID3D12Resource> m_cubemap_texture;
 
 		D3D12_VIEWPORT m_viewport;
 		D3D12_RECT m_scissors_rect;
 
-		std::shared_ptr<Camera> m_camera;
-		FpsCameraController m_camera_controler;
+		Texture m_environment_texture;
+		wil::com_ptr<ID3D12Resource> m_cubemap_texture;
+
 		wil::com_ptr<ID3D12Resource> m_camera_gpu_buffer;
 		wil::com_ptr<ID3D12Resource> m_scene_parameters_gpu_buffer;
 
@@ -107,7 +101,8 @@ namespace ysn
 		bool m_is_first_frame = true;
 
 		// Techniques
-		CascadedShadowMaps m_shadow_pass;
+		ForwardPass m_forward_pass;
+		ShadowMapPass m_shadow_pass;
 		TonemapPostprocess m_tonemap_pass;
 		RaytracingPass m_ray_tracing_pass;
 		ConvertToCubemap m_convert_to_cubemap_pass;

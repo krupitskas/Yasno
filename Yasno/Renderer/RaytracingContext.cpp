@@ -1,8 +1,8 @@
-#include "RayTracing.hpp"
+#include "RaytracingContext.hpp"
 
-#include <RHI/nv_helpers_dx12/TopLevelASGenerator.h>
-#include <RHI/nv_helpers_dx12/BottomLevelASGenerator.h>
-#include <RHI/DXRHelper.h>
+#include <Renderer/nv_helpers_dx12/TopLevelASGenerator.h>
+#include <Renderer/nv_helpers_dx12/BottomLevelASGenerator.h>
+#include <Renderer/DXRHelper.h>
 #include <System/GltfLoader.hpp>
 
 // TODO(postrtx): remove this
@@ -135,7 +135,7 @@ void ysn::RaytracingContext::CreateTopLevelAS(
 	tlas_generator.Generate(command_list.get(), tlas_buffers.scratch.get(), tlas_buffers.result.get(), tlas_buffers.instance_desc.get());
 }
 
-void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::D3D12Renderer> renderer)
+void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer)
 {
 	tlas_buffers.tlas_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 

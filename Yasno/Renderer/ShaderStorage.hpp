@@ -35,9 +35,8 @@ namespace ysn
 		std::vector<DxcDefine>	defines;
 	};
 
-	class ShaderManager
+	struct ShaderStorage
 	{
-	public:
 		bool Initialize();
 		std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters* parameters);
 
@@ -46,7 +45,6 @@ namespace ysn
 	#endif
 
 	private:
-
 	#ifndef YSN_RELEASE
 		std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
 		std::map<std::wstring, std::time_t> m_shaders_modified_time;

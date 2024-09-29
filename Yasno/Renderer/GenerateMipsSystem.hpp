@@ -5,13 +5,13 @@
 
 #include <DirectXMath.h>
 
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/DxRenderer.hpp>
 
 namespace ysn
 {
 	class Texture;
 
-	SHADER_STRUCT GenerateMipsConstantBuffer
+	YSN_SHADER_STRUCT GenerateMipsConstantBuffer
 	{
 		uint32_t src_mip_level;			// Texture level of source mip
 		uint32_t num_mip_levels;		// Number of OutMips to write: [1-4]
@@ -36,8 +36,8 @@ namespace ysn
 	class GenerateMipsSystem
 	{
 	public:
-		bool Initialize(const D3D12Renderer& renderer);
-		bool GenerateMips(std::shared_ptr<D3D12Renderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture);
+		bool Initialize(const DxRenderer& renderer);
+		bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture);
 	private:
 		wil::com_ptr<ID3D12RootSignature> m_root_signature;
 		wil::com_ptr<ID3D12PipelineState> m_pipeline_state;

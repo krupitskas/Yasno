@@ -1,6 +1,6 @@
 #include "CubemapGenerator.hpp"
 
-#include <RHI/GpuTexture.hpp>
+#include <Renderer/GpuTexture.hpp>
 
 namespace ysn
 {

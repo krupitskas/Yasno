@@ -1,4 +1,4 @@
-#include "ShaderManager.hpp"
+#include "ShaderStorage.hpp"
 
 #include <fstream>
 #include <filesystem>
@@ -89,7 +89,7 @@ namespace ysn
 	static IDxcLibrary* dxc_library = nullptr;
 	static IDxcIncludeHandler* dxc_include_handler = nullptr;
 
-	bool ShaderManager::Initialize()
+	bool ShaderStorage::Initialize()
 	{
 		if (auto result = DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler), (void**)&dxc_compiler); result != S_OK)
 		{
@@ -112,7 +112,7 @@ namespace ysn
 		return true;
 	}
 
-	std::optional<wil::com_ptr<IDxcBlob>> ShaderManager::CompileShader(const ShaderCompileParameters* parameters)
+	std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters* parameters)
 	{
 		std::filesystem::path fullpath(parameters->shader_path);
 		const std::wstring filename = fullpath.filename();
@@ -228,7 +228,7 @@ namespace ysn
 
 	#ifndef YSN_RELEASE
 		const auto shader_modification_time = GetShaderModificationTime(parameters->shader_path);
-		
+
 		if (shader_modification_time.has_value())
 		{
 			m_shaders_modified_time.emplace(parameters->shader_path, shader_modification_time.value());
@@ -264,7 +264,7 @@ namespace ysn
 		// }
 	}
 
-	void ShaderManager::VerifyAnyShaderChanged()
+	void ShaderStorage::VerifyAnyShaderChanged()
 	{
 
 		for(const auto& [shader_path, time] : m_shaders_modified_time)
@@ -278,7 +278,7 @@ namespace ysn
 					LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
 
 					// TODO: Notify PSO manager to compile the shader here
-					
+
 					m_shaders_modified_time[shader_path] = latest_time.value();
 				}
 			}
@@ -290,7 +290,7 @@ namespace ysn
 	}
 
 #ifndef YSN_RELEASE
-	std::optional<std::time_t> ShaderManager::GetShaderModificationTime(const std::filesystem::path& shader_path)
+	std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)
 	{
 		struct stat result;
 

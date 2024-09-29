@@ -8,7 +8,7 @@
 
 #include <System/Events.hpp>
 #include <System/HighResolutionClock.hpp>
-#include <RHI/DescriptorHeap.hpp>
+#include <Renderer/DescriptorHeap.hpp>
 
 namespace ysn
 {

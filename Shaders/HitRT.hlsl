@@ -9,7 +9,7 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo
 {
-	float4 colorAndDistance;
+	float4 color_distance;
 };
 
 // Attributes output by the raytracing when hitting a surface,
@@ -22,6 +22,8 @@ struct Attributes
 [shader("closesthit")]
 void ClosestHit(inout HitInfo payload, Attributes attrib)
 {
+	Texture2D albedo_texture = ResourceDescriptorHeap[3];
+	
 	float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
 
 	const float3 A = float3(1, 0, 0);
@@ -30,5 +32,5 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
 	float3 hit_color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
 
-	payload.colorAndDistance = float4(hit_color, RayTCurrent());
+	payload.color_distance = float4(hit_color, RayTCurrent());
 }

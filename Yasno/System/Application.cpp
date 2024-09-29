@@ -10,9 +10,9 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
 
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/DxRenderer.hpp>
 #include <System/Game.hpp>
-#include <RHI/CommandQueue.hpp>
+#include <Renderer/CommandQueue.hpp>
 #include <System/Window.hpp>
 #include <System/Helpers.hpp>
 
@@ -73,9 +73,9 @@ namespace ysn
 			MessageBoxA(NULL, "Unable to register the window class.", "Error", MB_OK | MB_ICONERROR);
 		}
 
-		m_d3d12renderer = std::make_shared<ysn::D3D12Renderer>();
+		m_dx_renderer = std::make_shared<ysn::DxRenderer>();
 
-		if(!m_d3d12renderer->Initialize())
+		if(!m_dx_renderer->Initialize())
 		{
 			LogFatal << "Can't initialize renderer\n";
 			return;
@@ -118,7 +118,7 @@ namespace ysn
 
 	bool Application::IsTearingSupported() const
 	{
-		return m_d3d12renderer->IsTearingSupported();
+		return m_dx_renderer->IsTearingSupported();
 	}
 
 	std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync)
@@ -214,32 +214,32 @@ namespace ysn
 
 	wil::com_ptr<ID3D12Device5> Application::GetDevice() const
 	{
-		return m_d3d12renderer->GetDevice();
+		return m_dx_renderer->GetDevice();
 	}
 
 	std::shared_ptr<CommandQueue> Application::GetDirectQueue() const
 	{
-		return m_d3d12renderer->GetDirectQueue();
+		return m_dx_renderer->GetDirectQueue();
 	}
 
 	std::shared_ptr<CommandQueue> Application::GetComputeQueue() const
 	{
-		return m_d3d12renderer->GetComputeQueue();
+		return m_dx_renderer->GetComputeQueue();
 	}
 
 	std::shared_ptr<CommandQueue> Application::GetCopyQueue() const
 	{
-		return m_d3d12renderer->GetCopyQueue();
+		return m_dx_renderer->GetCopyQueue();
 	}
 
 	void Application::Flush()
 	{
-		m_d3d12renderer->FlushQueues();
+		m_dx_renderer->FlushQueues();
 	}
 
-	std::shared_ptr<ysn::D3D12Renderer> Application::GetRenderer() const
+	std::shared_ptr<ysn::DxRenderer> Application::GetRenderer() const
 	{
-		return m_d3d12renderer;
+		return m_dx_renderer;
 	}
 
 	// Remove a window from our window lists.

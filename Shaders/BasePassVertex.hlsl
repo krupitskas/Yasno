@@ -76,6 +76,11 @@ cbuffer SceneParameters : register(b3)
 	uint		shadows_enabled;
 };
 
+
+// TODO: Implement vertex pulling
+//ByteAddressBuffer IndicesBuffer				: register(t1);
+//ByteAddressBuffer VerticesBuffer			: register(t2);
+
 VS2RS main(IA2VS input)
 {
 	VS2RS output;

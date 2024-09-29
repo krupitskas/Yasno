@@ -5,7 +5,7 @@
 #include <d3d12.h>
 #include <wil/com.h>
 
-#include <RHI/DescriptorHeap.hpp>
+#include <Renderer/DescriptorHeap.hpp>
 
 namespace ysn
 {

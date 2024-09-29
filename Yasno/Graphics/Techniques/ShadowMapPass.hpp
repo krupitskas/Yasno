@@ -4,11 +4,11 @@
 
 #include <SimpleMath.h>
 #include <DirectXMath.h>
-#include <d3d12.h>
+#include <d3dx12.h>
 #include <wil/com.h>
 
 #include <System/GltfLoader.hpp>
-#include <RHI/DescriptorHeap.hpp>
+#include <Renderer/DescriptorHeap.hpp>
 
 namespace ysn
 {
@@ -17,7 +17,7 @@ namespace ysn
 	struct DirectionalLight;
 	class CommandQueue;
 
-	SHADER_STRUCT ShadowCamera
+	YSN_SHADER_STRUCT ShadowCamera
 	{
 		XMFLOAT4X4 shadow_matrix;
 	};
@@ -29,12 +29,11 @@ namespace ysn
 		DescriptorHandle srv_handle;
 	};
 
-	class CascadedShadowMaps
+	struct ShadowMapPass
 	{
-	public:
-		void Initialize(std::shared_ptr<ysn::D3D12Renderer> p_renderer);
+		void Initialize(std::shared_ptr<ysn::DxRenderer> p_renderer);
 		void UpdateLight(const DirectionalLight& Light);
-		void Render(std::shared_ptr<ysn::D3D12Renderer> p_renderer,
+		void Render(std::shared_ptr<ysn::DxRenderer> p_renderer,
 					std::shared_ptr<ysn::CommandQueue> command_queue,
 					wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
 					ysn::ModelRenderContext* pGLTFDrawContext,
@@ -51,9 +50,9 @@ namespace ysn
 		ShadowMapBuffer shadow_map_buffer;
 
 	private:
-		bool InitializeShadowMapBuffer(std::shared_ptr<ysn::D3D12Renderer> p_renderer);
+		bool InitializeShadowMapBuffer(std::shared_ptr<ysn::DxRenderer> p_renderer);
 		void InitializeOrthProjection(SimpleMath::Vector3 direction);
-		bool InitializeCamera(std::shared_ptr<ysn::D3D12Renderer> p_renderer);
+		bool InitializeCamera(std::shared_ptr<ysn::DxRenderer> p_renderer);
 
 		wil::com_ptr<ID3D12Resource> m_pCameraBuffer;
 	};

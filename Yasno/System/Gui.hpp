@@ -12,9 +12,9 @@ namespace ysn
 	const static char* STATS_NAME = "Stats";
 
 	class Window;
-	class D3D12Renderer;
+	class DxRenderer;
 
-	void InitializeImgui(std::shared_ptr<Window> window, std::shared_ptr<D3D12Renderer> renderer);
+	void InitializeImgui(std::shared_ptr<Window> window, std::shared_ptr<DxRenderer> renderer);
 	void ShutdownImgui();
 	void ImguiPrepareNewFrame();
 	void ImguiRenderFrame(wil::com_ptr<ID3D12GraphicsCommandList4> command_list);

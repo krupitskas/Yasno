@@ -7,9 +7,8 @@
 
 namespace ysn
 {
-	class GameInput
+	struct GameInput
 	{
-	public:
 		void Initialize(HWND window_handle);
 
 		std::unique_ptr<DirectX::Keyboard> keyboard;

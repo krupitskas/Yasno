@@ -7,12 +7,12 @@
 #include <pix3.h>
 
 #include <System/Application.hpp>
-#include <RHI/CommandQueue.hpp>
+#include <Renderer/CommandQueue.hpp>
 #include <System/Helpers.hpp>
 #include <System/Window.hpp>
 #include <System/GltfLoader.hpp>
 #include <System/Gui.hpp>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/DxRenderer.hpp>
 #include <System/Filesystem.hpp>
 #include <System/Assert.hpp>
 #include <System/Filesystem.hpp>
@@ -195,18 +195,18 @@ namespace ysn
 		auto* camera_data = static_cast<GpuCamera*>(data);
 
 		DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-		view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_camera->GetViewMatrix());
-		view_projection = XMMatrixMultiply(view_projection, m_camera->GetProjectionMatrix());
+		view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_render_scene.camera->GetViewMatrix());
+		view_projection = XMMatrixMultiply(view_projection, m_render_scene.camera->GetProjectionMatrix());
 		
 		DirectX::XMVECTOR det;
 
 		XMStoreFloat4x4(&camera_data->view_projection, view_projection);
-		XMStoreFloat4x4(&camera_data->view, m_camera->GetViewMatrix());
-		XMStoreFloat4x4(&camera_data->projection, m_camera->GetProjectionMatrix());
-		XMStoreFloat4x4(&camera_data->view_inverse, XMMatrixInverse(&det, m_camera->GetViewMatrix()));
-		XMStoreFloat4x4(&camera_data->projection_inverse, XMMatrixInverse(&det, m_camera->GetProjectionMatrix()));
+		XMStoreFloat4x4(&camera_data->view, m_render_scene.camera->GetViewMatrix());
+		XMStoreFloat4x4(&camera_data->projection, m_render_scene.camera->GetProjectionMatrix());
+		XMStoreFloat4x4(&camera_data->view_inverse, XMMatrixInverse(&det, m_render_scene.camera->GetViewMatrix()));
+		XMStoreFloat4x4(&camera_data->projection_inverse, XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix()));
 
-		camera_data->position = m_camera->GetPosition();
+		camera_data->position = m_render_scene.camera->GetPosition();
 
 		m_camera_gpu_buffer->Unmap(0, nullptr);
 	}
@@ -219,11 +219,11 @@ namespace ysn
 		auto* scene_parameters_data = static_cast<GpuSceneParameters*>(data);
 
 		XMStoreFloat4x4(&scene_parameters_data->shadow_matrix, m_shadow_pass.shadow_matrix);
-		scene_parameters_data->directional_light_color = m_directional_light.color;
-		scene_parameters_data->directional_light_direction = m_directional_light.direction;
-		scene_parameters_data->directional_light_intensity = m_directional_light.intensity;
-		scene_parameters_data->ambient_light_intensity = m_environment_light.intensity;
-		scene_parameters_data->shadows_enabled = (uint32_t)m_directional_light.cast_shadow;
+		scene_parameters_data->directional_light_color = m_render_scene.directional_light.color;
+		scene_parameters_data->directional_light_direction = m_render_scene.directional_light.direction;
+		scene_parameters_data->directional_light_intensity = m_render_scene.directional_light.intensity;
+		scene_parameters_data->ambient_light_intensity = m_render_scene.environment_light.intensity;
+		scene_parameters_data->shadows_enabled = (uint32_t)m_render_scene.directional_light.cast_shadow;
 
 		m_scene_parameters_gpu_buffer->Unmap(0, nullptr);
 	}
@@ -251,9 +251,12 @@ namespace ysn
 
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
 
+		LoadingParameters loading_parameters;
+
 		// TODO(last): Another command list?
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
-		LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), Application::Get().GetRenderer(), command_list);
+		bool load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		bool load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
@@ -285,7 +288,7 @@ namespace ysn
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
 
-		m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_gltf_draw_context);
+		m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_render_scene);
 
 		if(!CreateGpuCameraBuffer())
 		{
@@ -313,7 +316,7 @@ namespace ysn
 
 		// Setup techniques
 		m_shadow_pass.Initialize(Application::Get().GetRenderer());
-		
+
 		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
 		{
 			LogFatal << "Can't initialize raytracing pass\n";
@@ -321,9 +324,9 @@ namespace ysn
 		}
 
 		// Setup camera
-		m_camera = std::make_shared<ysn::Camera>();
-		m_camera->SetPosition({ -5, 0, 0 });
-		m_camera_controler.pCamera = m_camera;
+		m_render_scene.camera = std::make_shared<ysn::Camera>();
+		m_render_scene.camera->SetPosition({ -5, 0, 0 });
+		m_render_scene.camera_controler.pCamera = m_render_scene.camera;
 
 		game_input.Initialize(m_pWindow->GetWindowHandle());
 
@@ -522,33 +525,33 @@ namespace ysn
 
 		if (mouse.positionMode == DirectX::Mouse::MODE_RELATIVE)
 		{
-			m_camera_controler.MoveMouse(mouse.x, mouse.y);
+			m_render_scene.camera_controler.MoveMouse(mouse.x, mouse.y);
 
-			m_camera_controler.m_IsMovementBoostActive = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
+			m_render_scene.camera_controler.m_IsMovementBoostActive = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
 
 			if (kb.IsKeyDown(DirectX::Keyboard::W))
 			{
-				m_camera_controler.MoveForward(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveForward(static_cast<float>(e.ElapsedTime));
 			}
 			if (kb.IsKeyDown(DirectX::Keyboard::A))
 			{
-				m_camera_controler.MoveLeft(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveLeft(static_cast<float>(e.ElapsedTime));
 			}
 			if (kb.IsKeyDown(DirectX::Keyboard::S))
 			{
-				m_camera_controler.MoveBackwards(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveBackwards(static_cast<float>(e.ElapsedTime));
 			}
 			if (kb.IsKeyDown(DirectX::Keyboard::D))
 			{
-				m_camera_controler.MoveRight(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveRight(static_cast<float>(e.ElapsedTime));
 			}
 			if (kb.IsKeyDown(DirectX::Keyboard::Space))
 			{
-				m_camera_controler.MoveUp(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveUp(static_cast<float>(e.ElapsedTime));
 			}
 			if (kb.IsKeyDown(DirectX::Keyboard::LeftControl))
 			{
-				m_camera_controler.MoveDown(static_cast<float>(e.ElapsedTime));
+				m_render_scene.camera_controler.MoveDown(static_cast<float>(e.ElapsedTime));
 			}
 		}
 
@@ -570,12 +573,12 @@ namespace ysn
 			}
 		}
 
-		m_camera->SetAspectRatio(GetClientWidth() / static_cast<float>(GetClientHeight()));
-		m_camera->Update();
+		m_render_scene.camera->SetAspectRatio(GetClientWidth() / static_cast<float>(GetClientHeight()));
+		m_render_scene.camera->Update();
 
 	#ifndef YSN_RELEASE
 		// Track shader updates
-		Application::Get().GetRenderer()->GetShaderManager()->VerifyAnyShaderChanged();
+		Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
 	#endif
 	}
 
@@ -599,27 +602,27 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("Lighting"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				static float color[3] = { m_directional_light.color.x, m_directional_light.color.y, m_directional_light.color.z };
+				static float color[3] = { m_render_scene.directional_light.color.x, m_render_scene.directional_light.color.y, m_render_scene.directional_light.color.z };
 				ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_Float);
-				m_directional_light.color.x = color[0];
-				m_directional_light.color.y = color[1];
-				m_directional_light.color.z = color[2];
+				m_render_scene.directional_light.color.x = color[0];
+				m_render_scene.directional_light.color.y = color[1];
+				m_render_scene.directional_light.color.z = color[2];
 
-				static float dir[3] = { m_directional_light.direction.x, m_directional_light.direction.y, m_directional_light.direction.z };
+				static float dir[3] = { m_render_scene.directional_light.direction.x, m_render_scene.directional_light.direction.y, m_render_scene.directional_light.direction.z };
 				ImGui::InputFloat3("Direction", dir);
-				m_directional_light.direction.x = dir[0];
-				m_directional_light.direction.y = dir[1];
-				m_directional_light.direction.z = dir[2];
+				m_render_scene.directional_light.direction.x = dir[0];
+				m_render_scene.directional_light.direction.y = dir[1];
+				m_render_scene.directional_light.direction.z = dir[2];
 
-				m_shadow_pass.UpdateLight(m_directional_light);
+				m_shadow_pass.UpdateLight(m_render_scene.directional_light);
 
-				ImGui::InputFloat("Intensity", &m_directional_light.intensity, 0.0f, 1000.0f);
-				ImGui::InputFloat("Env Light Intensity", &m_environment_light.intensity, 0.0f, 1000.0f);
+				ImGui::InputFloat("Intensity", &m_render_scene.directional_light.intensity, 0.0f, 1000.0f);
+				ImGui::InputFloat("Env Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
 			}
 
 			if (ImGui::CollapsingHeader("Shadows"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Enabled",  &m_directional_light.cast_shadow);
+				ImGui::Checkbox("Enabled",  &m_render_scene.directional_light.cast_shadow);
 			}
 
 			if (ImGui::CollapsingHeader("Tonemapping"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -634,8 +637,8 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("Camera"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::InputFloat("Speed", &m_camera_controler.mouse_speed, 0.0f, 1000.0f);
-				ImGui::InputFloat("FOV", &m_camera->fov, 0.0f, 1000.0f);
+				ImGui::InputFloat("Speed", &m_render_scene.camera_controler.mouse_speed, 0.0f, 1000.0f);
+				ImGui::InputFloat("FOV", &m_render_scene.camera->fov, 0.0f, 1000.0f);
 			}
 
 			if (ImGui::CollapsingHeader("System"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -690,57 +693,14 @@ namespace ysn
 
 		m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
 
-		m_shadow_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_gltf_draw_context, &m_gltf_draw_context.gltfModel);
+		m_shadow_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
 
 		UpdateGpuCameraBuffer();
 		UpdateGpuSceneParametersBuffer();
 
 		if (m_is_raster)
 		{
-			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-
-			PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
-
-			// Clear the render targets.
-			{
-				FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
-
-				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-				command_list->ResourceBarrier(1, &barrier);
-
-				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
-				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
-			}
-
-			command_list->RSSetViewports(1, &m_viewport);
-			command_list->RSSetScissorRects(1, &m_scissors_rect);
-			command_list->OMSetRenderTargets(1, &m_hdr_rtv_descriptor_handle.cpu, FALSE, &m_depth_dsv_descriptor_handle.cpu);
-
-			{
-				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_pass.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-				command_list->ResourceBarrier(1, &barrier);
-			}
-
-			RenderGLTF(&m_gltf_draw_context,
-					   Application::Get().GetRenderer(),
-					   &m_gltf_draw_context.gltfModel,
-					   command_list,
-					   m_camera_gpu_buffer,
-					   m_scene_parameters_gpu_buffer,
-					   PrimitivePipeline::ForwardPbr,
-					   &m_shadow_pass.shadow_map_buffer);
-
-			{
-				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_pass.shadow_map_buffer.buffer.get(),
-																						D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-																						D3D12_RESOURCE_STATE_DEPTH_WRITE);
-				command_list->ResourceBarrier(1, &barrier);
-			}
-
-			PIXEndEvent(command_list.get());
-
-			command_queue->ExecuteCommandList(command_list);
+			//m_forward_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
 		}
 		else
 		{

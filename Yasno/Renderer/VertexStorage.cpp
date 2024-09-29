@@ -1,4 +1,4 @@
-#include "VertexFactory.hpp"
+#include "VertexStorage.hpp"
 
 namespace ysn
 {
@@ -25,5 +25,12 @@ namespace ysn
 
         return elements_desc;
     }
+
+
+    uint32_t VertexStorage::GetVertexBufferSize()
+    {
+        return 0;
+    }
+
 }
 

@@ -8,7 +8,6 @@
 
 namespace ysn
 {
-
 	// TODO: make it typesafe and check if it's the same heap
 	struct DescriptorHandle
 	{

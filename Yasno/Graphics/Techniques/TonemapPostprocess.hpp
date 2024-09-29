@@ -5,7 +5,7 @@
 #include <wil/com.h>
 #include <d3d12.h>
 
-#include <RHI/DescriptorHeap.hpp>
+#include <Renderer/DescriptorHeap.hpp>
 
 namespace ysn
 {
@@ -19,7 +19,7 @@ namespace ysn
 		Aces
 	};
 
-	SHADER_STRUCT TonemapParameters
+	YSN_SHADER_STRUCT TonemapParameters
 	{
 		uint32_t display_width	= 0;
 		uint32_t display_height = 0;

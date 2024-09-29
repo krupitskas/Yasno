@@ -1,15 +1,14 @@
-#include "CascadedShadowMaps.hpp"
+#include "ShadowMapPass.hpp"
 
-#include <d3dx12.h>
 
-#include <RHI/D3D12Renderer.hpp>
-#include <RHI/GpuMarker.hpp>
+#include <Renderer/DxRenderer.hpp>
+#include <Renderer/GpuMarker.hpp>
 #include <System/Math.hpp>
 #include <Yasno/Lights.hpp>
 
 namespace ysn
 {
-	bool ysn::CascadedShadowMaps::InitializeCamera(std::shared_ptr<ysn::D3D12Renderer> p_renderer)
+	bool ShadowMapPass::InitializeCamera(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		D3D12_HEAP_PROPERTIES heapProperties = {};
 		heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -37,14 +36,14 @@ namespace ysn
 		return true;
 	}
 
-	void CascadedShadowMaps::Initialize(std::shared_ptr<ysn::D3D12Renderer> p_renderer)
+	void ShadowMapPass::Initialize(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		InitializeShadowMapBuffer(p_renderer);
 		//InitializeOrthProjection();
 		InitializeCamera(p_renderer);
 	}
 
-	bool CascadedShadowMaps::InitializeShadowMapBuffer(std::shared_ptr<ysn::D3D12Renderer> p_renderer)
+	bool ShadowMapPass::InitializeShadowMapBuffer(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		HRESULT result = S_OK;
 		const DXGI_FORMAT ShadowMapFormat = DXGI_FORMAT_D32_FLOAT;
@@ -92,7 +91,7 @@ namespace ysn
 		return true;
 	}
 
-	void CascadedShadowMaps::InitializeOrthProjection(DirectX::SimpleMath::Vector3 direction)
+	void ShadowMapPass::InitializeOrthProjection(DirectX::SimpleMath::Vector3 direction)
 	{
 		DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(-100.0f, 100.0f, -100.0f, 100.0f, 0.1f, 100.f);
 		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
@@ -100,16 +99,16 @@ namespace ysn
 		shadow_matrix = view * projection;
 	}
 
-	void CascadedShadowMaps::UpdateLight(const DirectionalLight& directional_light)
+	void ShadowMapPass::UpdateLight(const DirectionalLight& directional_light)
 	{
 		InitializeOrthProjection(SimpleMath::Vector3{ directional_light.direction.x, directional_light.direction.y, directional_light.direction.z });
 	}
 
-	void CascadedShadowMaps::Render(
-		std::shared_ptr<ysn::D3D12Renderer> p_renderer,
-		std::shared_ptr<ysn::CommandQueue> command_queue,
+	void ShadowMapPass::Render(
+		std::shared_ptr<DxRenderer> p_renderer,
+		std::shared_ptr<CommandQueue> command_queue,
 		wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-		ysn::ModelRenderContext* pGLTFDrawContext,
+		ModelRenderContext* pGLTFDrawContext,
 		tinygltf::Model* )
 	{
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();

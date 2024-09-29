@@ -1,12 +1,12 @@
 #include "TonemapPostprocess.hpp"
 
-#include <RHI/CommandQueue.hpp>
-#include <RHI/DescriptorHeap.hpp>
+#include <Renderer/CommandQueue.hpp>
+#include <Renderer/DescriptorHeap.hpp>
 #include <System/Math.hpp>
 #include <System/Application.hpp>
-#include <RHI/GpuMarker.hpp>
-#include <RHI/ShaderManager.hpp>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/GpuMarker.hpp>
+#include <Renderer/ShaderStorage.hpp>
+#include <Renderer/DxRenderer.hpp>
 #include <System/Filesystem.hpp>
 
 namespace ysn
@@ -77,7 +77,7 @@ namespace ysn
 		tonemap_shader_parameters.shader_type = ShaderType::Compute;
 		tonemap_shader_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/Tonemap.hlsl");
 
-		const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderManager()->CompileShader(&tonemap_shader_parameters);
+		const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(&tonemap_shader_parameters);
 
 		if (!tonemap_shader.has_value())
 		{

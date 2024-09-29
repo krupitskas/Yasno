@@ -1,12 +1,12 @@
-#include "Primitives.hpp"
+#include "Primitive.hpp"
 
 #include <vector>
 
-#include <RHI/VertexFactory.hpp>
+#include <Renderer/VertexStorage.hpp>
 
 #include <System/Application.hpp>
 
-#include "RHI/D3D12Renderer.hpp"
+#include "Renderer/DxRenderer.hpp"
 
 namespace ysn
 {

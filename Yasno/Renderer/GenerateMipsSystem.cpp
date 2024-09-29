@@ -2,12 +2,12 @@
 
 #include <d3dx12.h>
 
-#include <RHI/GpuTexture.hpp>
+#include <Renderer/GpuTexture.hpp>
 #include <System/Filesystem.hpp>
 
 namespace ysn
 {
-	bool GenerateMipsSystem::Initialize(const D3D12Renderer& renderer)
+	bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
 	{
 		CD3DX12_DESCRIPTOR_RANGE src_mip(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 		CD3DX12_DESCRIPTOR_RANGE out_mip(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0, 0, 0);
@@ -35,7 +35,7 @@ namespace ysn
 		generate_mips_shader_parameters.shader_type = ShaderType::Compute;
 		generate_mips_shader_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/GenerateMips.hlsl");
 
-		const auto generate_mips_shader = renderer.GetShaderManager()->CompileShader(&generate_mips_shader_parameters);
+		const auto generate_mips_shader = renderer.GetShaderStorage()->CompileShader(&generate_mips_shader_parameters);
 
 		if (!generate_mips_shader.has_value())
 		{
@@ -78,7 +78,7 @@ namespace ysn
 		return true;
 	}
 
-	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<D3D12Renderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture)
+	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture)
 	{
 		auto compute_queue = renderer->GetComputeQueue();
 

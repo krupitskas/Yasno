@@ -9,7 +9,7 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo
 {
-	float4 colorAndDistance;
+	float4 color_distance;
 };
 
 // Attributes output by the raytracing when hitting a surface,
@@ -33,14 +33,17 @@ cbuffer CameraParameters : register(b0)
 }
 
 // Raytracing acceleration structure, accessed as a SRV
-RaytracingAccelerationStructure SceneBVH : register(t0);
+RaytracingAccelerationStructure SceneBVH	: register(t0);
+
+ByteAddressBuffer IndicesBuffer				: register(t1);
+ByteAddressBuffer VerticesBuffer			: register(t2);
 
 [shader("raygeneration")]
 void RayGen()
 {
 	// Initialize the ray payload
 	HitInfo payload;
-	payload.colorAndDistance = float4(0, 0, 0, 0);
+	payload.color_distance = float4(0, 0, 0, 0);
 
 	// Get the location within the dispatched 2D grid of work items
 	// (often maps to pixels, so this could represent a pixel coordinate).
@@ -109,5 +112,5 @@ void RayGen()
 		payload
 	);
 
-	gOutput[launchIndex] = float4(payload.colorAndDistance.rgb, 1.f);
+	gOutput[launchIndex] = float4(payload.color_distance.rgb, 1.f);
 }

@@ -2,20 +2,20 @@
 
 #include <cstdint>
 
-#include <RHI/nv_helpers_dx12/RaytracingPipelineGenerator.h>
-#include <RHI/nv_helpers_dx12/RootSignatureGenerator.h>
-#include <RHI/D3D12Renderer.hpp>
+#include <Renderer/nv_helpers_dx12/RaytracingPipelineGenerator.h>
+#include <Renderer/nv_helpers_dx12/RootSignatureGenerator.h>
+#include <Renderer/DxRenderer.hpp>
 #include <System/Filesystem.hpp>
-#include <RHI/DXRHelper.h>
-#include <RHI/DescriptorHeap.hpp>
-#include <RHI/RayTracing.hpp>
+#include <Renderer/DXRHelper.h>
+#include <Renderer/DescriptorHeap.hpp>
+#include <Renderer/RayTracingContext.hpp>
 #include <Yasno/Camera.hpp>
 
 namespace ysn
 {
 	// The ray generation shader needs to access 2 resources: the raytracing output
 	// and the top-level acceleration structure
-	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateRayGenSignature(std::shared_ptr<ysn::D3D12Renderer> renderer)
+	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateRayGenSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
 
@@ -31,7 +31,7 @@ namespace ysn
 
 	// The hit shader communicates only through the ray payload, and therefore does
 	// not require any resources
-	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateHitSignature(std::shared_ptr<ysn::D3D12Renderer> renderer)
+	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateHitSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
 		return rsc.Generate(renderer->GetDevice().get(), true);
@@ -39,13 +39,13 @@ namespace ysn
 
 	// The miss shader communicates only through the ray payload, and therefore
 	// does not require any resources
-	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateMissSignature(std::shared_ptr<ysn::D3D12Renderer> renderer)
+	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateMissSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
 		return rsc.Generate(renderer->GetDevice().get(), true);
 	}
 
-	bool RaytracingPass::Initialize(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
+	bool RaytracingPass::Initialize(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
 		if (!CreateRaytracingPipeline(renderer))
 		{
@@ -65,7 +65,7 @@ namespace ysn
 	// The raytracing pipeline binds the shader code, root signatures and pipeline
 	// characteristics in a single structure used by DXR to invoke the shaders and
 	// manage temporary memory during raytracing
-	bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::D3D12Renderer> renderer)
+	bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RayTracingPipelineGenerator pipeline(renderer->GetDevice().get());
 
@@ -79,7 +79,7 @@ namespace ysn
 		ray_gen_parameters.shader_type = ShaderType::Library;
 		ray_gen_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/RayGenRT.hlsl");
 
-		const auto ray_gen_result = renderer->GetShaderManager()->CompileShader(&ray_gen_parameters);
+		const auto ray_gen_result = renderer->GetShaderStorage()->CompileShader(&ray_gen_parameters);
 
 		if (!ray_gen_result.has_value())
 		{
@@ -91,7 +91,7 @@ namespace ysn
 		miss_parameters.shader_type = ShaderType::Library;
 		miss_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/MissRT.hlsl");
 
-		const auto miss_result = renderer->GetShaderManager()->CompileShader(&miss_parameters);
+		const auto miss_result = renderer->GetShaderStorage()->CompileShader(&miss_parameters);
 
 		if (!miss_result.has_value())
 		{
@@ -103,7 +103,7 @@ namespace ysn
 		hit_parameters.shader_type = ShaderType::Library;
 		hit_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/HitRT.hlsl");
 
-		const auto hit_result = renderer->GetShaderManager()->CompileShader(&hit_parameters);
+		const auto hit_result = renderer->GetShaderStorage()->CompileShader(&hit_parameters);
 
 		if (!hit_result.has_value())
 		{
@@ -210,7 +210,7 @@ namespace ysn
 		return pBuffer;
 	}
 
-	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
+	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
 		// The SBT helper class collects calls to Add*Program.  If called several
 		// times, the helper must be emptied before re-adding shaders.
@@ -283,7 +283,7 @@ namespace ysn
 		return true;
 	}
 
-	void RaytracingPass::Execute(std::shared_ptr<ysn::D3D12Renderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer)
+	void RaytracingPass::Execute(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

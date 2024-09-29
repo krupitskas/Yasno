@@ -4,10 +4,15 @@
 
 #include <wil/com.h>
 
-#include <RHI/VertexFactory.hpp>
+#include <Renderer/VertexStorage.hpp>
 
 namespace ysn
 {
+	struct Primitive
+	{
+	};
+
+	// TODO: Meh
 	struct MeshPrimitive
 	{
 		wil::com_ptr<ID3D12Resource> vertex_buffer;

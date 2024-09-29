@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Graphics/Primitives.hpp>
-#include <RHI/DescriptorHeap.hpp>
-#include <RHI/CommandQueue.hpp>
-#include <RHI/GpuTexture.hpp>
+#include <Graphics/Primitive.hpp>
+#include <Renderer/DescriptorHeap.hpp>
+#include <Renderer/CommandQueue.hpp>
+#include <Renderer/GpuTexture.hpp>
 
 namespace ysn
 {
