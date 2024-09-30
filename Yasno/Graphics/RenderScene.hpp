@@ -15,9 +15,12 @@
 
 namespace ysn
 {
-	struct NodeTransformation
+	struct NodeTransform
 	{
-		DirectX::XMFLOAT4X4 transform;
+		NodeTransform() = default;
+		NodeTransform(const DirectX::XMMATRIX& transform) : transform(transform) {}
+
+		DirectX::XMMATRIX transform;
 	};
 
 	struct ModelRenderParameters
@@ -32,6 +35,7 @@ namespace ysn
 
 		std::vector<Mesh> meshes;
 		std::vector<Material> materials;
+		std::vector<NodeTransform> transforms;
 
 		// Not sure about that
 		std::vector<GpuResource> buffers;

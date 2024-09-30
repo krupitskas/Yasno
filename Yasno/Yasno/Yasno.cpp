@@ -680,10 +680,26 @@ namespace ysn
 	{
 		Game::OnRender(e);
 
-		// Render imgui
+		// Render GUI
 		{
 			ImguiPrepareNewFrame();
+			ImGuizmo::BeginFrame();
+
 			RenderUi();
+
+			ImGuizmo::SetRect(0, 0, GetClientWidth(), GetClientHeight());
+			
+			XMFLOAT4X4 view;
+			XMFLOAT4X4 projection;
+			XMFLOAT4X4 identity;
+
+			XMStoreFloat4x4(&view, m_render_scene.camera->GetViewMatrix());
+			XMStoreFloat4x4(&projection, m_render_scene.camera->GetProjectionMatrix());
+			XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+
+			ImGuizmo::DrawGrid(&view.m[0][0], &projection.m[0][0], &identity.m[0][0], 100.f);
+
+			ImGuizmo::Manipulate(&view.m[0][0], &projection.m[0][0], ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &identity.m[0][0]);
 		}
 
 		std::shared_ptr<ysn::CommandQueue> command_queue = Application::Get().GetDirectQueue();

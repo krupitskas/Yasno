@@ -194,6 +194,12 @@
     <ClCompile Include="Graphics\RtxMaterial.cpp">
       <Filter>Source\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="System\ModelLoader.cpp">
+      <Filter>Source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="System\ObjLoader.cpp">
+      <Filter>Source\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Yasno\Camera.hpp">
@@ -390,6 +396,12 @@
     </ClInclude>
     <ClInclude Include="Graphics\RtxMaterial.hpp">
       <Filter>Source\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="System\ModelLoader.hpp">
+      <Filter>Source\System</Filter>
+    </ClInclude>
+    <ClInclude Include="System\ObjLoader.hpp">
+      <Filter>Source\System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

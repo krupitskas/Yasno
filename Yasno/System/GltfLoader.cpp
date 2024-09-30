@@ -720,6 +720,8 @@ static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 		if (gltf_node.matrix.empty())
 		{
 			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), loading_parameters.model_modifier);
+
+			model.transforms.push_back(loading_parameters.model_modifier);
 		}
 		else
 		{
@@ -743,6 +745,8 @@ static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 			model_matrix *= loading_parameters.model_modifier;
 
 			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), model_matrix);
+
+			model.transforms.push_back(model_matrix);
 		}
 
 		model.node_buffers.push_back(buffer);
