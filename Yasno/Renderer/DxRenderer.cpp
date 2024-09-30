@@ -1,6 +1,6 @@
 ﻿#include "DxRenderer.hpp"
 
-#include <Renderer/ShaderManager.hpp>
+#include <Renderer/ShaderStorage.hpp>
 #include <Renderer/GenerateMipsSystem.hpp>
 #include <System/Helpers.hpp>
 #include <System/Result.hpp>
@@ -19,8 +19,7 @@ namespace
 
 		if (HRESULT err = CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory)); FAILED(err))
 		{
-			LogFatal << "Can't create DXGIFactory2 with flags " << create_factory_flags
-				<< ", error is: " << ysn::ConvertHrToString(err) << " aborting!\n";
+			LogFatal << "Can't create DXGIFactory2 with flags " << create_factory_flags << ", error is: " << ysn::ConvertHrToString(err) << " aborting!\n";
 			return ysn::Err(ysn::ErrorType::DxgiFactoryCreationFailed);
 		}
 

@@ -150,6 +150,9 @@ void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> rend
 }
 
 // Combine the BLAS and TLAS builds to construct the entire acceleration structure required to raytrace the scene
+
+/*
+
 void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Device5> device,
 														  wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
 														  ysn::ModelRenderContext* gltf_model_context)
@@ -193,3 +196,5 @@ void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Dev
 	tlas_buffers.result->SetName(L"TLAS");
 #endif
 }
+
+*/

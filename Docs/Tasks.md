@@ -48,6 +48,20 @@ Clean up and open source it
 * Magnify pixels (steal from AMD)
 * GPU Particles
 
+## Animation
+
+* Skeletal
+* Morph
+
+## Particles
+
+* Spawn GPU particles
+
+
+## Volumetric rendering
+
+* Cloud
+
 ## Hardware fancy stuff
 
 * Sampler feedback

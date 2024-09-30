@@ -88,7 +88,7 @@ namespace ysn
 		D3D12_VIEWPORT m_viewport;
 		D3D12_RECT m_scissors_rect;
 
-		Texture m_environment_texture;
+		GpuTexture m_environment_texture;
 		wil::com_ptr<ID3D12Resource> m_cubemap_texture;
 
 		wil::com_ptr<ID3D12Resource> m_camera_gpu_buffer;

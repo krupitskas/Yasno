@@ -254,9 +254,10 @@ namespace ysn
 		LoadingParameters loading_parameters;
 
 		// TODO(last): Another command list?
+		bool load_result = false;
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
-		bool load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		bool load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
@@ -282,13 +283,14 @@ namespace ysn
 		InitializeImgui(m_pWindow, renderer);
 
 		const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-		m_environment_texture = LoadHDRTextureFromFile("assets/HDRI/drackenstein_quarry_puresky_4k.hdr", command_list, device, enviroment_hdr_descriptor_handle);
+		//m_environment_texture = LoadHDRTextureFromFile("assets/HDRI/drackenstein_quarry_puresky_4k.hdr", command_list, device, enviroment_hdr_descriptor_handle);
 
 		m_hdr_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
 
-		m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_render_scene);
+		// TODO(return)
+		//m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_render_scene);
 
 		if(!CreateGpuCameraBuffer())
 		{
@@ -691,15 +693,17 @@ namespace ysn
 		wil::com_ptr<ID3D12Resource> current_back_buffer = m_pWindow->GetCurrentBackBuffer();
 		D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_pWindow->GetCurrentRenderTargetView();
 
-		m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
+		//m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
 
-		m_shadow_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
+		// TODO(return)
+		//m_shadow_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
 
 		UpdateGpuCameraBuffer();
 		UpdateGpuSceneParametersBuffer();
 
 		if (m_is_raster)
 		{
+			// TODO(return)
 			//m_forward_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
 		}
 		else

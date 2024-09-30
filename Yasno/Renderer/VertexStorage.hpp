@@ -19,9 +19,11 @@ namespace ysn
 
     struct VertexStorage
     {
-        uint32_t GetVertexBufferSize();
+        //uint32_t GetVertexBufferSize();
 
-        std::vector<VertexPosTexCoord> vertex_data;
-        GpuResource gpu_vertex_buffer;
+        //std::vector<VertexPosTexCoord> vertex_data;
+        //GpuResource gpu_vertex_buffer;
+
+        //// Multiple sources per channel?
     };
 }

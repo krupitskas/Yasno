@@ -11,374 +11,872 @@
 #include <System/Filesystem.hpp>
 #include <System/String.hpp>
 #include <System/Math.hpp>
+#include <System/Application.hpp>
+#include <Graphics/RenderScene.hpp>
+#include <Graphics/Primitive.hpp>
+#include <Graphics/SurfaceMaterial.hpp>
 
 using namespace Microsoft::WRL;
 
-/*
+struct LoadGltfContext
+{
+	wil::com_ptr<ID3D12GraphicsCommandList> copy_cmd_list;
+	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
+};
 
-void BuildBuffers(
-	ysn::ModelRenderContext* pModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList,
-	tinygltf::Model* pModel,
-	std::vector<wil::com_ptr<ID3D12Resource>>* pStagingResources)
+static bool BuildBuffers(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
 {
 	HRESULT hr = S_OK;
 
-	for (tinygltf::Buffer& buffer : pModel->buffers)
+	auto dx_renderer = ysn::Application::Get().GetRenderer();
+
+	model.buffers.reserve(gltf_model.buffers.size());
+
+	for (const tinygltf::Buffer& buffer : gltf_model.buffers)
 	{
-		// wil::com_ptr<ID3D12Resource> pDstBuffer;
-		//{
-		//	D3D12_HEAP_PROPERTIES heapProperties = {};
-		//	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-		//	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		//	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		//	D3D12_RESOURCE_DESC resourceDesc = {};
-		//	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		//	resourceDesc.Alignment = 0;
-		//	resourceDesc.Width = buffer.data.size();
-		//	resourceDesc.Height = 1;
-		//	resourceDesc.DepthOrArraySize = 1;
-		//	resourceDesc.MipLevels = 1;
-		//	resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-		//	resourceDesc.SampleDesc = { 1, 0 };
-		//	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		//	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-		//	hr = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties,
-		//														  D3D12_HEAP_FLAG_NONE,
-		//														  &resourceDesc,
-		//														  D3D12_RESOURCE_STATE_COMMON, // D3D12_RESOURCE_STATE_COPY_DEST
-		//														  nullptr,
-		//														  IID_PPV_ARGS(&pDstBuffer));
-
-		// #ifdef YSN_PROFILE
-		//	std::wstring name(buffer.name.begin(), buffer.name.end());
-		//	name = name.empty() ? L"Gltf_Buffer" : name;
-		//	pDstBuffer->SetName(name.c_str());
-		// #endif
-
-		//	assert(SUCCEEDED(hr));
-
-		//}
-
-		wil::com_ptr<ID3D12Resource> pSrcBuffer;
+		wil::com_ptr<ID3D12Resource> dst_buffer;
 		{
-			D3D12_HEAP_PROPERTIES heapProperties = {};
-			heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-			heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+			D3D12_HEAP_PROPERTIES heap_properties = {};
+			heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-			D3D12_RESOURCE_DESC resourceDesc = {};
-			resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resourceDesc.Alignment = 0;
-			resourceDesc.Width = buffer.data.size();
-			resourceDesc.Height = 1;
-			resourceDesc.DepthOrArraySize = 1;
-			resourceDesc.MipLevels = 1;
-			resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-			resourceDesc.SampleDesc = { 1, 0 };
-			resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			D3D12_RESOURCE_DESC resource_desc = {};
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = buffer.data.size();
+			resource_desc.Height = 1;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = 1;
+			resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+			resource_desc.SampleDesc = { 1, 0 };
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-			hr = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pSrcBuffer));
-
-			assert(SUCCEEDED(hr));
-			pStagingResources->push_back(pSrcBuffer);
+			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties,
+																  D3D12_HEAP_FLAG_NONE,
+																  &resource_desc,
+																  D3D12_RESOURCE_STATE_COPY_DEST,
+																  nullptr,
+																  IID_PPV_ARGS(&dst_buffer));
 
 		#ifndef YSN_RELEASE
 			std::wstring name(buffer.name.begin(), buffer.name.end());
-			name = name.empty() ? L"Gltf_Buffer" : name;
-			pSrcBuffer->SetName(name.c_str());
+			name = name.empty() ? L"GLTF Buffer Dest" : name;
+			dst_buffer->SetName(name.c_str());
 		#endif
 
-			void* pData;
-			hr = pSrcBuffer->Map(0, nullptr, &pData);
-			assert(SUCCEEDED(hr));
-
-			memcpy(pData, &buffer.data[0], buffer.data.size());
+			if (hr != S_OK)
+			{
+				LogError << "Can't allocate GLTF dst buffer\n";
+				return false;
+			}
 		}
 
-		pModelRenderContext->pBuffers.push_back(pSrcBuffer);
+		wil::com_ptr<ID3D12Resource> src_buffer;
+		{
+			D3D12_HEAP_PROPERTIES heap_properties = {};
+			heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		// pCopyCommandList->CopyBufferRegion(pDstBuffer.get(), 0, pSrcBuffer.get(), 0, buffer.data.size());
+			D3D12_RESOURCE_DESC resource_desc = {};
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = buffer.data.size();
+			resource_desc.Height = 1;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = 1;
+			resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+			resource_desc.SampleDesc = { 1, 0 };
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties,
+																  D3D12_HEAP_FLAG_NONE,
+																  &resource_desc,
+																  D3D12_RESOURCE_STATE_GENERIC_READ,
+																  nullptr, IID_PPV_ARGS(&src_buffer));
+
+			if (hr != S_OK)
+			{
+				LogError << "Can't allocate GLTF src buffer\n";
+				return false;
+			}
+
+			build_context.staging_resources.push_back(src_buffer);
+
+		#ifndef YSN_RELEASE
+			std::wstring name(buffer.name.begin(), buffer.name.end());
+			name = name.empty() ? L"GLTF Buffer Source" : name;
+			src_buffer->SetName(name.c_str());
+		#endif
+
+			void* data_ptr;
+			hr = src_buffer->Map(0, nullptr, &data_ptr);
+
+			if (hr != S_OK)
+			{
+				LogError << "Can't map GLTF src buffer\n";
+				return false;
+			}
+
+			// Copy cpu data to cpu src buffer
+			memcpy(data_ptr, &buffer.data[0], buffer.data.size());
+		}
+
+		// Copy from CPU to GPU buffer
+		build_context.copy_cmd_list->CopyBufferRegion(dst_buffer.get(), 0, src_buffer.get(), 0, buffer.data.size());
+
+		model.buffers.push_back(dst_buffer);
+	}
+
+	return true;
+}
+
+
+static DXGI_FORMAT GetSrgbFormat(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+			return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+
+		case DXGI_FORMAT_BC1_UNORM:
+			return DXGI_FORMAT_BC1_UNORM_SRGB;
+
+		case DXGI_FORMAT_BC2_UNORM:
+			return DXGI_FORMAT_BC2_UNORM_SRGB;
+
+		case DXGI_FORMAT_BC3_UNORM:
+			return DXGI_FORMAT_BC3_UNORM_SRGB;
+
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+
+		case DXGI_FORMAT_B8G8R8X8_UNORM:
+			return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+
+		case DXGI_FORMAT_BC7_UNORM:
+			return DXGI_FORMAT_BC7_UNORM_SRGB;
+
+		default:
+			return format;
 	}
 }
 
-void BuildSamplerDescs(ysn::ModelRenderContext* pModelRenderContext, tinygltf::Model* pGltfModel)
+// TODO: Move to ColorBuffer
+// Compute the number of texture levels needed to reduce to 1x1.  This uses
+// _BitScanReverse to find the highest set bit.  Each dimension reduces by
+// half and truncates bits.  The dimension 256 (0x100) has 9 mip levels, same
+// as the dimension 511 (0x1FF).
+static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
 {
-	for (tinygltf::Sampler& GltfSampler : pGltfModel->samplers)
+	uint32_t HighBit;
+	_BitScanReverse((unsigned long*)&HighBit, Width | Height);
+	return HighBit + 1;
+}
+
+static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
+{
+	auto dx_renderer = ysn::Application::Get().GetRenderer();
+
+	HRESULT hr = S_OK;
+
+	for (const tinygltf::Image& image : gltf_model.images)
 	{
-		D3D12_SAMPLER_DESC SamplerDesc = {};
-		switch (GltfSampler.minFilter)
+		const uint32_t num_mips = ComputeNumMips(image.width, image.height);
+		bool is_srgb = false; // TODO: add it back
+
+		wil::com_ptr<ID3D12Resource> dst_texture;
+		{
+			D3D12_HEAP_PROPERTIES heap_properties = {};
+			heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+			// TODO: HDR textures?
+			D3D12_RESOURCE_DESC resource_desc = {};
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = image.width;
+			resource_desc.Height = image.height;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = static_cast<UINT16>(num_mips);
+			resource_desc.Format = is_srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM; // GetSrgbFormat
+			resource_desc.SampleDesc = { 1, 0 };
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; // FIXME: UAV / SRV?
+
+			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&dst_texture));
+
+			if (hr != S_OK)
+			{
+				LogError << "Can't allocate GLTF dst texture\n";
+				return false;
+			}
+
+		#ifndef YSN_RELEASE
+			std::wstring name(image.name.begin(), image.name.end());
+			dst_texture->SetName(name.c_str());
+		#endif
+
+			ysn::GpuTexture new_texture;
+			new_texture.gpu_resource = dst_texture;
+			new_texture.is_srgb = is_srgb;
+			new_texture.num_mips = num_mips;
+			new_texture.width = image.width;
+			new_texture.height = image.height;
+
+			model.textures.push_back(new_texture);
+		}
+
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
+
+		UINT	row_count = 0;
+		UINT64	row_size = 0;
+		UINT64	size = 0;
+
+		const D3D12_RESOURCE_DESC texture_desc = dst_texture->GetDesc();
+
+		dx_renderer->GetDevice()->GetCopyableFootprints(&texture_desc, 0, 1, 0, &footprint, &row_count, &row_size, &size);
+
+		wil::com_ptr<ID3D12Resource> src_resource;
+		{
+			D3D12_HEAP_PROPERTIES heap_properties = {};
+			heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+			D3D12_RESOURCE_DESC resource_desc = {};
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = size;
+			resource_desc.Height = 1;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = 1;
+			resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+			resource_desc.SampleDesc = { 1, 0 };
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&src_resource));
+
+			if (hr != S_OK)
+			{
+				LogError << "Can't allocate GLTF src texture resource\n";
+				return false;
+			}
+
+			build_context.staging_resources.push_back(src_resource);
+
+			void* data_ptr;
+			hr = src_resource->Map(0, nullptr, &data_ptr);
+
+			if (hr != S_OK)
+			{
+				LogError << "Can't map GLTF src texture resource\n";
+				return false;
+			}
+
+			// Move data from gltf texture to resource
+			for (UINT i = 0; i != row_count; i++)
+			{
+				memcpy(static_cast<uint8_t*>(data_ptr) + row_size * i, &image.image[0] + image.width * image.component * i, image.width * image.component);
+			}
+
+			// TODO: try to unmap here?
+		}
+
+		D3D12_TEXTURE_COPY_LOCATION dst_copy_location = {};
+		dst_copy_location.pResource = dst_texture.get();
+		dst_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		dst_copy_location.SubresourceIndex = 0;
+
+		D3D12_TEXTURE_COPY_LOCATION src_copy_location = {};
+		src_copy_location.pResource = src_resource.get();
+		src_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		src_copy_location.PlacedFootprint = footprint;
+
+		// Copy texture to GPU
+		build_context.copy_cmd_list->CopyTextureRegion(&dst_copy_location, 0, 0, 0, &src_copy_location, nullptr);
+	}
+
+	return true;
+}
+
+//void FindAllSrgbTextures(ysn::ModelRenderContext* model_renderer_context, tinygltf::Model* gltf_model)
+//{
+//	for (const tinygltf::Material& gltf_material : gltf_model->materials)
+//	{
+//		const tinygltf::PbrMetallicRoughness& pbr_material = gltf_material.pbrMetallicRoughness;
+//
+//		{
+//			const tinygltf::TextureInfo& base_color = pbr_material.baseColorTexture;
+//
+//			if (base_color.index >= 0)
+//			{
+//				const tinygltf::Texture& texture = gltf_model->textures[base_color.index];
+//
+//				if (model_renderer_context->srgb_textures.contains(texture.source))
+//				{
+//					LogError << "Base color texture sRGB search collision\n";
+//				}
+//
+//				model_renderer_context->srgb_textures.emplace(texture.source);
+//			}
+//		}
+//
+//		{
+//			const tinygltf::TextureInfo& emissive_texture = gltf_material.emissiveTexture;
+//
+//			if (emissive_texture.index >= 0)
+//			{
+//				const tinygltf::Texture& texture = gltf_model->textures[emissive_texture.index];
+//
+//				if (model_renderer_context->srgb_textures.contains(texture.source))
+//				{
+//					LogError << "Emissive texture sRGB search collision\n";
+//				}
+//
+//				model_renderer_context->srgb_textures.emplace(texture.source);
+//			}
+//		}
+//	}
+//}
+
+static void BuildSamplerDescs(ysn::Model& model, const tinygltf::Model& gltf_model)
+{
+	model.sampler_descs.reserve(gltf_model.samplers.size());
+
+	for (const tinygltf::Sampler& gltf_sampler : gltf_model.samplers)
+	{
+		D3D12_SAMPLER_DESC sampler_desc = {};
+
+		switch (gltf_sampler.minFilter)
 		{
 			case TINYGLTF_TEXTURE_FILTER_NEAREST:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
 				}
 				else
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 				}
 				break;
 			case TINYGLTF_TEXTURE_FILTER_LINEAR:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
-					SamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-				else
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-				break;
-			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-				else
-					SamplerDesc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-				break;
-			case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
-					SamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-				else
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-				break;
-			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+					sampler_desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
 				}
 				else
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+				}
+				break;
+			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+				}
+				else
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+				}
+				break;
+			case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+				}
+				else
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+				}
+				break;
+			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+				}
+				else
+				{
+					sampler_desc.Filter = D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR;
 				}
 				break;
 			case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
-				if (GltfSampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+				if (gltf_sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+					sampler_desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
 				}
 				else
 				{
-					SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+					sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 				}
 				break;
 			default:
-				SamplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-				break;
+			{
+				sampler_desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+			}
+			break;
 		}
 
-		auto toTextureAddressMode = [](int wrap)
+		auto to_texture_address_wrap = [](int wrap)
 		{
 			switch (wrap)
 			{
 				case TINYGLTF_TEXTURE_WRAP_REPEAT:
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+				}
 				case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+				}
 				case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+				}
 				default:
-					assert(false);
+				{
+					LogWarning << "GLTF sampler desc found incorrect wrap mode\n";
 					return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+				}
 			}
 		};
 
-		SamplerDesc.AddressU = toTextureAddressMode(GltfSampler.wrapS);
-		SamplerDesc.AddressV = toTextureAddressMode(GltfSampler.wrapT);
-		SamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		SamplerDesc.MaxLOD = 256; // TODO: eh??
+		sampler_desc.AddressU = to_texture_address_wrap(gltf_sampler.wrapS);
+		sampler_desc.AddressV = to_texture_address_wrap(gltf_sampler.wrapT);
+		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler_desc.MaxLOD = 256;
 
-		pModelRenderContext->SamplerDescs.push_back(SamplerDesc);
+		model.sampler_descs.push_back(sampler_desc);
 	}
 }
 
-void FindAllSrgbTextures(ysn::ModelRenderContext* model_renderer_context, tinygltf::Model* gltf_model)
+static std::vector<DxcDefine> BuildAttributeDefines(const std::vector<ysn::Attribute>& attributes)
 {
-	for (const tinygltf::Material& gltf_material : gltf_model->materials)
+	std::vector<DxcDefine> defines;
+
+	for (const ysn::Attribute& attribute : attributes)
 	{
-		const tinygltf::PbrMetallicRoughness& pbr_material = gltf_material.pbrMetallicRoughness;
-
+		if (attribute.name == "NORMAL")
 		{
-			const tinygltf::TextureInfo& base_color = pbr_material.baseColorTexture;
+			defines.push_back({ L"HAS_NORMAL", L"1" });
+		}
+		else if (attribute.name == "TANGENT")
+		{
+			defines.push_back({ L"HAS_TANGENT", L"1" });
+		}
+		else if (attribute.name == "TEXCOORD_0")
+		{
+			defines.push_back({ L"HAS_TEXCOORD_0", L"1" });
+		}
+		else if (attribute.name == "TEXCOORD_1")
+		{
+			defines.push_back({ L"HAS_TEXCOORD_1", L"1" });
+		}
+	}
 
-			if (base_color.index >= 0)
-			{
-				const tinygltf::Texture& texture = gltf_model->textures[base_color.index];
+	return defines;
+}
 
-				if (model_renderer_context->srgb_textures.contains(texture.source))
-				{
-					LogError << "Base color texture sRGB search collision\n";
-				}
+static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::vector<ysn::Attribute>& render_attributes)
+{
+	std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
 
-				model_renderer_context->srgb_textures.emplace(texture.source);
-			}
+	for (const ysn::Attribute& attribute : render_attributes)
+	{
+		D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
+
+		input_element_desc.SemanticName = &attribute.name[0];
+		input_element_desc.Format = attribute.format;
+
+		// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
+		if (attribute.name == "TEXCOORD_0")
+		{
+			input_element_desc.SemanticName = "TEXCOORD_";
+			input_element_desc.SemanticIndex = 0;
 		}
 
+		if (attribute.name == "TEXCOORD_1")
 		{
-			const tinygltf::TextureInfo& emissive_texture = gltf_material.emissiveTexture;
-
-			if (emissive_texture.index >= 0)
-			{
-				const tinygltf::Texture& texture = gltf_model->textures[emissive_texture.index];
-
-				if (model_renderer_context->srgb_textures.contains(texture.source))
-				{
-					LogError << "Emissive texture sRGB search collision\n";
-				}
-
-				model_renderer_context->srgb_textures.emplace(texture.source);
-			}
+			input_element_desc.SemanticName = "TEXCOORD_";
+			input_element_desc.SemanticIndex = 1;
 		}
+
+		if (attribute.name == "TEXCOORD_2")
+		{
+			input_element_desc.SemanticName = "TEXCOORD_";
+			input_element_desc.SemanticIndex = 2;
+		}
+
+		if (attribute.name == "COLOR_0")
+		{
+			input_element_desc.SemanticName = "COLOR_";
+			input_element_desc.SemanticIndex = 0;
+		}
+
+		if (attribute.name == "COLOR_1")
+		{
+			input_element_desc.SemanticName = "COLOR_";
+			input_element_desc.SemanticIndex = 1;
+		}
+
+		input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
+		input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+		input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+
+		input_element_desc_arr.push_back(input_element_desc);
+	}
+
+	return input_element_desc_arr;
+}
+
+
+static bool BuildPrimitiveTopology(ysn::Primitive& primitive, int gltf_primitive_mode)
+{
+	switch (gltf_primitive_mode)
+	{
+		case TINYGLTF_MODE_POINTS:
+			primitive.topology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+			break;
+		case TINYGLTF_MODE_LINE:
+			primitive.topology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+			break;
+		case TINYGLTF_MODE_LINE_STRIP:
+			primitive.topology = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+			break;
+		case TINYGLTF_MODE_TRIANGLES:
+			primitive.topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			break;
+		case TINYGLTF_MODE_TRIANGLE_STRIP:
+			primitive.topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		default:
+			LogError << "GLTF has unknown primitive topology\n";
+			return false;
+	}
+
+	return true;
+}
+
+static void BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& model, int indices_index, const tinygltf::Model& gltf_model)
+{
+	if (indices_index >= 0)
+	{
+		const tinygltf::Accessor& gltf_accessor = gltf_model.accessors[indices_index];
+		const tinygltf::BufferView& gltf_buffer_view = gltf_model.bufferViews[gltf_accessor.bufferView];
+
+		primitive.index_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		primitive.index_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
+
+		switch (gltf_accessor.componentType)
+		{
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+				primitive.index_buffer_view.Format = DXGI_FORMAT_R8_UINT;
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+				primitive.index_buffer_view.Format = DXGI_FORMAT_R16_UINT;
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+				primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
+				break;
+		}
+
+		primitive.index_count = static_cast<uint32_t>(gltf_accessor.count);
+
+		//pRenderPrimitive->index_buffer = pBuffers[gltf_buffer_view.buffer];
+		//pRenderPrimitive->index_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+	}
+	else
+	{
+		LogWarning << "GLTF primitive don't have indices\n";
 	}
 }
 
-void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_ptr<ysn::DxRenderer> p_renderer, wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList, tinygltf::Model* pGltfModel)
+static void BuildAccessorType(ysn::Attribute& attribute, const int gltf_accessorType)
 {
+	switch (gltf_accessorType)
+	{
+		case TINYGLTF_TYPE_VEC2:
+			attribute.format = DXGI_FORMAT_R32G32_FLOAT;
+			break;
+		case TINYGLTF_TYPE_VEC3:
+			attribute.format = DXGI_FORMAT_R32G32B32_FLOAT;
+			break;
+		case TINYGLTF_TYPE_VEC4:
+			attribute.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			break;
+		default:;
+	}
+}
+
+static void BuildAttributesAccessors(ysn::Primitive& primitive,
+							  const ysn::Model& model,
+							  const tinygltf::Model& gltf_model,
+							  const std::map<std::string, int>& gltf_primitive_attributes)
+{
+	for (const auto& [gltf_attribute_name, gltf_accessor_index] : gltf_primitive_attributes)
+	{
+		const tinygltf::Accessor& gltf_accessor = gltf_model.accessors[gltf_accessor_index];
+		const tinygltf::BufferView& gltf_buffer_view = gltf_model.bufferViews[gltf_accessor.bufferView];
+
+		ysn::Attribute render_attribute;
+		render_attribute.name = gltf_attribute_name;
+
+		BuildAccessorType(render_attribute, gltf_accessor.type);
+
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {};
+		vertex_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		vertex_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
+		vertex_buffer_view.StrideInBytes = gltf_accessor.ByteStride(gltf_buffer_view);
+
+		render_attribute.vertex_buffer_view = vertex_buffer_view;
+		render_attribute.vertex_count = static_cast<uint32_t>(gltf_accessor.count);
+
+		//if (gltf_attribute_name == "POSITION")
+		//{
+		//	primitive->vertex_count = = static_cast<uint32_t>(gltf_accessor.count);;
+		//	primitive->vertex_buffer = pGltfBuffers[gltf_buffer_view.buffer];
+		//	primitive->vertex_stride = render_attribute.vertexBufferView.StrideInBytes;
+		//	primitive->vertex_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		//}
+
+		primitive.attributes.emplace(gltf_attribute_name, render_attribute);
+	}
+}
+
+static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
+{
+	for (const tinygltf::Mesh& gltf_mesh : gltf_model.meshes)
+	{
+		ysn::Mesh mesh = {};
+		mesh.name = gltf_mesh.name;
+
+		for (const tinygltf::Primitive& gltf_primitive : gltf_mesh.primitives)
+		{
+			ysn::Primitive primitive = {};
+
+			BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
+			BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
+			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
+
+			//if (gltf_primitive.material >= 0)
+			//{
+			//	primitive.pMaterial = &pModelRenderContext->Materials[gltf_primitive.material]; // TODO: Move out
+			//}
+
+			//BuildPipelines(&primitive, renderer);
+
+			mesh.primitives.push_back(primitive);
+		}
+
+		model.meshes.push_back(mesh);
+	}
+}
+
+
+static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, const ysn::LoadingParameters& loading_parameters)
+{
+	auto dx_renderer = ysn::Application::Get().GetRenderer();
+
 	HRESULT hr = S_OK;
 
-	for (tinygltf::Material& GltfMaterial : pGltfModel->materials)
+	for (const tinygltf::Node& gltf_node : gltf_model.nodes)
 	{
-		ysn::Material RenderMaterial = {};
+		D3D12_HEAP_PROPERTIES heap_properties = {};
+		heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		// Set a material name.
-		RenderMaterial.name = GltfMaterial.name;
+		D3D12_RESOURCE_DESC resource_desc = {};
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resource_desc.Width = ysn::AlignPow2(sizeof(DirectX::XMFLOAT4X4), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		resource_desc.Height = 1;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+		resource_desc.SampleDesc = { 1, 0 };
+		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-		// Set a blend desc.
-		D3D12_BLEND_DESC& blendDesc = RenderMaterial.blendDesc;
-		if (GltfMaterial.alphaMode == "BLEND") // TODO: hide strings under constants
+		wil::com_ptr<ID3D12Resource> buffer;
+		hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
+
+		if (hr != S_OK)
 		{
-			// TODO: check if this is only equation?
-			blendDesc.RenderTarget[0].BlendEnable = true;
-			blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-			blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-			blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-			blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-			blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			blendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-		}
-		else if (GltfMaterial.alphaMode == "MASK")
-		{
-			// TODO(gltf): Check other alpha modes
-			// assert( false );
-		}
-		else if (GltfMaterial.alphaMode == "OPAQUE")
-		{
-			// TODO(gltf): Check other alpha modes
-			// assert( false );
+			LogError << "GLTF Build Nodes can't allocate buffer\n";
+			return false;
 		}
 
-		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		void* data_ptr;
+		hr = buffer->Map(0, nullptr, &data_ptr);
 
-		// Set a rasterizer desc.
-		D3D12_RASTERIZER_DESC& rasterizerDesc = RenderMaterial.rasterizerDesc;
-		rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-
-		if (GltfMaterial.doubleSided)
+		if (hr != S_OK)
 		{
-			rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+			LogError << "GLTF Build Nodes can't map buffer\n";
+			return false;
+		}
+
+		if (gltf_node.matrix.empty())
+		{
+			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), loading_parameters.model_modifier);
 		}
 		else
 		{
-			rasterizerDesc.CullMode = D3D12_CULL_MODE_FRONT;
+			if (gltf_node.matrix.size() != 16)
+			{
+				LogError << "GLTF node has broken matrix!\n";
+				return false;
+			}
+
+			std::array<float, 16> float_array;
+
+			// Convert to floats
+			for (int i = 0; i < gltf_node.matrix.size(); i++)
+			{
+				float_array[0] = static_cast<float>(gltf_node.matrix[i]);
+			}
+
+			DirectX::XMMATRIX model_matrix(float_array.data());
+
+			// Apply loading modifier
+			model_matrix *= loading_parameters.model_modifier;
+
+			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), model_matrix);
 		}
 
-		// TODO: Why counter clockwise?
-		// rasterizerDesc.FrontCounterClockwise = true;
-		rasterizerDesc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-		rasterizerDesc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-		rasterizerDesc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-		rasterizerDesc.ForcedSampleCount = 0;
-		rasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		model.node_buffers.push_back(buffer);
+	}
+}
 
+bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
+{
+	auto dx_renderer = ysn::Application::Get().GetRenderer();
+
+	HRESULT hr = S_OK;
+
+	for (const tinygltf::Material& gltf_material : gltf_model.materials)
+	{
+		ysn::Material material(gltf_material.name);
+
+		if (gltf_material.alphaMode == "BLEND")
 		{
-			D3D12_HEAP_PROPERTIES heapProperties = {};
-			heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-			heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resourceDesc = {};
-			resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resourceDesc.Width = ysn::AlignPow2(sizeof(ysn::PBRMetallicRoughnessShader), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			resourceDesc.Height = 1;
-			resourceDesc.DepthOrArraySize = 1;
-			resourceDesc.MipLevels = 1;
-			resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-			resourceDesc.SampleDesc = { 1, 0 };
-			resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-			hr = p_renderer->GetDevice()->CreateCommittedResource(
-				&heapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&resourceDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&RenderMaterial.pBuffer));
-			assert(SUCCEEDED(hr));
-
-			hr = RenderMaterial.pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&RenderMaterial.pBufferData));
-
-			assert(SUCCEEDED(hr));
+			material.blend_desc.RenderTarget[0].BlendEnable = true;
+			material.blend_desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+			material.blend_desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+			material.blend_desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+			material.blend_desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+			material.blend_desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+			material.blend_desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			material.blend_desc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+		}
+		else if (gltf_material.alphaMode == "MASK")
+		{
+			// TODO(gltf): Check other alpha modes
+			// assert( false );
+		}
+		else if (gltf_material.alphaMode == "OPAQUE")
+		{
+			// TODO(gltf): Check other alpha modes
+			// assert( false );
 		}
 
-		tinygltf::PbrMetallicRoughness& glTFPBRMetallicRoughness = GltfMaterial.pbrMetallicRoughness;
-		ysn::PBRMetallicRoughnessShader* pPBRMetallicRoughness = static_cast<ysn::PBRMetallicRoughnessShader*>(RenderMaterial.pBufferData);
+		material.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
+		if (gltf_material.doubleSided)
 		{
-			DirectX::XMFLOAT4& baseColorFactor = pPBRMetallicRoughness->baseColorFactor;
-
-			baseColorFactor.x = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[0]);
-			baseColorFactor.y = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[1]);
-			baseColorFactor.z = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[2]);
-			baseColorFactor.w = static_cast<float>(glTFPBRMetallicRoughness.baseColorFactor[3]);
-
-			tinygltf::TextureInfo& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
-
-			if (glTFBaseColorTexture.index >= 0)
-			{
-				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BITMASK;
-			}
-
-			pPBRMetallicRoughness->metallicFactor = static_cast<float>(glTFPBRMetallicRoughness.metallicFactor);
-			pPBRMetallicRoughness->roughnessFactor = static_cast<float>(glTFPBRMetallicRoughness.roughnessFactor);
-
-			tinygltf::TextureInfo& glTFMetallicRoughnessTexture = glTFPBRMetallicRoughness.metallicRoughnessTexture;
-
-			if (glTFMetallicRoughnessTexture.index >= 0)
-			{
-				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BITMASK;
-
-			}
-
-			tinygltf::NormalTextureInfo& GlTFNormalsTexture = GltfMaterial.normalTexture;
-
-			if (GlTFNormalsTexture.index >= 0)
-			{
-				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BITMASK;
-			}
-
-			tinygltf::OcclusionTextureInfo& GlTFOcclusionTexture = GltfMaterial.occlusionTexture;
-
-			if (GlTFOcclusionTexture.index >= 0)
-			{
-				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BITMASK;
-
-			}
-
-			auto& GlTFEmissiveTexture = GltfMaterial.emissiveTexture;
-
-			if (GlTFEmissiveTexture.index >= 0)
-			{
-				pPBRMetallicRoughness->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BITMASK;
-			}
+			material.rasterizer_desc.CullMode = D3D12_CULL_MODE_NONE;
+		}
+		else
+		{
+			material.rasterizer_desc.CullMode = D3D12_CULL_MODE_FRONT;
 		}
 
-		// TODO: Improve texture material handling
+		material.rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
+		material.rasterizer_desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+		material.rasterizer_desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+		material.rasterizer_desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+		material.rasterizer_desc.ForcedSampleCount = 0;
+		material.rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-		// Albedo
-		tinygltf::TextureInfo& glTFBaseColorTexture = glTFPBRMetallicRoughness.baseColorTexture;
-		if (glTFBaseColorTexture.index >= 0)
+		D3D12_HEAP_PROPERTIES heap_properties = {};
+		heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+		D3D12_RESOURCE_DESC resource_desc = {};
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resource_desc.Width = ysn::AlignPow2(sizeof(ysn::SurfaceShaderParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		resource_desc.Height = 1;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+		resource_desc.SampleDesc = { 1, 0 };
+		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		void* material_data_buffer;
+
+		hr = dx_renderer->GetDevice()->CreateCommittedResource(
+			&heap_properties,
+			D3D12_HEAP_FLAG_NONE,
+			&resource_desc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&material.gpu_material_parameters.resource));
+
+		if (hr != S_OK)
 		{
-			const tinygltf::Texture& GltfTexture = pGltfModel->textures[glTFBaseColorTexture.index];
+			LogError << "GLTF build materials can't create buffer\n";
+			return false;
+		}
+
+		hr = material.gpu_material_parameters.resource->Map(0, nullptr, &material_data_buffer);
+
+		if (hr != S_OK)
+		{
+			LogError << "GLTF build materials can't map buffer\n";
+			return false;
+		}
+
+		const tinygltf::PbrMetallicRoughness& gltf_pbr_material = gltf_material.pbrMetallicRoughness;
+		ysn::SurfaceShaderParameters* shader_parameters = static_cast<ysn::SurfaceShaderParameters*>(material_data_buffer);
+
+		DirectX::XMFLOAT4& base_color_factor = shader_parameters->base_color_factor;
+		base_color_factor.x = static_cast<float>(gltf_pbr_material.baseColorFactor[0]);
+		base_color_factor.y = static_cast<float>(gltf_pbr_material.baseColorFactor[1]);
+		base_color_factor.z = static_cast<float>(gltf_pbr_material.baseColorFactor[2]);
+		base_color_factor.w = static_cast<float>(gltf_pbr_material.baseColorFactor[3]);
+
+		shader_parameters->metallic_factor = static_cast<float>(gltf_pbr_material.metallicFactor);
+		shader_parameters->roughness_factor = static_cast<float>(gltf_pbr_material.roughnessFactor);
+
+		if (gltf_pbr_material.metallicRoughnessTexture.index >= 0)
+		{
+			shader_parameters->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
+		}
+
+		if (gltf_material.normalTexture.index >= 0)
+		{
+			shader_parameters->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
+		}
+
+		if (gltf_material.occlusionTexture.index >= 0)
+		{
+			shader_parameters->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
+		}
+
+		if (gltf_material.emissiveTexture.index >= 0)
+		{
+			shader_parameters->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
+		}
+
+		if (gltf_pbr_material.baseColorTexture.index >= 0)
+		{
+			shader_parameters->texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BIT;
+
+			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_pbr_material.baseColorTexture.index];
 
 			// TODO: Preallocate 5 handles and provide them through array, do not save first handle
 			RenderMaterial.srv_handle = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
@@ -396,13 +894,13 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			texture.name = L"Albedo";
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format						= resource_desc.Format;
-			srv_desc.Shader4ComponentMapping	= D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension				= D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels		= resource_desc.MipLevels;
+			srv_desc.Format = resource_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
 
 			p_renderer->GetDevice()->CreateShaderResourceView(resource.get(), &srv_desc, RenderMaterial.srv_handle.cpu);
-			
+
 			D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
 			p_renderer->GetDevice()->CreateSampler(&SamplerDesc, RenderMaterial.sampler_handle.cpu);
 		}
@@ -490,837 +988,44 @@ void BuildMaterials(ysn::ModelRenderContext* pModelRenderContext, std::shared_pt
 			p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
-		// Generate mips
-		if (glTFBaseColorTexture.index >= 0)
-		{
-			const tinygltf::Texture& GltfTexture = pGltfModel->textures[glTFBaseColorTexture.index];
-			auto& texture = pModelRenderContext->pTextures[GltfTexture.source];
-			p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
-		}
-
-		//if (glTFMetallicRoughnessTexture.index > 0)
-		//{
-		//	tinygltf::Texture& gltfTexture = pGltfModel->textures[glTFMetallicRoughnessTexture.index];
-		//	auto& texture = pModelRenderContext->pTextures[gltfTexture.source];
-		//	p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
-		//}
-
-		//if (gltfNormalTexture.index > 0)
-		//{
-		//	const tinygltf::Texture& GltfTexture = pGltfModel->textures[gltfNormalTexture.index];
-		//	auto& texture = pModelRenderContext->pTextures[GltfTexture.source];
-		//	p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
-		//}
-
-		//if (gltfOcclusionTexture.index > 0)
-		//{
-		//	tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfOcclusionTexture.index];
-		//	auto& texture = pModelRenderContext->pTextures[gltfTexture.source];
-		//	p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
-		//}
-
-		//if (gltfEmissiveTexture.index > 0)
-		//{
-		//	tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfEmissiveTexture.index];
-		//	auto& texture = pModelRenderContext->pTextures[gltfTexture.source];
-		//	p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
-		//}
-
 		pModelRenderContext->Materials.push_back(RenderMaterial);
 	}
 }
 
-// TODO: cache it
-std::vector<DxcDefine> BuildAttributeDefines(const std::vector<ysn::Attribute>& Attributes)
-{
-	std::vector<DxcDefine> Defines;
-
-	for (const ysn::Attribute& Attribute : Attributes)
-	{
-		if (Attribute.name == "NORMAL")
-		{
-			Defines.push_back({ L"HAS_NORMAL", L"1" });
-		}
-		else if (Attribute.name == "TANGENT")
-		{
-			Defines.push_back({ L"HAS_TANGENT", L"1" });
-		}
-		else if (Attribute.name == "TEXCOORD_0")
-		{
-			Defines.push_back({ L"HAS_TEXCOORD_0", L"1" });
-		}
-		else if (Attribute.name == "TEXCOORD_1")
-		{
-			Defines.push_back({ L"HAS_TEXCOORD_1", L"1" });
-		}
-	}
-
-	return Defines;
-}
-
-std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::vector<ysn::Attribute>& RenderAttributes)
-{
-	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
-
-	for (const ysn::Attribute& RenderAttribute : RenderAttributes)
-	{
-		D3D12_INPUT_ELEMENT_DESC InputElementDesc = {};
-		InputElementDesc.SemanticName = &RenderAttribute.name[0];
-		InputElementDesc.Format = RenderAttribute.format;
-
-		// TODO: Need to parse semantic name and index from attribute name.
-		if (RenderAttribute.name == "TEXCOORD_0")
-		{
-			InputElementDesc.SemanticName = "TEXCOORD_";
-			InputElementDesc.SemanticIndex = 0;
-		}
-
-		if (RenderAttribute.name == "TEXCOORD_1")
-		{
-			InputElementDesc.SemanticName = "TEXCOORD_";
-			InputElementDesc.SemanticIndex = 1;
-		}
-
-		if (RenderAttribute.name == "TEXCOORD_2")
-		{
-			InputElementDesc.SemanticName = "TEXCOORD_";
-			InputElementDesc.SemanticIndex = 2;
-		}
-
-		if (RenderAttribute.name == "COLOR_0")
-		{
-			InputElementDesc.SemanticName = "COLOR_";
-			InputElementDesc.SemanticIndex = 0;
-		}
-
-		if (RenderAttribute.name == "COLOR_1")
-		{
-			InputElementDesc.SemanticName = "COLOR_";
-			InputElementDesc.SemanticIndex = 1;
-		}
-
-		InputElementDesc.InputSlot = static_cast<UINT>(InputElementDescs.size());
-		InputElementDesc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		InputElementDesc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-
-		InputElementDescs.push_back(InputElementDesc);
-	}
-
-	return InputElementDescs;
-}
-
-bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
-{
-	HRESULT result = S_OK;
-	{
-		D3D12_DESCRIPTOR_RANGE SrvDescriptorRange = {};
-		SrvDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		SrvDescriptorRange.NumDescriptors = 5;
-		SrvDescriptorRange.BaseShaderRegister = 0;
-
-		D3D12_DESCRIPTOR_RANGE DepthInputDescriptorRange = {};
-		DepthInputDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		DepthInputDescriptorRange.NumDescriptors = 1;
-		DepthInputDescriptorRange.BaseShaderRegister = 1 + 5;
-
-		D3D12_ROOT_PARAMETER srv_range;
-		srv_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		srv_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		srv_range.DescriptorTable.NumDescriptorRanges = 1;
-		srv_range.DescriptorTable.pDescriptorRanges = &SrvDescriptorRange;
-
-		D3D12_ROOT_PARAMETER depth_range;
-		depth_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		depth_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		depth_range.DescriptorTable.NumDescriptorRanges = 1;
-		depth_range.DescriptorTable.pDescriptorRanges = &DepthInputDescriptorRange;
-
-		D3D12_ROOT_PARAMETER rootParams[6] = {
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-			srv_range,
-			depth_range
-		};
-
-		// TEMP
-		rootParams[0].Descriptor.RegisterSpace = 0;
-		rootParams[1].Descriptor.RegisterSpace = 0;
-		rootParams[2].Descriptor.RegisterSpace = 0;
-		rootParams[3].Descriptor.RegisterSpace = 0;
-
-		// 0 ShadowSampler
-		// 1 LinearSampler
-		CD3DX12_STATIC_SAMPLER_DESC static_sampler[2];
-		static_sampler[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-		static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, 0, D3D12_COMPARISON_FUNC_NONE);
-
-		D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-		RootSignatureDesc.NumParameters			= 6;
-		RootSignatureDesc.pParameters			= &rootParams[0];
-		RootSignatureDesc.Flags					= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT 
-			| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
-			| D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
-		RootSignatureDesc.pStaticSamplers		= &static_sampler[0];
-		RootSignatureDesc.NumStaticSamplers		= 2;
-
-		result = renderer->CreateRootSignature(&RootSignatureDesc, &pRenderPrimitive->pRootSignature);
-		assert(SUCCEEDED(result));
-	}
-
-	{
-		ysn::ShaderCompileParameters vs_parameters;
-		vs_parameters.shader_type = ysn::ShaderType::Vertex;
-		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
-		vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
-
-		const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
-
-		if (!vs_shader_result.has_value())
-		{
-			LogError << "Can't compile GLTF forward pipeline vs shader\n";
-			return false;
-		}
-
-		ysn::ShaderCompileParameters ps_parameters;
-		ps_parameters.shader_type = ysn::ShaderType::Pixel;
-		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelLighting.hlsl");
-		ps_parameters.defines = vs_parameters.defines;
-
-		const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
-
-		if (!ps_shader_result.has_value())
-		{
-			LogError << "Can't compile GLTF forward pipeline ps shader\n";
-			return false;
-		}
-
-		std::vector<D3D12_INPUT_ELEMENT_DESC> inputElementDescs = BuildInputElementDescs(pRenderPrimitive->RenderAttributes);
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
-		pipelineStateDesc.pRootSignature = pRenderPrimitive->pRootSignature.get();
-		pipelineStateDesc.VS = { vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize() };
-		pipelineStateDesc.PS = { ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize() };
-		pipelineStateDesc.BlendState = pRenderPrimitive->pMaterial->blendDesc;
-		pipelineStateDesc.SampleMask = UINT_MAX;
-		pipelineStateDesc.RasterizerState = pRenderPrimitive->pMaterial->rasterizerDesc;
-		pipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: provide
-		pipelineStateDesc.DepthStencilState.DepthEnable = true;
-		pipelineStateDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		pipelineStateDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		pipelineStateDesc.InputLayout = { inputElementDescs.data(), static_cast<UINT>(inputElementDescs.size()) };
-
-		switch (pRenderPrimitive->primitiveTopology)
-		{
-			case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-				break;
-			case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
-			case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-				break;
-			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
-			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-				break;
-			default:
-				assert(false);
-		}
-
-		pipelineStateDesc.NumRenderTargets = 1;
-		pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Provide it from outside
-		pipelineStateDesc.SampleDesc = { 1, 0 };
-
-		result = renderer->GetDevice()->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&pRenderPrimitive->pPipelineState));
-
-		assert(SUCCEEDED(result));
-	}
-
-	return true;
-}
-
-bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
-{
-	HRESULT result = S_OK;
-
-	{
-		D3D12_ROOT_PARAMETER rootParams[2] = {
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-			{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX }
-		};
-
-		// TEMP
-		rootParams[0].Descriptor.RegisterSpace = 0;
-		rootParams[1].Descriptor.RegisterSpace = 0;
-
-		D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-		rootSignatureDesc.NumParameters = _countof(rootParams);
-		rootSignatureDesc.pParameters = &rootParams[0];
-		rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-		result = renderer->CreateRootSignature(&rootSignatureDesc, &pRenderPrimitive->pShadowRootSignature);
-
-		assert(SUCCEEDED(result));
-	}
-
-	{
-		ysn::ShaderCompileParameters vs_parameters;
-		vs_parameters.shader_type = ysn::ShaderType::Vertex;
-		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
-		vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
-		vs_parameters.defines.emplace_back(L"SHADOW_PASS");
-
-		const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
-
-		if (!vs_shader_result.has_value())
-		{
-			LogError << "Can't compile GLTF shadow pipeline vs shader\n";
-			return false;
-		}
-
-		ysn::ShaderCompileParameters ps_parameters;
-		ps_parameters.shader_type = ysn::ShaderType::Pixel;
-		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelGray.hlsl");
-		ps_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
-
-		const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
-
-		if (!ps_shader_result.has_value())
-		{
-			LogError << "Can't compile GLTF shadow pipeline ps shader\n";
-			return false;
-		}
-
-		auto inputElementDescs = BuildInputElementDescs(pRenderPrimitive->RenderAttributes);
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
-		pipelineStateDesc.pRootSignature = pRenderPrimitive->pShadowRootSignature.get();
-		pipelineStateDesc.VS = { vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize() };
-		pipelineStateDesc.PS = { ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize() };
-		pipelineStateDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-		pipelineStateDesc.SampleMask = UINT_MAX;
-		pipelineStateDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		pipelineStateDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT; // TODO: Why front?
-		pipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: provide
-		pipelineStateDesc.DepthStencilState.DepthEnable = true;
-		pipelineStateDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-		pipelineStateDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		pipelineStateDesc.InputLayout = { inputElementDescs.data(), static_cast<UINT>(inputElementDescs.size()) };
-
-		switch (pRenderPrimitive->primitiveTopology)
-		{
-			case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-				break;
-			case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
-			case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-				break;
-			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
-			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-				pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-				break;
-			default:
-				assert(false);
-		}
-
-		pipelineStateDesc.NumRenderTargets = 1;
-		pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Provide it from outside
-		pipelineStateDesc.SampleDesc = { 1, 0 };
-
-		result = renderer->GetDevice()->CreateGraphicsPipelineState(
-			&pipelineStateDesc, IID_PPV_ARGS(&pRenderPrimitive->pShadowPipelineState));
-
-		assert(SUCCEEDED(result));
-	}
-
-	return true;
-}
-
-void BuildPipelines(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
-{
-	// 1. Forward pass
-	if (pRenderPrimitive->pMaterial != nullptr)
-	{
-		ForwardPipeline(pRenderPrimitive, renderer);
-	}
-
-	// 2. Forward pass no material
-	// ForwardPipelineNoMaterial();
-
-	// 2. Shadow pass
-	ShadowPipeline(pRenderPrimitive, renderer);
-}
-
-void BuildPrimitiveMode(ysn::Primitive* pRenderPrimitive, const int GltfPrimitiveMode)
-{
-	switch (GltfPrimitiveMode)
-	{
-		case TINYGLTF_MODE_POINTS:
-			pRenderPrimitive->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-			break;
-		case TINYGLTF_MODE_LINE:
-			pRenderPrimitive->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-			break;
-		case TINYGLTF_MODE_LINE_STRIP:
-			pRenderPrimitive->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-			break;
-		case TINYGLTF_MODE_TRIANGLES:
-			pRenderPrimitive->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			break;
-		case TINYGLTF_MODE_TRIANGLE_STRIP:
-			pRenderPrimitive->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-			break;
-		default:
-			assert(false);
-	}
-}
-
-void BuildIndexBuffer(
-	ysn::Primitive* pRenderPrimitive,
-	const int GltfPrimitiveIndices,
-	const tinygltf::Model* pGltfModel,
-	const std::vector<wil::com_ptr<ID3D12Resource>>& pBuffers)
-{
-	if (GltfPrimitiveIndices >= 0)
-	{
-		const tinygltf::Accessor& GltfAccessor = pGltfModel->accessors[GltfPrimitiveIndices];
-		const tinygltf::BufferView& GltfBufferView = pGltfModel->bufferViews[GltfAccessor.bufferView];
-		// const tinygltf::Buffer& glTFBuffer = pModel->buffers[glTFBufferView.buffer];
-
-		pRenderPrimitive->indexBufferView.BufferLocation = pBuffers[GltfBufferView.buffer]->GetGPUVirtualAddress() + GltfBufferView.byteOffset +
-			GltfAccessor.byteOffset; // TODO: double byteoffset?
-		pRenderPrimitive->indexBufferView.SizeInBytes = static_cast<UINT>(GltfBufferView.byteLength - GltfAccessor.byteOffset);
-
-		switch (GltfAccessor.componentType)
-		{
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				pRenderPrimitive->indexBufferView.Format = DXGI_FORMAT_R8_UINT;
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				pRenderPrimitive->indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				pRenderPrimitive->indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-				break;
-		}
-
-		pRenderPrimitive->indexCount = static_cast<uint32_t>(GltfAccessor.count);
-
-		pRenderPrimitive->index_count = pRenderPrimitive->indexCount;
-		pRenderPrimitive->index_buffer = pBuffers[GltfBufferView.buffer];
-		pRenderPrimitive->index_offset_in_bytes = GltfBufferView.byteOffset + GltfAccessor.byteOffset;
-	}
-	else
-	{
-		// Primitive don't have indices PERF
-		// ysn::log::Warning();
-	}
-}
-
-void BuildAccessorType(ysn::Attribute* pRenderAttribute, const int GltfAccessorType)
-{
-	switch (GltfAccessorType)
-	{
-		case TINYGLTF_TYPE_VEC2:
-			pRenderAttribute->format = DXGI_FORMAT_R32G32_FLOAT;
-			break;
-		case TINYGLTF_TYPE_VEC3:
-			pRenderAttribute->format = DXGI_FORMAT_R32G32B32_FLOAT;
-			break;
-		case TINYGLTF_TYPE_VEC4:
-			pRenderAttribute->format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			break;
-		default:;
-	}
-}
-
-void BuildAttributesAccessors(
-	ysn::Primitive* pRenderPrimitive,
-	const tinygltf::Model* pGltfModel,
-	const std::vector<wil::com_ptr<ID3D12Resource>>& pGltfBuffers,
-	const std::map<std::string, int>& GltfPrimitiveAttributes)
-{
-	for (auto& [GltfAttributeName, GltfAccessorIndex] : GltfPrimitiveAttributes)
-	{
-		const tinygltf::Accessor& GltfAccessor = pGltfModel->accessors[GltfAccessorIndex];
-		const tinygltf::BufferView& GltfBufferView = pGltfModel->bufferViews[GltfAccessor.bufferView];
-		// const tinygltf::Buffer& glTFBuffer = pGltfModel->buffers[GltfBufferView.buffer];
-
-		ysn::Attribute RenderAttribute = {};
-		RenderAttribute.name = GltfAttributeName;
-
-		BuildAccessorType(&RenderAttribute, GltfAccessor.type);
-
-		RenderAttribute.vertexBufferView.BufferLocation = pGltfBuffers[GltfBufferView.buffer]->GetGPUVirtualAddress() +
-			GltfBufferView.byteOffset +
-			GltfAccessor.byteOffset; // TODO: what is this offsets?
-
-		RenderAttribute.vertexBufferView.SizeInBytes = static_cast<UINT>(GltfBufferView.byteLength - GltfAccessor.byteOffset);
-		RenderAttribute.vertexBufferView.StrideInBytes = GltfAccessor.ByteStride(GltfBufferView);
-
-		if (GltfAttributeName == "POSITION")
-		{
-			pRenderPrimitive->vertexCount = static_cast<uint32_t>(GltfAccessor.count);
-			pRenderPrimitive->vertex_count = pRenderPrimitive->vertexCount;
-			pRenderPrimitive->vertex_buffer = pGltfBuffers[GltfBufferView.buffer];
-			pRenderPrimitive->vertex_stride = RenderAttribute.vertexBufferView.StrideInBytes;
-			pRenderPrimitive->vertex_offset_in_bytes = GltfBufferView.byteOffset + GltfAccessor.byteOffset;
-		}
-
-		pRenderPrimitive->RenderAttributes.emplace_back(RenderAttribute);
-	}
-}
-
-void BuildMeshes(ysn::ModelRenderContext* pModelRenderContext, tinygltf::Model* pGltfModel, std::shared_ptr<ysn::DxRenderer> renderer)
-{
-	for (tinygltf::Mesh& GltfMesh : pGltfModel->meshes)
-	{
-		ysn::Mesh RenderMesh = {};
-		RenderMesh.name = GltfMesh.name;
-
-		for (tinygltf::Primitive& GltfPrimitive : GltfMesh.primitives)
-		{
-			ysn::Primitive RenderPrimitive = {};
-
-			BuildAttributesAccessors(&RenderPrimitive, pGltfModel, pModelRenderContext->pBuffers, GltfPrimitive.attributes);
-			BuildIndexBuffer(&RenderPrimitive, GltfPrimitive.indices, pGltfModel, pModelRenderContext->pBuffers);
-			BuildPrimitiveMode(&RenderPrimitive, GltfPrimitive.mode);
-
-			if (GltfPrimitive.material >= 0)
-			{
-				RenderPrimitive.pMaterial = &pModelRenderContext->Materials[GltfPrimitive.material]; // TODO: Move out
-			}
-			BuildPipelines(&RenderPrimitive, renderer);
-
-			RenderMesh.primitives.push_back(RenderPrimitive);
-		}
-
-		pModelRenderContext->Meshes.push_back(RenderMesh);
-	}
-}
-
-void BuildNodes(ysn::ModelRenderContext* ModelRenderContext, wil::com_ptr<ID3D12Device5> pRenderDevice, tinygltf::Model* pModel)
-{
-	HRESULT hr = S_OK;
-
-	for (tinygltf::Node& glTFNode : pModel->nodes)
-	{
-		D3D12_HEAP_PROPERTIES heapProperties = {};
-		heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-		heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		D3D12_RESOURCE_DESC resourceDesc = {};
-		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resourceDesc.Width = ysn::AlignPow2(sizeof(ysn::PBRMetallicRoughnessShader), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-		resourceDesc.Height = 1;
-		resourceDesc.DepthOrArraySize = 1;
-		resourceDesc.MipLevels = 1;
-		resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-		resourceDesc.SampleDesc = { 1, 0 };
-		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-		wil::com_ptr<ID3D12Resource> pBuffer;
-		hr = pRenderDevice->CreateCommittedResource(
-			&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pBuffer));
-		assert(SUCCEEDED(hr));
-
-		void* pData;
-		hr = pBuffer->Map(0, nullptr, &pData);
-		assert(SUCCEEDED(hr));
-
-		if (glTFNode.matrix.empty())
-		{
-			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(pData), DirectX::XMMatrixIdentity());
-		}
-		else
-		{
-			float* pElement = static_cast<float*>(pData);
-		
-			for (double value : glTFNode.matrix)
-			{
-				*pElement = static_cast<float>(value);
-				++pElement;
-			}
-		}
-
-		ModelRenderContext->pNodeBuffers.push_back(pBuffer);
-	}
-}
-
-void DrawNode(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	tinygltf::Model* pModel,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
-	wil::com_ptr<ID3D12Resource> pCameraBuffer,
-	wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-	uint64_t nodeIndex,
-	ysn::PrimitivePipeline PrimitivePipeline,
-	ysn::ShadowMapBuffer* p_shadow_map_buffer)
-{
-	const auto& glTFNode = pModel->nodes[nodeIndex];
-
-	if (glTFNode.mesh >= 0)
-	{
-		const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
-
-		for (const ysn::Primitive& primitive : mesh.primitives)
-		{
-			pCommandList->IASetPrimitiveTopology(primitive.primitiveTopology);
-
-			for (auto i = 0; i != primitive.RenderAttributes.size(); ++i)
-			{
-				pCommandList->IASetVertexBuffers(i, 1, &primitive.RenderAttributes[i].vertexBufferView);
-			}
-
-			ID3D12DescriptorHeap* pDescriptorHeaps[] = {
-				p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
-			};
-			pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-
-			switch (PrimitivePipeline)
-			{
-				case ysn::PrimitivePipeline::ForwardPbr:
-				{
-					pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
-					pCommandList->SetPipelineState(primitive.pPipelineState.get());
-					pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
-					pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-					pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-					pCommandList->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
-					break;
-				}
-				case ysn::PrimitivePipeline::Shadow:
-					pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
-					pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
-					break;
-				case ysn::PrimitivePipeline::ForwardNoMaterial:
-					break;
-			}
-
-			pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
-			pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
-
-
-			if (primitive.indexCount)
-			{
-				pCommandList->IASetIndexBuffer(&primitive.indexBufferView);
-				pCommandList->DrawIndexedInstanced(primitive.indexCount, 1, 0, 0, 0);
-			}
-			else
-			{
-				pCommandList->DrawInstanced(primitive.vertexCount, 1, 0, 0);
-			}
-		}
-	}
-
-	for (auto childNodeIndex : glTFNode.children)
-	{
-		DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
-	}
-}
-
-void ysn::RenderGLTF(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	tinygltf::Model* pModel,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
-	wil::com_ptr<ID3D12Resource> pCameraBuffer,
-	wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-	ysn::PrimitivePipeline PrimitivePipeline,
-	ysn::ShadowMapBuffer* p_shadow_map_descriptor)
-{
-	auto& scene = pModel->scenes[pModel->defaultScene];
-
-	for (auto nodeIndex : scene.nodes)
-	{
-		DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
-	}
-}
-
-DXGI_FORMAT MakeSRGB(DXGI_FORMAT format)
-{
-	switch (format)
-	{
-		case DXGI_FORMAT_R8G8B8A8_UNORM:
-			return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-
-		case DXGI_FORMAT_BC1_UNORM:
-			return DXGI_FORMAT_BC1_UNORM_SRGB;
-
-		case DXGI_FORMAT_BC2_UNORM:
-			return DXGI_FORMAT_BC2_UNORM_SRGB;
-
-		case DXGI_FORMAT_BC3_UNORM:
-			return DXGI_FORMAT_BC3_UNORM_SRGB;
-
-		case DXGI_FORMAT_B8G8R8A8_UNORM:
-			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-
-		case DXGI_FORMAT_B8G8R8X8_UNORM:
-			return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
-
-		case DXGI_FORMAT_BC7_UNORM:
-			return DXGI_FORMAT_BC7_UNORM_SRGB;
-
-		default:
-			return format;
-	}
-}
-
-// TODO: Move to ColorBuffer
-// 
-// Compute the number of texture levels needed to reduce to 1x1.  This uses
-// _BitScanReverse to find the highest set bit.  Each dimension reduces by
-// half and truncates bits.  The dimension 256 (0x100) has 9 mip levels, same
-// as the dimension 511 (0x1FF).
-static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
-{
-	uint32_t HighBit;
-	_BitScanReverse((unsigned long*)&HighBit, Width | Height);
-	return HighBit + 1;
-}
-
-void BuildImages(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCopyCommandList,
-	tinygltf::Model* pModel,
-	)
-{
-	HRESULT hr = S_OK;
-
-	for (tinygltf::Image& image : pModel->images)
-	{
-		// TODO: madness
-		const uint32_t current_texture_index = static_cast<uint32_t>(ModelRenderContext->pTextures.size());
-		const bool is_srgb = ModelRenderContext->srgb_textures.contains(current_texture_index);
-
-		const uint32_t num_mips = ComputeNumMips(image.width, image.height);
-
-		wil::com_ptr<ID3D12Resource> pDstTexture;
-		{
-			D3D12_HEAP_PROPERTIES heapProperties = {};
-			heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-			heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-			// TODO: sRGB albedo textures?
-			// TODO: HDR textures?
-			D3D12_RESOURCE_DESC resourceDesc = {};
-			resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-			resourceDesc.Alignment = 0;
-			resourceDesc.Width = image.width;
-			resourceDesc.Height = image.height;
-			resourceDesc.DepthOrArraySize = 1;
-			resourceDesc.MipLevels = num_mips;
-			resourceDesc.Format = is_srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-			resourceDesc.SampleDesc = { 1, 0 };
-			resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-			resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-			hr = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pDstTexture));
-			assert(SUCCEEDED(hr));
-
-		#ifndef YSN_RELEASE
-			std::wstring name(image.name.begin(), image.name.end());
-			pDstTexture->SetName(name.c_str());
-		#endif
-
-			ysn::Texture new_texture;
-			new_texture.gpuTexture = pDstTexture;
-			new_texture.is_srgb = is_srgb;
-			new_texture.num_mips = num_mips;
-			new_texture.width = image.width;
-			new_texture.height = image.height;
-
-			ModelRenderContext->pTextures.push_back(new_texture);
-		}
-
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
-		UINT rowCount;
-		UINT64 rowSize;
-		UINT64 size;
-
-		const auto dstTextureDesc = pDstTexture->GetDesc();
-		// TODO: What is that?
-		p_renderer->GetDevice()->GetCopyableFootprints(&dstTextureDesc, 0, 1, 0, &footprint, &rowCount, &rowSize, &size);
-
-		wil::com_ptr<ID3D12Resource> pSrcBuffer;
-		{
-			D3D12_HEAP_PROPERTIES heapProperties = {};
-			heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-			heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resourceDesc = {};
-			resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resourceDesc.Alignment = 0;
-			resourceDesc.Width = size;
-			resourceDesc.Height = 1;
-			resourceDesc.DepthOrArraySize = 1;
-			resourceDesc.MipLevels = 1;
-			resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-			resourceDesc.SampleDesc = { 1, 0 };
-			resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-			hr = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pSrcBuffer));
-
-			assert(SUCCEEDED(hr));
-			pStagingResources->push_back(pSrcBuffer);
-
-			void* pData;
-			hr = pSrcBuffer->Map(0, nullptr, &pData);
-			assert(SUCCEEDED(hr));
-
-			for (UINT i = 0; i != rowCount; ++i)
-			{
-				memcpy(
-					static_cast<uint8_t*>(pData) + rowSize * i,
-					&image.image[0] + image.width * image.component * i,
-					image.width * image.component);
-			}
-		}
-
-		D3D12_TEXTURE_COPY_LOCATION dstCopyLocation = {};
-		dstCopyLocation.pResource = pDstTexture.get();
-		dstCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dstCopyLocation.SubresourceIndex = 0;
-
-		D3D12_TEXTURE_COPY_LOCATION srcCopyLocation = {};
-		srcCopyLocation.pResource = pSrcBuffer.get();
-		srcCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		srcCopyLocation.PlacedFootprint = footprint;
-
-		pCopyCommandList->CopyTextureRegion(&dstCopyLocation, 0, 0, 0, &srcCopyLocation, nullptr);
-	}
-}
-
-*/
-//
-//void ReadModel(RenderScene& render_scene, const tinygltf::Model& gltf_model)
-//{
-//	//Application::Get().GetRenderer();
-//	//wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-//
-//	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
-//	staging_resources.reserve(256);
-//
-//	//BuildBuffers(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
-//	//FindAllSrgbTextures(ModelRenderContext, pModel);
-//	//BuildImages(ModelRenderContext, p_renderer, pCopyCommandList, pModel, &ModelRenderContext->stagingResources);
-//	//BuildSamplerDescs(ModelRenderContext, pModel);
-//	//BuildMaterials(ModelRenderContext, p_renderer, pCopyCommandList, pModel);
-//	//BuildMeshes(ModelRenderContext, pModel, p_renderer);
-//	//BuildNodes(ModelRenderContext, p_renderer->GetDevice(), pModel);
-//}
-
 namespace ysn
 {
+	void ReadModel(Model& model, const tinygltf::Model& gltf_model, const LoadingParameters& loading_parameters)
+	{
+		auto dx_renderer = Application::Get().GetRenderer();
+		auto command_queue = Application::Get().GetDirectQueue();
+
+		//PIXCaptureParameters pix_capture_parameters;
+		//pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
+		//PIXSetTargetWindow(m_pWindow->GetWindowHandle());
+		//YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
+
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+
+		LoadGltfContext load_gltf_context;
+		load_gltf_context.staging_resources.reserve(256);
+		load_gltf_context.copy_cmd_list = command_queue->GetCommandList();
+
+		BuildBuffers(model, load_gltf_context, gltf_model);
+		//FindAllSrgbTextures(ModelRenderContext, pModel);
+		BuildMaterials(model, load_gltf_context, gltf_model);
+		BuildImages(model, load_gltf_context, gltf_model);
+		BuildSamplerDescs(model, gltf_model);
+		BuildMeshes(model, gltf_model);
+		BuildNodes(model, gltf_model, loading_parameters);
+
+		// Build pipelines
+		// Compute mips 
+		// p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
+
+		auto fence_value = command_queue->ExecuteCommandList(command_list);
+		command_queue->WaitForFenceValue(fence_value);
+	}
+
 	bool LoadGltfFromFile(RenderScene& render_scene, const std::wstring& load_path, const LoadingParameters& loading_parameters)
 	{
 		tinygltf::Model gltf_model;
@@ -1348,7 +1053,11 @@ namespace ysn
 			return false;
 		}
 
-		//ReadModel(render_scene, &model);
+		Model model;
+
+		ReadModel(model, gltf_model, loading_parameters);
+
+		render_scene.models.push_back(model);
 
 		return true;
 	}

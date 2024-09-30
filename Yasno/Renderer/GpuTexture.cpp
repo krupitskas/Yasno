@@ -7,6 +7,7 @@
 
 namespace ysn
 {
+	/*
 	Texture LoadTextureFromFile(const std::string& filename,
 								wil::com_ptr<ID3D12GraphicsCommandList2> CommandList,
 								wil::com_ptr<ID3D12Device5> device,
@@ -176,4 +177,5 @@ namespace ysn
 
 		return result;
 	}
+	*/
 }

@@ -27,10 +27,10 @@ namespace ysn
     }
 
 
-    uint32_t VertexStorage::GetVertexBufferSize()
-    {
-        return 0;
-    }
+    //uint32_t VertexStorage::GetVertexBufferSize()
+    //{
+    //    return 0;
+    //}
 
 }
 

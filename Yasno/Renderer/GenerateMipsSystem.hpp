@@ -9,7 +9,7 @@
 
 namespace ysn
 {
-	class Texture;
+	struct GpuTexture;
 
 	YSN_SHADER_STRUCT GenerateMipsConstantBuffer
 	{
@@ -37,7 +37,7 @@ namespace ysn
 	{
 	public:
 		bool Initialize(const DxRenderer& renderer);
-		bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture);
+		bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const GpuTexture& gpu_texture);
 	private:
 		wil::com_ptr<ID3D12RootSignature> m_root_signature;
 		wil::com_ptr<ID3D12PipelineState> m_pipeline_state;

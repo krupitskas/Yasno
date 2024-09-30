@@ -1,13 +1,13 @@
 #pragma once
 
+#include <Graphics/Primitive.hpp>
+
 namespace ysn
 {
 	struct Mesh
 	{
-		uint32_t vertex_buffer_offset = 0;
-		uint32_t vertex_buffer_size = 0;
+		std::string name = "Unnamed Mesh";
 
-		uint32_t index_buffer_offset = 0;
-		uint32_t vertex_buffer_size = 0;
+		std::vector<Primitive> primitives;
 	};
 }

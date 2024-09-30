@@ -54,10 +54,10 @@ namespace ysn
 		void CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer);
 
 		/// Create all acceleration structures, bottom and top
-		void CreateAccelerationStructures(
-			wil::com_ptr<ID3D12Device5> device,
-			wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-			ysn::ModelRenderContext* gltf_model_context);
+		//void CreateAccelerationStructures(
+		//	wil::com_ptr<ID3D12Device5> device,
+		//	wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
+		//	ysn::ModelRenderContext* gltf_model_context);
 
 		nv_helpers_dx12::TopLevelASGenerator tlas_generator;
 

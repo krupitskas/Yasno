@@ -5,11 +5,15 @@
 
 namespace ysn
 {
-    class GpuResource
+    struct GpuResource
     {
-    public:
+        GpuResource(wil::com_ptr<ID3D12Resource> res) : resource(res) {}
 
-    private:
-        wil::com_ptr<ID3D12Resource> m_resource;
+        D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const
+        {
+            return resource->GetGPUVirtualAddress();
+        }
+
+        wil::com_ptr<ID3D12Resource> resource;
     };
 }

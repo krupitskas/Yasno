@@ -10,21 +10,38 @@
 #include <Graphics/RenderObjectId.hpp>
 #include <Yasno/Lights.hpp>
 #include <Yasno/CameraController.hpp>
+#include <Renderer/GpuResource.hpp>
+#include <Renderer/GpuTexture.hpp>
 
 namespace ysn
 {
 	struct NodeTransformation
 	{
-		DirectX::XMFLOAT4X4 model;
+		DirectX::XMFLOAT4X4 transform;
 	};
 
-	// Model desciption info
+	struct ModelRenderParameters
+	{
+		bool should_cast_shadow		= false;
+
+	};
+
 	struct Model
 	{
 		std::string name			= "Unnamed Model";
-		bool should_cast_shadow		= false;
-	};
+		ModelRenderParameters render_parameters;
 
+		std::vector<Mesh> meshes;
+
+		// Not sure about that
+		std::vector<GpuResource> buffers;
+		std::vector<GpuTexture> textures;
+
+		// Not sure about that x2
+		std::vector<GpuResource> node_buffers; // Per node GPU data
+		std::vector<D3D12_SAMPLER_DESC> sampler_descs;
+	};
+	
 	struct RenderScene
 	{
 		std::shared_ptr<Camera> camera;
@@ -34,23 +51,6 @@ namespace ysn
 		EnvironmentLight environment_light;
 
 		std::vector<Model> models;
-		std::vector<NodeTransformation> transformations;
-		std::vector<Mesh> meshes;
-		std::vector<Material> materials;
-
-		RenderObjectId AddObject();
-
-		// Switches pointers between current object and last one, decrement num_objects and deletes it later.
-		void DeleteObject(RenderObjectId object);
-
-		uint32_t GetModelCount() const
-		{
-			return num_objects;
-		}
-		
-	private:
-		// Keep track of live objects to render
-		uint32_t num_objects = 0;
 	};
 }
 

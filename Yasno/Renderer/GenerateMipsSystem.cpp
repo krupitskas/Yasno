@@ -78,11 +78,11 @@ namespace ysn
 		return true;
 	}
 
-	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const Texture& gpu_texture)
+	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const GpuTexture& gpu_texture)
 	{
 		auto compute_queue = renderer->GetComputeQueue();
 
-		auto resource = gpu_texture.gpuTexture;
+		auto resource = gpu_texture.gpu_resource;
 		auto resource_desc = resource->GetDesc();
 
 		if (resource_desc.MipLevels == 1)
@@ -156,7 +156,7 @@ namespace ysn
 			uav_orig_desc.Texture2D.MipSlice	= src_mip + 1;
 
 			const auto uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.gpuTexture.get(), nullptr, &uav_orig_desc, uav_handle.cpu);
+			renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.gpu_resource.get(), nullptr, &uav_orig_desc, uav_handle.cpu);
 
 			for (uint32_t mip = 1; mip < mip_count; mip++)
 			{
@@ -165,7 +165,7 @@ namespace ysn
 				uav_desc.ViewDimension		= D3D12_UAV_DIMENSION_TEXTURE2D;
 				uav_desc.Texture2D.MipSlice	= src_mip + mip + 1;
 
-				renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.gpuTexture.get(), nullptr, &uav_desc, renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu);
+				renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.gpu_resource.get(), nullptr, &uav_desc, renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu);
 			}
 
 			command_list->SetComputeRoot32BitConstants(RootSignatureIndex::GenerateMipsCB, sizeof( GenerateMipsConstantBuffer ) / sizeof( uint32_t ), &generate_mips_parameters, 0);

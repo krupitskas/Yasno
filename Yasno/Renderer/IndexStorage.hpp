@@ -11,10 +11,10 @@ namespace ysn
 
     struct IndexStorage
     {
-        uint32_t GetIndexBufferSize();
+        //uint32_t GetIndexBufferSize();
 
-        std::vector<IndexBufferFormat> index_data;
+        //std::vector<IndexBufferFormat> index_data;
 
-        GpuResource gpu_index_buffer;
+        //GpuResource gpu_index_buffer;
     };
 }

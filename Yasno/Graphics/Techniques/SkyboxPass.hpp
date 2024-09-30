@@ -16,7 +16,7 @@ namespace ysn
 		DescriptorHandle dsv_descriptor_handle;
 		D3D12_VIEWPORT viewport;
 		D3D12_RECT scissors_rect;
-		Texture* equirectangular_texture;
+		GpuTexture* equirectangular_texture;
 		wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
 	};
 	

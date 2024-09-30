@@ -33,11 +33,11 @@ namespace ysn
 	{
 		void Initialize(std::shared_ptr<ysn::DxRenderer> p_renderer);
 		void UpdateLight(const DirectionalLight& Light);
-		void Render(std::shared_ptr<ysn::DxRenderer> p_renderer,
-					std::shared_ptr<ysn::CommandQueue> command_queue,
-					wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-					ysn::ModelRenderContext* pGLTFDrawContext,
-					tinygltf::Model* pModel);
+		//void Render(std::shared_ptr<ysn::DxRenderer> p_renderer,
+		//			std::shared_ptr<ysn::CommandQueue> command_queue,
+		//			wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
+		//			ysn::ModelRenderContext* pGLTFDrawContext,
+		//			tinygltf::Model* pModel);
 
 		// Shadow Map resources
 		std::uint32_t ShadowMapDimension = 4096;
