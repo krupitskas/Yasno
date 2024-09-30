@@ -7,6 +7,8 @@ namespace ysn
 {
     struct GpuResource
     {
+        GpuResource() = default;
+
         GpuResource(wil::com_ptr<ID3D12Resource> res) : resource(res) {}
 
         D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const

@@ -217,11 +217,12 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
 			}
 
 		#ifndef YSN_RELEASE
-			std::wstring name(image.name.begin(), image.name.end());
+			std::wstring name(image.uri.begin(), image.uri.end());
 			dst_texture->SetName(name.c_str());
 		#endif
 
 			ysn::GpuTexture new_texture;
+			new_texture.name = std::wstring(image.uri.begin(), image.uri.end());
 			new_texture.gpu_resource = dst_texture;
 			new_texture.is_srgb = is_srgb;
 			new_texture.num_mips = num_mips;
@@ -652,21 +653,18 @@ static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 {
 	for (const tinygltf::Mesh& gltf_mesh : gltf_model.meshes)
 	{
-		ysn::Mesh mesh = {};
+		ysn::Mesh mesh;
 		mesh.name = gltf_mesh.name;
 
 		for (const tinygltf::Primitive& gltf_primitive : gltf_mesh.primitives)
 		{
-			ysn::Primitive primitive = {};
+			ysn::Primitive primitive;
 
 			BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
 			BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
 
-			//if (gltf_primitive.material >= 0)
-			//{
-			//	primitive.pMaterial = &pModelRenderContext->Materials[gltf_primitive.material]; // TODO: Move out
-			//}
+			primitive.material_id = gltf_primitive.material;
 
 			//BuildPipelines(&primitive, renderer);
 
@@ -751,7 +749,7 @@ static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 	}
 }
 
-bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
+static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
 {
 	auto dx_renderer = ysn::Application::Get().GetRenderer();
 
@@ -779,6 +777,8 @@ bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tin
 		}
 		else if (gltf_material.alphaMode == "OPAQUE")
 		{
+			material.blend_desc.RenderTarget[0].BlendEnable = false;
+
 			// TODO(gltf): Check other alpha modes
 			// assert( false );
 		}
@@ -852,26 +852,6 @@ bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tin
 		shader_parameters->metallic_factor = static_cast<float>(gltf_pbr_material.metallicFactor);
 		shader_parameters->roughness_factor = static_cast<float>(gltf_pbr_material.roughnessFactor);
 
-		if (gltf_pbr_material.metallicRoughnessTexture.index >= 0)
-		{
-			shader_parameters->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
-		}
-
-		if (gltf_material.normalTexture.index >= 0)
-		{
-			shader_parameters->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
-		}
-
-		if (gltf_material.occlusionTexture.index >= 0)
-		{
-			shader_parameters->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
-		}
-
-		if (gltf_material.emissiveTexture.index >= 0)
-		{
-			shader_parameters->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
-		}
-
 		if (gltf_pbr_material.baseColorTexture.index >= 0)
 		{
 			shader_parameters->texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BIT;
@@ -879,122 +859,140 @@ bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tin
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_pbr_material.baseColorTexture.index];
 
 			// TODO: Preallocate 5 handles and provide them through array, do not save first handle
-			RenderMaterial.srv_handle = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			RenderMaterial.sampler_handle = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			ysn::Texture& texture = pModelRenderContext->pTextures[GltfTexture.source];
-			texture.descriptor_handle = RenderMaterial.srv_handle;
+			ysn::GpuTexture& texture = model.textures[gltf_texture.source]; // TODO: use it for srgb?
+			texture.descriptor_handle = srv_handle;
+			texture.is_srgb = true;
 
-			pPBRMetallicRoughness->albedo_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(RenderMaterial.srv_handle);
+			shader_parameters->albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			auto resource = texture.gpuTexture;
-			auto resource_desc = resource->GetDesc();
+			auto resource_desc = texture.gpu_resource->GetDesc();
 
-			resource->SetName(L"Albedo");
-			texture.name = L"Albedo";
+		#ifndef YSN_RELEASE
+			texture.gpu_resource->SetName(L"Albedo Texture");
+		#endif
 
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = resource_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
+			texture.name = L"Albedo Texture";
 
-			p_renderer->GetDevice()->CreateShaderResourceView(resource.get(), &srv_desc, RenderMaterial.srv_handle.cpu);
+			//D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			//srv_desc.Format = resource_desc.Format;
+			//srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			//srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			//srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
 
-			D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
-			p_renderer->GetDevice()->CreateSampler(&SamplerDesc, RenderMaterial.sampler_handle.cpu);
+			//p_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, RenderMaterial.srv_handle.cpu);
+
+			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
+			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, RenderMaterial.sampler_handle.cpu);
 		}
 
-		tinygltf::TextureInfo& glTFMetallicRoughnessTexture = GltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture;
-		if (glTFMetallicRoughnessTexture.index > 0)
+		if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index > 0)
 		{
-			tinygltf::Texture& gltfTexture = pGltfModel->textures[glTFMetallicRoughnessTexture.index];
-			auto& texture = pModelRenderContext->pTextures[gltfTexture.source];
+			shader_parameters->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
 
-			auto SrvDescriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+			const tinygltf::Texture& gltfTexture = gltf_model.textures[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+			ysn::GpuTexture& texture = model.textures[gltfTexture.source];
 
-			texture.descriptor_handle = SrvDescriptor;
-			pPBRMetallicRoughness->metallic_roughness_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(SrvDescriptor);
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			texture.gpuTexture->SetName(L"MetallicRoughness");
+			texture.descriptor_handle = srv_handle;
+			shader_parameters->metallic_roughness_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			p_renderer->GetDevice()->CreateShaderResourceView(texture.gpuTexture.get(), nullptr, SrvDescriptor.cpu);
+		#ifndef YSN_RELEASE
+			texture.gpu_resource->SetName(L"Metallic Roughness Texture");
+		#endif
 
-			auto& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
+			texture.name = L"Metallic Roughness Texture";
+
+			//p_renderer->GetDevice()->CreateShaderResourceView(texture.gpuTexture.get(), nullptr, SrvDescriptor.cpu);
+
+			//auto& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
+			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
-		// Normal
-		// TODO: add scale
-		tinygltf::NormalTextureInfo& gltfNormalTexture = GltfMaterial.normalTexture;
-		if (gltfNormalTexture.index > 0)
+		if (gltf_material.normalTexture.index > 0)
 		{
-			const tinygltf::Texture& GltfTexture = pGltfModel->textures[gltfNormalTexture.index];
-			ID3D12Resource* pTexture = pModelRenderContext->pTextures[GltfTexture.source].gpuTexture.get();
+			shader_parameters->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
 
-			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.normalTexture.index];
+			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			pPBRMetallicRoughness->normal_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
+			shader_parameters->normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			pTexture->SetName(L"Normal");
+		#ifndef YSN_RELEASE
+			texture.gpu_resource->SetName(L"Normals Texture");
+		#endif
 
-			p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+			texture.name = L"Normals Texture";
 
-			D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
-			p_renderer->GetDevice()->CreateSampler(&SamplerDesc, SamplerDescriptor);
+			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+
+			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
+			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, SamplerDescriptor);
 		}
 
-		// Occlusion
-		tinygltf::OcclusionTextureInfo& gltfOcclusionTexture = GltfMaterial.occlusionTexture;
-		if (gltfOcclusionTexture.index > 0)
+		if (gltf_material.occlusionTexture.index > 0)
 		{
-			tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfOcclusionTexture.index];
-			ID3D12Resource* pTexture = pModelRenderContext->pTextures[gltfTexture.source].gpuTexture.get();
+			shader_parameters->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
 
-			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.occlusionTexture.index];
+			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			pPBRMetallicRoughness->occlusion_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
+			shader_parameters->occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+		#ifndef YSN_RELEASE
+			texture.gpu_resource->SetName(L"Occlusion Texture");
+		#endif
 
-			D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
+			texture.name = L"Occlusion Texture";
+
+			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+
+			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
+			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
-		// Emissive
-		tinygltf::TextureInfo& gltfEmissiveTexture = GltfMaterial.emissiveTexture;
-		if (gltfEmissiveTexture.index > 0)
+		if (gltf_material.emissiveTexture.index > 0)
 		{
-			tinygltf::Texture& gltfTexture = pGltfModel->textures[gltfEmissiveTexture.index];
-			ID3D12Resource* pTexture = pModelRenderContext->pTextures[gltfTexture.source].gpuTexture.get();
+			shader_parameters->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
 
-			auto descriptor = p_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.emissiveTexture.index];
+			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
+			texture.is_srgb = true;
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SrvDescriptor = descriptor.cpu;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE SamplerDescriptor = p_renderer->GetSamplerDescriptorHeap()->GetNewHandle().cpu;
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
-			pPBRMetallicRoughness->emissive_texture_index = p_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(descriptor);
+			shader_parameters->emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+		#ifndef YSN_RELEASE
+			texture.gpu_resource->SetName(L"Emissive Texture");
+		#endif
 
-			D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
+			texture.name = L"Emissive Texture";
+
+			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+
+			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
+			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
-		pModelRenderContext->Materials.push_back(RenderMaterial);
+		model.materials.push_back(material);
 	}
 }
 
 namespace ysn
 {
-	void ReadModel(Model& model, const tinygltf::Model& gltf_model, const LoadingParameters& loading_parameters)
+	bool ReadModel(Model& model, const tinygltf::Model& gltf_model, const LoadingParameters& loading_parameters)
 	{
 		auto dx_renderer = Application::Get().GetRenderer();
 		auto command_queue = Application::Get().GetDirectQueue();
@@ -1010,13 +1008,29 @@ namespace ysn
 		load_gltf_context.staging_resources.reserve(256);
 		load_gltf_context.copy_cmd_list = command_queue->GetCommandList();
 
-		BuildBuffers(model, load_gltf_context, gltf_model);
+		if(!BuildBuffers(model, load_gltf_context, gltf_model))
+		{
+			LogError << "GLTF loader can't build buffers\n";
+			return false;
+		}
+		if(!BuildImages(model, load_gltf_context, gltf_model))
+		{
+			LogError << "GLTF loader can't build materials\n";
+			return false;
+		}
 		//FindAllSrgbTextures(ModelRenderContext, pModel);
-		BuildMaterials(model, load_gltf_context, gltf_model);
-		BuildImages(model, load_gltf_context, gltf_model);
+		if(!BuildMaterials(model, load_gltf_context, gltf_model))
+		{
+			LogError << "GLTF loader can't build materials\n";
+			return false;
+		}
 		BuildSamplerDescs(model, gltf_model);
 		BuildMeshes(model, gltf_model);
-		BuildNodes(model, gltf_model, loading_parameters);
+		if(!BuildNodes(model, gltf_model, loading_parameters))
+		{
+			LogError << "GLTF loader can't build nodes\n";
+			return false;
+		}
 
 		// Build pipelines
 		// Compute mips 
@@ -1024,6 +1038,8 @@ namespace ysn
 
 		auto fence_value = command_queue->ExecuteCommandList(command_list);
 		command_queue->WaitForFenceValue(fence_value);
+
+		return true;
 	}
 
 	bool LoadGltfFromFile(RenderScene& render_scene, const std::wstring& load_path, const LoadingParameters& loading_parameters)
@@ -1036,6 +1052,8 @@ namespace ysn
 		const std::string load_path_str = ysn::WStringToString(load_path);
 
 		const bool result = gltf_loader.LoadASCIIFromFile(&gltf_model, &error_str, &warning_str, load_path_str.c_str());
+
+		LogInfo << "GLTF loading: " << load_path_str << "\n";
 
 		if (!warning_str.empty())
 		{
@@ -1055,9 +1073,15 @@ namespace ysn
 
 		Model model;
 
-		ReadModel(model, gltf_model, loading_parameters);
+		if(!ReadModel(model, gltf_model, loading_parameters))
+		{
+			LogInfo << "GLTF can't load model\n";
+			return false;
+		}
 
 		render_scene.models.push_back(model);
+
+		LogInfo << "GLTF loaded successfully: " << load_path_str << "\n";
 
 		return true;
 	}

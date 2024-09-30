@@ -74,7 +74,7 @@ namespace ysn
 		return commandList;
 	}
 
-	wil::com_ptr<ID3D12GraphicsCommandList4> CommandQueue::GetCommandList()
+	wil::com_ptr<ID3D12GraphicsCommandList4> CommandQueue::GetCommandList(std::string name)
 	{
 		wil::com_ptr<ID3D12CommandAllocator> commandAllocator;
 		wil::com_ptr<ID3D12GraphicsCommandList4> commandList;
@@ -102,6 +102,10 @@ namespace ysn
 		{
 			commandList = CreateCommandList(commandAllocator);
 		}
+
+	#ifndef YSN_RELEASE
+		commandList->SetName(std::wstring(name.begin(), name.end()).c_str());
+	#endif
 
 		// Associate the command allocator with the command list so that it can be
 		// retrieved when the command list is executed.

@@ -14,7 +14,7 @@ namespace ysn
 		CommandQueue(wil::com_ptr<ID3D12Device5> device, D3D12_COMMAND_LIST_TYPE type);
 		virtual ~CommandQueue();
 
-		wil::com_ptr<ID3D12GraphicsCommandList4> GetCommandList();
+		wil::com_ptr<ID3D12GraphicsCommandList4> GetCommandList(std::string name = "Neyasno Command List");
 
 		// Execute a command list.
 		// Returns the fence value to wait for this command list.

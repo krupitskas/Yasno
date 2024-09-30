@@ -256,7 +256,7 @@ namespace ysn
 		// TODO(last): Another command list?
 		bool load_result = false;
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
-		load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		//load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
 		load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
@@ -319,11 +319,11 @@ namespace ysn
 		// Setup techniques
 		m_shadow_pass.Initialize(Application::Get().GetRenderer());
 
-		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
-		{
-			LogFatal << "Can't initialize raytracing pass\n";
-			return false;
-		}
+		//if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
+		//{
+		//	LogFatal << "Can't initialize raytracing pass\n";
+		//	return false;
+		//}
 
 		// Setup camera
 		m_render_scene.camera = std::make_shared<ysn::Camera>();
@@ -703,6 +703,25 @@ namespace ysn
 
 		if (m_is_raster)
 		{
+			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+
+			PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
+
+			// Clear the render targets.
+			{
+				FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
+
+				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+				command_list->ResourceBarrier(1, &barrier);
+
+				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
+				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
+			}
+
+			command_queue->ExecuteCommandList(command_list);
+
+
 			// TODO(return)
 			//m_forward_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
 		}
@@ -732,21 +751,21 @@ namespace ysn
 			command_queue->ExecuteCommandList(command_list);
 		}
 
-		if (m_is_raster)
-		{
-			SkyboxPassParameters skybox_parameters;
-			skybox_parameters.command_queue = command_queue;
-			skybox_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
-			skybox_parameters.scene_color_buffer = m_scene_color_buffer;
-			skybox_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
-			skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
-			skybox_parameters.viewport = m_viewport;
-			skybox_parameters.scissors_rect = m_scissors_rect;
-			skybox_parameters.equirectangular_texture = &m_environment_texture;
-			skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
-			
-			m_skybox_pass.RenderSkybox(&skybox_parameters);
-		}
+		//if (m_is_raster)
+		//{
+		//	SkyboxPassParameters skybox_parameters;
+		//	skybox_parameters.command_queue = command_queue;
+		//	skybox_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
+		//	skybox_parameters.scene_color_buffer = m_scene_color_buffer;
+		//	skybox_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
+		//	skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
+		//	skybox_parameters.viewport = m_viewport;
+		//	skybox_parameters.scissors_rect = m_scissors_rect;
+		//	skybox_parameters.equirectangular_texture = &m_environment_texture;
+		//	skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
+		//	
+		//	m_skybox_pass.RenderSkybox(&skybox_parameters);
+		//}
 
 		{
 			TonemapPostprocessParameters tonemap_parameters;

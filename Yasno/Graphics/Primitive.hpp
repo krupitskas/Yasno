@@ -25,6 +25,7 @@ namespace ysn
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 
 		uint32_t index_count = 0;
+		int material_id = -1;
 
 		std::unordered_map<std::string, Attribute> attributes;
 	};

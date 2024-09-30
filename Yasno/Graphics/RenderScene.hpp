@@ -22,16 +22,16 @@ namespace ysn
 
 	struct ModelRenderParameters
 	{
-		bool should_cast_shadow		= false;
-
+		bool should_cast_shadow = false;
 	};
 
 	struct Model
 	{
-		std::string name			= "Unnamed Model";
+		std::string name = "Unnamed Model";
 		ModelRenderParameters render_parameters;
 
 		std::vector<Mesh> meshes;
+		std::vector<Material> materials;
 
 		// Not sure about that
 		std::vector<GpuResource> buffers;
@@ -41,7 +41,7 @@ namespace ysn
 		std::vector<GpuResource> node_buffers; // Per node GPU data
 		std::vector<D3D12_SAMPLER_DESC> sampler_descs;
 	};
-	
+
 	struct RenderScene
 	{
 		std::shared_ptr<Camera> camera;

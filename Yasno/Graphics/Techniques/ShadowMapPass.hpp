@@ -9,6 +9,7 @@
 
 #include <System/GltfLoader.hpp>
 #include <Renderer/DescriptorHeap.hpp>
+#include <Renderer/DxRenderer.hpp>
 
 namespace ysn
 {
