@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Renderer/PipelineStateObject.hpp>
+#include <Renderer/Pso.hpp>
 
 namespace ysn
 {
 	struct PSOStorage
 	{
-		PipelineStateObjectId CreatePso();
+		PsoId CreatePso();
 		void DeletePso();
 
-		std::unordered_map<PipelineStateObjectId, PipelineStateObject> pso_pool;
+		std::unordered_map<PsoId, Pso> pso_pool;
 	};
 }

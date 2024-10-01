@@ -149,7 +149,7 @@
     <ClCompile Include="Renderer\VertexStorage.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\PipelineStateObject.cpp">
+    <ClCompile Include="Renderer\Pso.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\DepthBuffer.cpp">
@@ -343,7 +343,7 @@
     <ClInclude Include="Renderer\VertexStorage.hpp">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\PipelineStateObject.hpp">
+    <ClInclude Include="Renderer\Pso.hpp">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\DepthBuffer.hpp">

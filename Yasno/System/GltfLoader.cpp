@@ -666,8 +666,6 @@ static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 
 			primitive.material_id = gltf_primitive.material;
 
-			//BuildPipelines(&primitive, renderer);
-
 			mesh.primitives.push_back(primitive);
 		}
 

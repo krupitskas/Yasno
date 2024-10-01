@@ -11,6 +11,7 @@
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/IndexStorage.hpp>
 #include <Renderer/VertexStorage.hpp>
+#include <Renderer/PsoStorage.hpp>
 
 namespace ysn
 {
@@ -23,6 +24,8 @@ namespace ysn
 		void Shutdown();
 
 		bool CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const;
+
+		bool CreatePso();
 
 		wil::com_ptr<ID3D12Device5> GetDevice() const;
 
@@ -60,6 +63,7 @@ namespace ysn
 		VertexStorage m_vertex_storage;
 		IndexStorage m_index_storage;
 		std::shared_ptr<ShaderStorage> m_shader_storage;
+		PsoStorage m_pso_storage;
 
 		// Formats
 		DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;

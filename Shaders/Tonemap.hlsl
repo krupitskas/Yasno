@@ -1,5 +1,3 @@
-// Provide parameters for exposure
-
 RWTexture2D<float4> HDRTexture : register(u0);
 RWTexture2D<float4> LDRTexture : register(u1);
 

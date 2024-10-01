@@ -280,7 +280,7 @@
     <ClCompile Include="Renderer\nv_helpers_dx12\RootSignatureGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.cpp" />
-    <ClCompile Include="Renderer\PipelineStateObject.cpp" />
+    <ClCompile Include="Renderer\Pso.cpp" />
     <ClCompile Include="Renderer\PsoStorage.cpp" />
     <ClCompile Include="Renderer\RaytracingContext.cpp" />
     <ClCompile Include="Renderer\RootSignature.cpp" />
@@ -345,7 +345,7 @@
     <ClInclude Include="Renderer\nv_helpers_dx12\RootSignatureGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.h" />
-    <ClInclude Include="Renderer\PipelineStateObject.hpp" />
+    <ClInclude Include="Renderer\Pso.hpp" />
     <ClInclude Include="Renderer\PsoStorage.hpp" />
     <ClInclude Include="Renderer\RaytracingContext.hpp" />
     <ClInclude Include="Renderer\RootSignature.hpp" />

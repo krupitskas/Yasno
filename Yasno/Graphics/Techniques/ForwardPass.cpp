@@ -3,8 +3,6 @@
 namespace ysn
 {
 	/*
-	
-
 	void DrawNode(
 	ysn::ModelRenderContext* ModelRenderContext,
 	std::shared_ptr<ysn::DxRenderer> p_renderer,
@@ -16,66 +14,66 @@ namespace ysn
 	ysn::PrimitivePipeline PrimitivePipeline,
 	ysn::ShadowMapBuffer* p_shadow_map_buffer)
 	{
-	const auto& glTFNode = pModel->nodes[nodeIndex];
+		const auto& glTFNode = pModel->nodes[nodeIndex];
 
-	if (glTFNode.mesh >= 0)
-	{
-	const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
+		if (glTFNode.mesh >= 0)
+		{
+			const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
 
-	for (const ysn::Primitive& primitive : mesh.primitives)
-	{
-	pCommandList->IASetPrimitiveTopology(primitive.primitiveTopology);
+			for (const ysn::Primitive& primitive : mesh.primitives)
+			{
+				pCommandList->IASetPrimitiveTopology(primitive.primitiveTopology);
 
-	for (auto i = 0; i != primitive.RenderAttributes.size(); ++i)
-	{
-	pCommandList->IASetVertexBuffers(i, 1, &primitive.RenderAttributes[i].vertexBufferView);
-	}
+				for (auto i = 0; i != primitive.RenderAttributes.size(); ++i)
+				{
+					pCommandList->IASetVertexBuffers(i, 1, &primitive.RenderAttributes[i].vertexBufferView);
+				}
 
-	ID3D12DescriptorHeap* pDescriptorHeaps[] = {
-	p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
-	};
-	pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+				ID3D12DescriptorHeap* pDescriptorHeaps[] = {
+				p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
+				};
+				pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
-	switch (PrimitivePipeline)
-	{
-	case ysn::PrimitivePipeline::ForwardPbr:
-	{
-	pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
-	pCommandList->SetPipelineState(primitive.pPipelineState.get());
-	pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
-	pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-	pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-	pCommandList->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
-	break;
-	}
-	case ysn::PrimitivePipeline::Shadow:
-	pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
-	pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
-	break;
-	case ysn::PrimitivePipeline::ForwardNoMaterial:
-	break;
-	}
+				switch (PrimitivePipeline)
+				{
+					case ysn::PrimitivePipeline::ForwardPbr:
+					{
+						pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
+						pCommandList->SetPipelineState(primitive.pPipelineState.get());
+						pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
+						pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
+						pCommandList->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
+						break;
+					}
+					case ysn::PrimitivePipeline::Shadow:
+						pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
+						pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
+						break;
+					case ysn::PrimitivePipeline::ForwardNoMaterial:
+						break;
+				}
 
-	pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
-	pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+				pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
+				pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
 
 
-	if (primitive.indexCount)
-	{
-	pCommandList->IASetIndexBuffer(&primitive.indexBufferView);
-	pCommandList->DrawIndexedInstanced(primitive.indexCount, 1, 0, 0, 0);
-	}
-	else
-	{
-	pCommandList->DrawInstanced(primitive.vertexCount, 1, 0, 0);
-	}
-	}
-	}
+				if (primitive.indexCount)
+				{
+					pCommandList->IASetIndexBuffer(&primitive.indexBufferView);
+					pCommandList->DrawIndexedInstanced(primitive.indexCount, 1, 0, 0, 0);
+				}
+				else
+				{
+					pCommandList->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+				}
+			}
+		}
 
-	for (auto childNodeIndex : glTFNode.children)
-	{
-	DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
-	}
+		for (auto childNodeIndex : glTFNode.children)
+		{
+			DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
+		}
 	}
 
 	void ysn::RenderGLTF(
@@ -88,16 +86,17 @@ namespace ysn
 	ysn::PrimitivePipeline PrimitivePipeline,
 	ysn::ShadowMapBuffer* p_shadow_map_descriptor)
 	{
-	auto& scene = pModel->scenes[pModel->defaultScene];
+		auto& scene = pModel->scenes[pModel->defaultScene];
 
-	for (auto nodeIndex : scene.nodes)
-	{
-	DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
+		for (auto nodeIndex : scene.nodes)
+		{
+			DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
+		}
 	}
-	}
-	 
-	 
-	bool ForwardPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
+	*/
+
+
+	bool ForwardPass::CompileModelPso(ysn::Primitive& primitive)
 	{
 		HRESULT result = S_OK;
 		{
@@ -145,13 +144,13 @@ namespace ysn
 			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, 0, D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters			= 6;
-			RootSignatureDesc.pParameters			= &rootParams[0];
-			RootSignatureDesc.Flags					= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+			RootSignatureDesc.NumParameters = 6;
+			RootSignatureDesc.pParameters = &rootParams[0];
+			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 				| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
 				| D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
-			RootSignatureDesc.pStaticSamplers		= &static_sampler[0];
-			RootSignatureDesc.NumStaticSamplers		= 2;
+			RootSignatureDesc.pStaticSamplers = &static_sampler[0];
+			RootSignatureDesc.NumStaticSamplers = 2;
 
 			result = renderer->CreateRootSignature(&RootSignatureDesc, &pRenderPrimitive->pRootSignature);
 			assert(SUCCEEDED(result));
@@ -227,8 +226,6 @@ namespace ysn
 
 		return true;
 	}
-	*/
-
 
 
 	/*

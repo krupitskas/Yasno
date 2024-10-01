@@ -186,6 +186,14 @@ namespace ysn
 	void DxRenderer::Shutdown()
 	{}
 
+	bool DxRenderer::CreatePso()
+	{
+	
+
+		return true;
+	}
+
+
 	bool DxRenderer::CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const
 	{
 		HRESULT hr = S_OK;

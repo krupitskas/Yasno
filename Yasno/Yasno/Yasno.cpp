@@ -582,6 +582,17 @@ namespace ysn
 		// Track shader updates
 		Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
 	#endif
+
+		for(auto& model : m_render_scene.models)
+		{
+			for(auto& mesh : model.meshes)
+			{
+				for(auto& primitive : model.primitives)
+				{
+					mesh.
+				}
+			}
+		}
 	}
 
 	void Yasno::RenderUi()
