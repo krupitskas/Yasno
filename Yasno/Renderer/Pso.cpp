@@ -1,5 +1,7 @@
 #include "Pso.hpp"
 
+#include <System/Hash.hpp>
+
 namespace ysn
 {
 	GraphicsPso::GraphicsPso()
@@ -12,60 +14,79 @@ namespace ysn
 		type = PsoType::Compute;
 	}
 
-	inline void ComputePso::SetComputeShader(const void* binary, size_t size)
+	void ComputePso::SetComputeShader(const void* binary, size_t size)
 	{
 		m_pso_desc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(binary), size);
 	}
 
-	inline void ComputePso::SetComputeShader(const D3D12_SHADER_BYTECODE& binary)
+	void ComputePso::SetComputeShader(const D3D12_SHADER_BYTECODE& binary)
 	{
 		m_pso_desc.CS = binary;
 	}
 
-	/*
-	void GraphicsPSO::Finalize()
+	std::optional<PsoId> GraphicsPso::Build(wil::com_ptr<ID3D12Device5> device, std::unordered_map<PsoId, GraphicsPso>& pso_pool)
 	{
 		// Make sure the root signature is finalized first
-		m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
-		ASSERT(m_PSODesc.pRootSignature != nullptr);
+		m_pso_desc.pRootSignature = m_root_signature.get();
+		YSN_ASSERT(m_pso_desc.pRootSignature != nullptr);
 
-		m_PSODesc.InputLayout.pInputElementDescs = nullptr;
-		size_t HashCode = Utility::HashState(&m_PSODesc);
-		HashCode = Utility::HashState(m_InputLayouts.get(), m_PSODesc.InputLayout.NumElements, HashCode);
-		m_PSODesc.InputLayout.pInputElementDescs = m_InputLayouts.get();
+		m_pso_desc.InputLayout.pInputElementDescs = nullptr;
 
-		ID3D12PipelineState** PSORef = nullptr;
-		bool firstCompile = false;
+		pso_id = HashState(&m_pso_desc);
+		pso_id = HashState(m_input_layout.get(), m_pso_desc.InputLayout.NumElements, pso_id);
+
+		m_pso_desc.InputLayout.pInputElementDescs = m_input_layout.get();
+
+		ID3D12PipelineState** pso_ref = nullptr;
+
+		bool first_compile = false;
+
 		{
-			static mutex s_HashMapMutex;
-			lock_guard<mutex> CS(s_HashMapMutex);
-			auto iter = s_GraphicsPSOHashMap.find(HashCode);
+			auto iter = pso_pool.find(pso_id);
 
 			// Reserve space so the next inquiry will find that someone got here first.
-			if (iter == s_GraphicsPSOHashMap.end())
+			if (iter == pso_pool.end())
 			{
-				firstCompile = true;
-				PSORef = s_GraphicsPSOHashMap[HashCode].GetAddressOf();
+				first_compile = true;
+				//pso_ref = pso_pool[pso_id].GetAddressOf();
 			}
 			else
-				PSORef = iter->second.GetAddressOf();
+			{
+				//pso_ref = iter->second.GetAddressOf();
+			}
 		}
 
-		if (firstCompile)
+		if (first_compile)
 		{
-			ASSERT(m_PSODesc.DepthStencilState.DepthEnable != (m_PSODesc.DSVFormat == DXGI_FORMAT_UNKNOWN));
-			ASSERT_SUCCEEDED( g_Device->CreateGraphicsPipelineState(&m_PSODesc, MY_IID_PPV_ARGS(&m_PSO)) );
-			s_GraphicsPSOHashMap[HashCode].Attach(m_PSO);
-			m_PSO->SetName(m_Name);
+			//YSN_ASSERT(pso_ref->DepthStencilState.DepthEnable != (m_pso_desc.DSVFormat == DXGI_FORMAT_UNKNOWN));
+
+			const auto res = device->CreateGraphicsPipelineState(&m_pso_desc, IID_PPV_ARGS(&m_pso));
+
+			if(res != S_OK)
+			{
+				LogFatal << "Can't compile pso " << m_name << " " << pso_id << " \n";
+				return std::nullopt;
+			}
+
+			//pso_pool[pso_id].Attach(m_pso);
+
+
+		#ifndef YSN_RELEASE
+			std::wstring name(m_name.begin(), m_name.end());
+			m_pso->SetName(name.c_str());
+		#endif
+
+			pso_pool[pso_id] = *this;
 		}
 		else
 		{
-			while (*PSORef == nullptr)
-				this_thread::yield();
-			m_PSO = *PSORef;
+			//m_pso = *pso_ref;
 		}
+
+		return pso_id;
 	}
 
+	/*
 
 	void ComputePSO::Finalize()
 	{
@@ -73,29 +94,29 @@ namespace ysn
 		m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
 		ASSERT(m_PSODesc.pRootSignature != nullptr);
 
-		size_t HashCode = Utility::HashState(&m_PSODesc);
+		size_t hash_code = Utility::HashState(&m_PSODesc);
 
 		ID3D12PipelineState** PSORef = nullptr;
-		bool firstCompile = false;
+		bool first_compile = false;
 		{
 			static mutex s_HashMapMutex;
 			lock_guard<mutex> CS(s_HashMapMutex);
-			auto iter = s_ComputePSOHashMap.find(HashCode);
+			auto iter = s_ComputePSOHashMap.find(hash_code);
 
 			// Reserve space so the next inquiry will find that someone got here first.
 			if (iter == s_ComputePSOHashMap.end())
 			{
-				firstCompile = true;
-				PSORef = s_ComputePSOHashMap[HashCode].GetAddressOf();
+				first_compile = true;
+				PSORef = s_ComputePSOHashMap[hash_code].GetAddressOf();
 			}
 			else
 				PSORef = iter->second.GetAddressOf();
 		}
 
-		if (firstCompile)
+		if (first_compile)
 		{
 			ASSERT_SUCCEEDED( g_Device->CreateComputePipelineState(&m_PSODesc, MY_IID_PPV_ARGS(&m_PSO)) );
-			s_ComputePSOHashMap[HashCode].Attach(m_PSO);
+			s_ComputePSOHashMap[hash_code].Attach(m_PSO);
 			m_PSO->SetName(m_Name);
 		}
 		else
@@ -107,13 +128,11 @@ namespace ysn
 	}
 	*/
 
-	void GraphicsPso::Build()
+	void GraphicsPso::SetRootSignature(ID3D12RootSignature* root_signature)
 	{
+		m_root_signature = root_signature;
 	}
 
-	void ComputePso::Build()
-	{
-	}
 
 	void GraphicsPso::SetBlendState(const D3D12_BLEND_DESC& blend_desc)
 	{
@@ -164,8 +183,8 @@ namespace ysn
 			YSN_ASSERT(RTVFormats[i] != DXGI_FORMAT_UNKNOWN);
 			m_pso_desc.RTVFormats[i] = RTVFormats[i];
 		}
-		for (UINT i = NumRTVs; i < m_pso_desc.NumRenderTargets; ++i)
-			m_pso_desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+		//for (UINT i = NumRTVs; i < m_pso_desc.NumRenderTargets; ++i)
+		//	m_pso_desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
 		m_pso_desc.NumRenderTargets = NumRTVs;
 		m_pso_desc.DSVFormat = DSVFormat;
 		m_pso_desc.SampleDesc.Count = MsaaCount;
@@ -189,52 +208,52 @@ namespace ysn
 
 	// These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
 
-	inline void GraphicsPso::SetVertexShader(const void* Binary, size_t Size)
+	void GraphicsPso::SetVertexShader(const void* Binary, size_t Size)
 	{
 		m_pso_desc.VS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
 	}
 
-	inline void GraphicsPso::SetPixelShader(const void* Binary, size_t Size)
+	void GraphicsPso::SetPixelShader(const void* Binary, size_t Size)
 	{
 		m_pso_desc.PS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
 	}
 
-	inline void GraphicsPso::SetGeometryShader(const void* Binary, size_t Size)
+	void GraphicsPso::SetGeometryShader(const void* Binary, size_t Size)
 	{
 		m_pso_desc.GS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
 	}
 
-	inline void GraphicsPso::SetHullShader(const void* Binary, size_t Size)
+	void GraphicsPso::SetHullShader(const void* Binary, size_t Size)
 	{
 		m_pso_desc.HS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
 	}
 
-	inline void GraphicsPso::SetDomainShader(const void* Binary, size_t Size)
+	void GraphicsPso::SetDomainShader(const void* Binary, size_t Size)
 	{
 		m_pso_desc.DS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
 	}
 
-	inline void GraphicsPso::SetVertexShader(const D3D12_SHADER_BYTECODE& Binary)
+	void GraphicsPso::SetVertexShader(const D3D12_SHADER_BYTECODE& Binary)
 	{
 		m_pso_desc.VS = Binary;
 	}
 
-	inline void GraphicsPso::SetPixelShader(const D3D12_SHADER_BYTECODE& Binary)
+	void GraphicsPso::SetPixelShader(const D3D12_SHADER_BYTECODE& Binary)
 	{
 		m_pso_desc.PS = Binary;
 	}
 
-	inline void GraphicsPso::SetGeometryShader(const D3D12_SHADER_BYTECODE& Binary)
+	void GraphicsPso::SetGeometryShader(const D3D12_SHADER_BYTECODE& Binary)
 	{
 		m_pso_desc.GS = Binary;
 	}
 
-	inline void GraphicsPso::SetHullShader(const D3D12_SHADER_BYTECODE& Binary)
+	void GraphicsPso::SetHullShader(const D3D12_SHADER_BYTECODE& Binary)
 	{
 		m_pso_desc.HS = Binary;
 	}
 
-	inline void GraphicsPso::SetDomainShader(const D3D12_SHADER_BYTECODE& Binary)
+	void GraphicsPso::SetDomainShader(const D3D12_SHADER_BYTECODE& Binary)
 	{
 		m_pso_desc.DS = Binary;
 	}

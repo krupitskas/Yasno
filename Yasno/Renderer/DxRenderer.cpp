@@ -186,13 +186,15 @@ namespace ysn
 	void DxRenderer::Shutdown()
 	{}
 
-	bool DxRenderer::CreatePso()
+	std::optional<PsoId> DxRenderer::CreatePso(GraphicsPso& pso)
 	{
-	
-
-		return true;
+		return pso.Build(m_device, m_pso_pool);
 	}
 
+	GraphicsPso DxRenderer::GetPso(PsoId pso_id)
+	{
+		return m_pso_pool[pso_id];
+	}
 
 	bool DxRenderer::CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const
 	{

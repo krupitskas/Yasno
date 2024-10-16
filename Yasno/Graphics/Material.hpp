@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Renderer/PipelineStateObject.hpp>
+#include <Renderer/PSO.hpp>
 #include <Renderer/GpuResource.hpp>
 
 namespace ysn
@@ -11,11 +11,11 @@ namespace ysn
 
 		std::string name = "Unnamed Material";
 
-		D3D12_BLEND_DESC blend_desc;
-		D3D12_RASTERIZER_DESC rasterizer_desc;
+		D3D12_BLEND_DESC blend_desc = {};
+		D3D12_RASTERIZER_DESC rasterizer_desc = {};
 
 		GpuResource gpu_material_parameters;
 
-		PipelineStateObjectId pso_id;
+		PsoId pso_id;
 	};
 }

@@ -5,6 +5,7 @@
 #include <d3dx12.h>
 #include <wil/com.h>
 
+#include <Renderer/Pso.hpp>
 #include <Renderer/VertexStorage.hpp>
 
 namespace ysn
@@ -21,6 +22,8 @@ namespace ysn
 
 	struct Primitive
 	{
+		PsoId pso_id = -1;
+
 		D3D_PRIMITIVE_TOPOLOGY topology;
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 
@@ -30,6 +33,7 @@ namespace ysn
 		std::unordered_map<std::string, Attribute> attributes;
 	};
 
+	// TODO: Rename it into some CSG mesh
 	struct MeshPrimitive
 	{
 		wil::com_ptr<ID3D12Resource> vertex_buffer;

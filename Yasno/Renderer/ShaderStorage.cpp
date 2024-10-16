@@ -114,6 +114,8 @@ namespace ysn
 
 	std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters* parameters)
 	{
+		// TODO: search for this cached binary and return it if possible
+
 		std::filesystem::path fullpath(parameters->shader_path);
 		const std::wstring filename = fullpath.filename();
 

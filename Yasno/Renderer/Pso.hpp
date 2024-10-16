@@ -8,9 +8,7 @@
 
 namespace ysn
 {
-	using PsoId = uint64_t;
-
-	static PsoId GlobalPsoIdCounter = 0;
+	using PsoId = size_t;
 
 	enum class PsoType
 	{
@@ -18,6 +16,8 @@ namespace ysn
 		Graphics,
 		Compute
 	};
+
+	// TODO: Split into Pso and PsoDescription
 
 	struct Pso
 	{
@@ -28,18 +28,19 @@ namespace ysn
 			m_name = name;
 		}
 
+		wil::com_ptr<ID3D12RootSignature> m_root_signature = nullptr;
+		wil::com_ptr<ID3D12PipelineState> m_pso = nullptr;
 	protected:
 		PsoId pso_id = 0;
 		PsoType type = PsoType::None;
 		std::string m_name = "Neyasnoe PSO";
-
-		ID3D12RootSignature* m_root_signature = nullptr;
-		ID3D12PipelineState* m_pso = nullptr;
 	};
 
 	struct GraphicsPso : public Pso
 	{
 		GraphicsPso();
+
+		void SetRootSignature(ID3D12RootSignature* root_signature);
 
 		void SetBlendState(const D3D12_BLEND_DESC& blend_desc);
 		void SetRasterizerState(const D3D12_RASTERIZER_DESC& rasterizer_desc);
@@ -65,10 +66,10 @@ namespace ysn
 		void SetHullShader(const D3D12_SHADER_BYTECODE& binary);
 		void SetDomainShader(const D3D12_SHADER_BYTECODE& binary);
 
-		void Build();
+		std::optional<PsoId> Build(wil::com_ptr<ID3D12Device5> device, std::unordered_map<PsoId, GraphicsPso>& pso_pool);
 	protected:
 
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_pso_desc;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_pso_desc = {};
 		std::shared_ptr<const D3D12_INPUT_ELEMENT_DESC> m_input_layout;
 	};
 
@@ -78,8 +79,8 @@ namespace ysn
 
 		void SetComputeShader(const void* binary, size_t size);
 		void SetComputeShader(const D3D12_SHADER_BYTECODE& binary);
-		void Build();
+		bool Build(std::unordered_map<PsoId, GraphicsPso>& pso_pool);
 	protected:
-		D3D12_COMPUTE_PIPELINE_STATE_DESC m_pso_desc;
+		D3D12_COMPUTE_PIPELINE_STATE_DESC m_pso_desc = {};
 	};
 }

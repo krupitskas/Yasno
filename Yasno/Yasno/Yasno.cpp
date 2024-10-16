@@ -262,6 +262,18 @@ namespace ysn
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
 
+
+		for(auto& model : m_render_scene.models)
+		{
+			for(auto& mesh : model.meshes)
+			{
+				for(auto& primitive : mesh.primitives)
+				{
+					m_forward_pass.CompilePrimitivePso(primitive, model.materials);
+				}
+			}
+		}
+
 		if(!m_tonemap_pass.Initialize())
 		{
 			LogFatal << "Can't initialize tonemap pass\n";
@@ -582,17 +594,6 @@ namespace ysn
 		// Track shader updates
 		Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
 	#endif
-
-		for(auto& model : m_render_scene.models)
-		{
-			for(auto& mesh : model.meshes)
-			{
-				for(auto& primitive : model.primitives)
-				{
-					mesh.
-				}
-			}
-		}
 	}
 
 	void Yasno::RenderUi()
@@ -730,12 +731,12 @@ namespace ysn
 
 		if (m_is_raster)
 		{
-			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-
-			PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
-
-			// Clear the render targets.
 			{
+				wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+
+				PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
+
+				// Clear the render targets.
 				FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
 
 				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -744,13 +745,20 @@ namespace ysn
 				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
 				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
+
+				PIXEndEvent(command_list.get());
+				command_queue->ExecuteCommandList(command_list);
+
 			}
 
-			command_queue->ExecuteCommandList(command_list);
-
-
-			// TODO(return)
-			//m_forward_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
+			{
+				ForwardPassRenderParameters render_parameters;
+				render_parameters.command_queue = command_queue;
+				render_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
+				render_parameters.scene_color_buffer = m_scene_color_buffer;
+			
+				m_forward_pass.Render(m_render_scene, render_parameters);
+			}
 		}
 		else
 		{

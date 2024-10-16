@@ -1,105 +1,151 @@
 #include "ForwardPass.hpp"
 
+#include <Renderer/DxRenderer.hpp>
+#include <System/Application.hpp>
+#include <System/Filesystem.hpp>
+#include <Renderer/PsoStorage.hpp>
+
 namespace ysn
 {
+	//void DrawNode(ysn::ModelRenderContext* ModelRenderContext,
+	//std::shared_ptr<ysn::DxRenderer> p_renderer,
+	//tinygltf::Model* pModel,
+	//wil::com_ptr<ID3D12GraphicsCommandList> command_list,
+	//wil::com_ptr<ID3D12Resource> pCameraBuffer,
+	//wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
+	//uint64_t nodeIndex,
+	//ysn::PrimitivePipeline PrimitivePipeline,
+	//ysn::ShadowMapBuffer* p_shadow_map_buffer)
+	//{
+	//	const auto& glTFNode = pModel->nodes[nodeIndex];
+
+	//	if (glTFNode.mesh >= 0)
+	//	{
+	//		const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
+
+	//		for (const ysn::Primitive& primitive : mesh.primitives)
+	//		{
+	//			
+	//		}
+	//	}
+
+	//	for (auto childNodeIndex : glTFNode.children)
+	//	{
+	//		DrawNode(ModelRenderContext, p_renderer, pModel, command_list, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
+	//	}
+	//}
+
 	/*
-	void DrawNode(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	tinygltf::Model* pModel,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
-	wil::com_ptr<ID3D12Resource> pCameraBuffer,
-	wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-	uint64_t nodeIndex,
-	ysn::PrimitivePipeline PrimitivePipeline,
-	ysn::ShadowMapBuffer* p_shadow_map_buffer)
-	{
-		const auto& glTFNode = pModel->nodes[nodeIndex];
-
-		if (glTFNode.mesh >= 0)
-		{
-			const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
-
-			for (const ysn::Primitive& primitive : mesh.primitives)
-			{
-				pCommandList->IASetPrimitiveTopology(primitive.primitiveTopology);
-
-				for (auto i = 0; i != primitive.RenderAttributes.size(); ++i)
-				{
-					pCommandList->IASetVertexBuffers(i, 1, &primitive.RenderAttributes[i].vertexBufferView);
-				}
-
-				ID3D12DescriptorHeap* pDescriptorHeaps[] = {
-				p_renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
-				};
-				pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-
-				switch (PrimitivePipeline)
-				{
-					case ysn::PrimitivePipeline::ForwardPbr:
-					{
-						pCommandList->SetGraphicsRootSignature(primitive.pRootSignature.get());
-						pCommandList->SetPipelineState(primitive.pPipelineState.get());
-						pCommandList->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
-						pCommandList->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-						pCommandList->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-						pCommandList->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
-						break;
-					}
-					case ysn::PrimitivePipeline::Shadow:
-						pCommandList->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
-						pCommandList->SetPipelineState(primitive.pShadowPipelineState.get());
-						break;
-					case ysn::PrimitivePipeline::ForwardNoMaterial:
-						break;
-				}
-
-				pCommandList->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
-				pCommandList->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
-
-
-				if (primitive.indexCount)
-				{
-					pCommandList->IASetIndexBuffer(&primitive.indexBufferView);
-					pCommandList->DrawIndexedInstanced(primitive.indexCount, 1, 0, 0, 0);
-				}
-				else
-				{
-					pCommandList->DrawInstanced(primitive.vertexCount, 1, 0, 0);
-				}
-			}
-		}
-
-		for (auto childNodeIndex : glTFNode.children)
-		{
-			DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
-		}
-	}
 
 	void ysn::RenderGLTF(
 	ysn::ModelRenderContext* ModelRenderContext,
 	std::shared_ptr<ysn::DxRenderer> p_renderer,
 	tinygltf::Model* pModel,
-	wil::com_ptr<ID3D12GraphicsCommandList> pCommandList,
+	wil::com_ptr<ID3D12GraphicsCommandList> command_list,
 	wil::com_ptr<ID3D12Resource> pCameraBuffer,
 	wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
 	ysn::PrimitivePipeline PrimitivePipeline,
 	ysn::ShadowMapBuffer* p_shadow_map_descriptor)
 	{
-		auto& scene = pModel->scenes[pModel->defaultScene];
+	auto& scene = pModel->scenes[pModel->defaultScene];
 
-		for (auto nodeIndex : scene.nodes)
-		{
-			DrawNode(ModelRenderContext, p_renderer, pModel, pCommandList, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
-		}
+	for (auto nodeIndex : scene.nodes)
+	{
+	DrawNode(ModelRenderContext, p_renderer, pModel, command_list, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
+	}
 	}
 	*/
 
-
-	bool ForwardPass::CompileModelPso(ysn::Primitive& primitive)
+	static std::vector<DxcDefine> BuildAttributeDefines(const std::unordered_map<std::string, Attribute>& attributes)
 	{
-		HRESULT result = S_OK;
+		std::vector<DxcDefine> defines;
+
+		for (const auto& [name, attribute] : attributes)
 		{
+			if (attribute.name == "NORMAL")
+			{
+				defines.push_back({ L"HAS_NORMAL", L"1" });
+			}
+			else if (attribute.name == "TANGENT")
+			{
+				defines.push_back({ L"HAS_TANGENT", L"1" });
+			}
+			else if (attribute.name == "TEXCOORD_0")
+			{
+				defines.push_back({ L"HAS_TEXCOORD_0", L"1" });
+			}
+			else if (attribute.name == "TEXCOORD_1")
+			{
+				defines.push_back({ L"HAS_TEXCOORD_1", L"1" });
+			}
+		}
+
+		return defines;
+	}
+
+
+	static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::unordered_map<std::string, Attribute>& render_attributes)
+	{
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
+
+		for (const auto& [name, attribute] : render_attributes)
+		{
+			D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
+
+			input_element_desc.SemanticName = &attribute.name[0];
+			input_element_desc.Format = attribute.format;
+
+			// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
+			if (attribute.name == "TEXCOORD_0")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 0;
+			}
+
+			if (attribute.name == "TEXCOORD_1")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 1;
+			}
+
+			if (attribute.name == "TEXCOORD_2")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 2;
+			}
+
+			if (attribute.name == "COLOR_0")
+			{
+				input_element_desc.SemanticName = "COLOR_";
+				input_element_desc.SemanticIndex = 0;
+			}
+
+			if (attribute.name == "COLOR_1")
+			{
+				input_element_desc.SemanticName = "COLOR_";
+				input_element_desc.SemanticIndex = 1;
+			}
+
+			input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
+			input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+
+			input_element_desc_arr.push_back(input_element_desc);
+		}
+
+		return input_element_desc_arr;
+	}
+
+	bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials)
+	{
+		auto renderer = Application::Get().GetRenderer();
+
+		GraphicsPso primitive_pso;
+		primitive_pso.SetName("Primitive PSO");
+
+		{
+			bool result = false;
+
 			D3D12_DESCRIPTOR_RANGE SrvDescriptorRange = {};
 			SrvDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 			SrvDescriptorRange.NumDescriptors = 5;
@@ -152,15 +198,27 @@ namespace ysn
 			RootSignatureDesc.pStaticSamplers = &static_sampler[0];
 			RootSignatureDesc.NumStaticSamplers = 2;
 
-			result = renderer->CreateRootSignature(&RootSignatureDesc, &pRenderPrimitive->pRootSignature);
-			assert(SUCCEEDED(result));
+			ID3D12RootSignature* root_signature = nullptr;
+
+			result = renderer->CreateRootSignature(&RootSignatureDesc, &root_signature);
+
+			if (!result)
+			{
+				LogFatal << "Can't create root signature for primitive\n";
+				return false;
+			}
+
+			primitive_pso.SetRootSignature(root_signature);
 		}
 
+		const auto primitive_attributes_defines = BuildAttributeDefines(primitive.attributes);;
+
+		// Vertex shader
 		{
 			ysn::ShaderCompileParameters vs_parameters;
 			vs_parameters.shader_type = ysn::ShaderType::Vertex;
 			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
-			vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
+			vs_parameters.defines = primitive_attributes_defines;
 
 			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
 
@@ -170,10 +228,15 @@ namespace ysn
 				return false;
 			}
 
+			primitive_pso.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
+		}
+
+		// Pixel shader
+		{
 			ysn::ShaderCompileParameters ps_parameters;
 			ps_parameters.shader_type = ysn::ShaderType::Pixel;
 			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelLighting.hlsl");
-			ps_parameters.defines = vs_parameters.defines;
+			ps_parameters.defines = primitive_attributes_defines;
 
 			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
 
@@ -183,101 +246,166 @@ namespace ysn
 				return false;
 			}
 
-			std::vector<D3D12_INPUT_ELEMENT_DESC> inputElementDescs = BuildInputElementDescs(pRenderPrimitive->RenderAttributes);
-
-			D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
-			pipelineStateDesc.pRootSignature = pRenderPrimitive->pRootSignature.get();
-			pipelineStateDesc.VS = { vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize() };
-			pipelineStateDesc.PS = { ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize() };
-			pipelineStateDesc.BlendState = pRenderPrimitive->pMaterial->blendDesc;
-			pipelineStateDesc.SampleMask = UINT_MAX;
-			pipelineStateDesc.RasterizerState = pRenderPrimitive->pMaterial->rasterizerDesc;
-			pipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: provide
-			pipelineStateDesc.DepthStencilState.DepthEnable = true;
-			pipelineStateDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-			pipelineStateDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-			pipelineStateDesc.InputLayout = { inputElementDescs.data(), static_cast<UINT>(inputElementDescs.size()) };
-
-			switch (pRenderPrimitive->primitiveTopology)
-			{
-				case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-					break;
-				case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
-				case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-					break;
-				case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
-				case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-					break;
-				default:
-					assert(false);
-			}
-
-			pipelineStateDesc.NumRenderTargets = 1;
-			pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Provide it from outside
-			pipelineStateDesc.SampleDesc = { 1, 0 };
-
-			result = renderer->GetDevice()->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&pRenderPrimitive->pPipelineState));
-
-			assert(SUCCEEDED(result));
+			primitive_pso.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
 		}
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc = BuildInputElementDescs(primitive.attributes);
+
+		D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
+		depth_stencil_desc.DepthEnable = true;
+		depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+
+		primitive_pso.SetDepthStencilState(depth_stencil_desc);
+		primitive_pso.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
+		primitive_pso.SetSampleMask(UINT_MAX);
+
+		const auto material = materials[primitive.material_id];
+
+		primitive_pso.SetRasterizerState(material.rasterizer_desc);
+		primitive_pso.SetBlendState(material.blend_desc);
+
+		switch (primitive.topology)
+		{
+			case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
+				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+				break;
+			case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
+			case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
+				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+				break;
+			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
+			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
+				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+				break;
+			default:
+				YSN_ASSERT(false);
+		}
+
+		primitive_pso.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+
+		auto result_pso = renderer->CreatePso(primitive_pso);
+
+		if (!result_pso.has_value())
+		{
+			return false;
+		}
+
+		primitive.pso_id = *result_pso;
 
 		return true;
 	}
 
-
-	/*
-	void ForwardPass::Render(const RenderScene& scene)
+	void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
 	{
+		auto renderer = Application::Get().GetRenderer();
 
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList();
 
-		PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
+		ID3D12DescriptorHeap* pDescriptorHeaps[] =
+		{
+			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
+		};
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+
+		//PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
 
 		// Clear the render targets.
 		{
 			FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
 
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			command_list->ResourceBarrier(1, &barrier);
 
-			command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
-			command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-			command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
+			command_list->ClearRenderTargetView(render_parameters.backbuffer_handle, clear_color, 0, nullptr);
+			command_list->ClearDepthStencilView(render_parameters.dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			command_list->ClearRenderTargetView(render_parameters.hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
 		}
 
-		command_list->RSSetViewports(1, &m_viewport);
-		command_list->RSSetScissorRects(1, &m_scissors_rect);
-		command_list->OMSetRenderTargets(1, &m_hdr_rtv_descriptor_handle.cpu, FALSE, &m_depth_dsv_descriptor_handle.cpu);
+		command_list->RSSetViewports(1, &render_parameters.viewport);
+		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+		command_list->OMSetRenderTargets(1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_pass.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.get(),
+																					D3D12_RESOURCE_STATE_DEPTH_WRITE,
+																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		//RenderGLTF(&m_gltf_draw_context,
-		//		   Application::Get().GetRenderer(),
-		//		   &m_gltf_draw_context.gltfModel,
-		//		   command_list,
-		//		   m_camera_gpu_buffer,
-		//		   m_scene_parameters_gpu_buffer,
-		//		   PrimitivePipeline::ForwardPbr,
-		//		   &m_shadow_pass.shadow_map_buffer);
+
+
+		for(auto& model : render_scene.models)
+		{
+			for(auto& mesh : model.meshes)
+			{
+				for(auto& primitive : mesh.primitives)
+				{
+					uint32_t attribute_slot = 0;
+					for(const auto& [name, attribute] : primitive.attributes)
+					{
+						command_list->IASetVertexBuffers(attribute_slot, 1, &attribute.vertex_buffer_view);
+						attribute_slot += 1;
+					}
+
+					// TODO: check for -1 as pso_id
+					const GraphicsPso pso = renderer->GetPso(primitive.pso_id);
+
+					command_list->SetGraphicsRootSignature(pso.m_root_signature.get());
+					command_list->SetPipelineState(pso.m_pso.get());
+
+					command_list->IASetPrimitiveTopology(primitive.topology);
+					command_list->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
+					command_list->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+					command_list->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
+					command_list->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
+
+					command_list->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
+					command_list->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+
+					if (primitive.index_count)
+					{
+						command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+						command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+					}
+					else
+					{
+						//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+					}
+				}
+			}
+		}
+
+
+
+		//switch (PrimitivePipeline)
+		//{
+		//	case ysn::PrimitivePipeline::ForwardPbr:
+		//{
+
+		//	break;
+		//}
+		//case ysn::PrimitivePipeline::Shadow:
+		//	command_list->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
+		//	command_list->SetPipelineState(primitive.pShadowPipelineState.get());
+		//	break;
+		//case ysn::PrimitivePipeline::ForwardNoMaterial:
+		//	break;
+
+
+
 
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_pass.shadow_map_buffer.buffer.get(),
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.get(),
 																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 																					D3D12_RESOURCE_STATE_DEPTH_WRITE);
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		PIXEndEvent(command_list.get());
+		//PIXEndEvent(command_list.get());
 
-		command_queue->ExecuteCommandList(command_list);
+		render_parameters.command_queue->ExecuteCommandList(command_list);
 	}
-	*/
 
 }

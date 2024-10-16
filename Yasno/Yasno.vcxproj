@@ -298,8 +298,6 @@
     <ClCompile Include="System\HighResolutionClock.cpp" />
     <ClCompile Include="System\Logger.cpp" />
     <ClCompile Include="System\Math.cpp" />
-    <ClCompile Include="System\ModelLoader.cpp" />
-    <ClCompile Include="System\ObjLoader.cpp" />
     <ClCompile Include="System\Result.cpp" />
     <ClCompile Include="System\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -371,8 +369,6 @@
     <ClInclude Include="System\Logger.hpp" />
     <ClInclude Include="System\Math.hpp" />
     <ClInclude Include="System\MemoryDefines.hpp" />
-    <ClInclude Include="System\ModelLoader.hpp" />
-    <ClInclude Include="System\ObjLoader.hpp" />
     <ClInclude Include="System\Result.hpp" />
     <ClInclude Include="System\stdafx.h" />
     <ClInclude Include="System\String.hpp" />

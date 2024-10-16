@@ -25,7 +25,8 @@ namespace ysn
 
 		bool CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const;
 
-		bool CreatePso();
+		std::optional<PsoId> CreatePso(GraphicsPso& pso);
+		GraphicsPso GetPso(PsoId pso_id);
 
 		wil::com_ptr<ID3D12Device5> GetDevice() const;
 
@@ -63,7 +64,7 @@ namespace ysn
 		VertexStorage m_vertex_storage;
 		IndexStorage m_index_storage;
 		std::shared_ptr<ShaderStorage> m_shader_storage;
-		PsoStorage m_pso_storage;
+		std::unordered_map<PsoId, GraphicsPso> m_pso_pool;
 
 		// Formats
 		DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
