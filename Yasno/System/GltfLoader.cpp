@@ -15,6 +15,7 @@
 #include <Graphics/RenderScene.hpp>
 #include <Graphics/Primitive.hpp>
 #include <Graphics/SurfaceMaterial.hpp>
+#include <Renderer/GenerateMipsSystem.hpp>
 
 using namespace Microsoft::WRL;
 
@@ -790,7 +791,7 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			shader_parameters->albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
-			auto resource_desc = texture.gpu_resource->GetDesc();
+			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Albedo Texture");
@@ -798,13 +799,13 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			texture.name = L"Albedo Texture";
 
-			//D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			//srv_desc.Format = resource_desc.Format;
-			//srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			//srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			//srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = texture_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
 
-			//p_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, RenderMaterial.srv_handle.cpu);
+			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
 
 			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
 			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, RenderMaterial.sampler_handle.cpu);
@@ -829,7 +830,15 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			texture.name = L"Metallic Roughness Texture";
 
-			//p_renderer->GetDevice()->CreateShaderResourceView(texture.gpuTexture.get(), nullptr, SrvDescriptor.cpu);
+			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = texture_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
+
+			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
 
 			//auto& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
 			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
@@ -853,7 +862,15 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			texture.name = L"Normals Texture";
 
-			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = texture_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
+
+			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
 
 			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
 			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, SamplerDescriptor);
@@ -877,7 +894,15 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			texture.name = L"Occlusion Texture";
 
-			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = texture_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
+
+			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
 
 			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
 			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
@@ -902,11 +927,21 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			texture.name = L"Emissive Texture";
 
-			//p_renderer->GetDevice()->CreateShaderResourceView(pTexture, nullptr, SrvDescriptor);
+			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = texture_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
+
+			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
 
 			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
 			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
+
+		material.gpu_material_parameters.resource->Unmap(0, nullptr);
 
 		model.materials.push_back(material);
 	}
@@ -954,7 +989,11 @@ namespace ysn
 
 		// Build pipelines
 		// Compute mips 
-		// p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
+		for(const GpuTexture& texture : model.textures)
+		{
+			dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
+			break;
+		}
 
 		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
 		command_queue->WaitForFenceValue(fence_value);

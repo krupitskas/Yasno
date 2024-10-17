@@ -33,13 +33,13 @@ struct PBRMetallicRoughness
 	float metallic_factor;
 	float roughness_factor;
 
+	int texture_enable_bitmask; // Encoded which textures are should be used
+
 	int albedo_texture_index;
 	int metallic_roughness_texture_index;
 	int normal_texture_index;
 	int occlusion_texture_index;
 	int emissive_texture_index;
-
-	int texture_enable_bitmask; // Encoded which textures are should be used
 };
 
 // Input buffers
