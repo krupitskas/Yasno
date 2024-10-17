@@ -253,9 +253,11 @@ namespace ysn
 
 			if (res != S_OK)
 			{
-				LogFatal << "Can't compile pso " << pso_desc.GetName() << " " << pso_id << " \n";
+				LogFatal << "Can't compile pso '" << pso_desc.GetName() << "' " << pso_id << " \n";
 				return std::nullopt;
 			}
+
+			LogInfo << "Compiled new pso " << pso_desc.GetName() << " " << pso_id << " \n";
 
 			new_pso.pso_id = pso_id;
 			new_pso.root_signature.attach(pso_desc.GetRootSignature());
@@ -266,6 +268,10 @@ namespace ysn
 		#endif
 
 			m_graphics_pso_pool[pso_id] = new_pso;
+		}
+		else
+		{
+			LogInfo << "Cache hit for pso: " << pso_desc.GetName() << " " << pso_id << " \n";
 		}
 
 		return pso_id;

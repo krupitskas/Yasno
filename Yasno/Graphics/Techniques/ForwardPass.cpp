@@ -145,35 +145,35 @@ namespace ysn
 		{
 			bool result = false;
 
-			D3D12_DESCRIPTOR_RANGE SrvDescriptorRange = {};
-			SrvDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-			SrvDescriptorRange.NumDescriptors = 5;
-			SrvDescriptorRange.BaseShaderRegister = 0;
+			//D3D12_DESCRIPTOR_RANGE SrvDescriptorRange = {};
+			//SrvDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			//SrvDescriptorRange.NumDescriptors = 5;
+			//SrvDescriptorRange.BaseShaderRegister = 0;
 
 			D3D12_DESCRIPTOR_RANGE DepthInputDescriptorRange = {};
 			DepthInputDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 			DepthInputDescriptorRange.NumDescriptors = 1;
-			DepthInputDescriptorRange.BaseShaderRegister = 1 + 5;
+			DepthInputDescriptorRange.BaseShaderRegister = 0;
 
-			D3D12_ROOT_PARAMETER srv_range;
-			srv_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-			srv_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			srv_range.DescriptorTable.NumDescriptorRanges = 1;
-			srv_range.DescriptorTable.pDescriptorRanges = &SrvDescriptorRange;
+			//D3D12_ROOT_PARAMETER srv_range;
+			//srv_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			//srv_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			//srv_range.DescriptorTable.NumDescriptorRanges = 1;
+			//srv_range.DescriptorTable.pDescriptorRanges = &SrvDescriptorRange;
 
-			D3D12_ROOT_PARAMETER depth_range;
-			depth_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-			depth_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			depth_range.DescriptorTable.NumDescriptorRanges = 1;
-			depth_range.DescriptorTable.pDescriptorRanges = &DepthInputDescriptorRange;
+			D3D12_ROOT_PARAMETER shadow_range;
+			shadow_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			shadow_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			shadow_range.DescriptorTable.NumDescriptorRanges = 1;
+			shadow_range.DescriptorTable.pDescriptorRanges = &DepthInputDescriptorRange;
 
-			D3D12_ROOT_PARAMETER rootParams[6] = {
+			D3D12_ROOT_PARAMETER rootParams[5] = {
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL },
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-				srv_range,
-				depth_range
+				//srv_range,
+				shadow_range
 			};
 
 			// TEMP
@@ -189,7 +189,7 @@ namespace ysn
 			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, 0, D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters = 6;
+			RootSignatureDesc.NumParameters = 5;
 			RootSignatureDesc.pParameters = &rootParams[0];
 			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 				| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
@@ -216,7 +216,7 @@ namespace ysn
 		{
 			ysn::ShaderCompileParameters vs_parameters;
 			vs_parameters.shader_type = ysn::ShaderType::Vertex;
-			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
+			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassVS.hlsl");
 			vs_parameters.defines = primitive_attributes_defines;
 
 			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
@@ -234,7 +234,7 @@ namespace ysn
 		{
 			ysn::ShaderCompileParameters ps_parameters;
 			ps_parameters.shader_type = ysn::ShaderType::Pixel;
-			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelLighting.hlsl");
+			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassPS.hlsl");
 			ps_parameters.defines = primitive_attributes_defines;
 
 			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
@@ -311,7 +311,7 @@ namespace ysn
 		command_list->OMSetRenderTargets(1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.get(),
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(),
 																					D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			command_list->ResourceBarrier(1, &barrier);
@@ -319,8 +319,11 @@ namespace ysn
 
 		for(auto& model : render_scene.models)
 		{
-			for(auto& mesh : model.meshes)
+			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 			{
+				const Mesh& mesh = model.meshes[mesh_id];
+				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
+
 				for(auto& primitive : mesh.primitives)
 				{
 					uint32_t attribute_slot = 0;
@@ -342,12 +345,11 @@ namespace ysn
 
 						command_list->IASetPrimitiveTopology(primitive.topology);
 						command_list->SetGraphicsRootConstantBufferView(2, material.gpu_material_parameters.GetGPUVirtualAddress());
-						//command_list->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-						//command_list->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-						//command_list->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
+						command_list->SetGraphicsRootConstantBufferView(3, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootDescriptorTable(4, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
 						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
-						//command_list->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(1, node_gpu_buffer.GetGPUVirtualAddress());
 
 						if (primitive.index_count)
 						{
@@ -370,7 +372,7 @@ namespace ysn
 		}
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.get(),
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(),
 																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 																					D3D12_RESOURCE_STATE_DEPTH_WRITE);
 			command_list->ResourceBarrier(1, &barrier);

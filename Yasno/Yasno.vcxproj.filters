@@ -381,22 +381,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\BasePassPixelGray.hlsl">
+    <None Include="..\Shaders\ForwardPassPS.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="..\Shaders\BasePassPixelLighting.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Shaders\BasePassPixelTextureSample.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Shaders\BasePassVertex.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Shaders\BasePassVertexPosTex.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Shaders\Common.hlsl">
+    <None Include="..\Shaders\ForwardPassVS.hlsl">
       <Filter>Shaders</Filter>
     </None>
     <None Include="..\Shaders\GenerateMips.hlsl">

@@ -760,7 +760,8 @@ namespace ysn
 				render_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
 				render_parameters.backbuffer_handle = backbuffer_handle;
 				render_parameters.current_back_buffer = current_back_buffer;
-				render_parameters.shadow_map_buffer = m_shadow_pass.shadow_map_buffer.buffer;
+				render_parameters.shadow_map_buffer = m_shadow_pass.shadow_map_buffer;
+				render_parameters.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer;
 
 				m_forward_pass.Render(m_render_scene, render_parameters);
 			}

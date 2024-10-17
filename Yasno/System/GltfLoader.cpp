@@ -1,14 +1,14 @@
 #include "GltfLoader.hpp"
 
+#include <memory>
+
 #include <d3d12.h>
 #include <wrl.h>
-
-#include <dxcapi.h>
+#include <d3dx12.h>
+#include <wil/com.h>
+#include <tiny_gltf.h>
 
 #include <Renderer/DxRenderer.hpp>
-#include <Graphics/Techniques/ShadowMapPass.hpp>
-#include <Renderer/GenerateMipsSystem.hpp>
-#include <System/Filesystem.hpp>
 #include <System/String.hpp>
 #include <System/Math.hpp>
 #include <System/Application.hpp>

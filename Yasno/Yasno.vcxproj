@@ -381,22 +381,10 @@
     <None Include="..\.gitignore" />
     <None Include="..\nuget.config" />
     <None Include="..\README.md" />
-    <None Include="..\Shaders\BasePassPixelGray.hlsl">
+    <None Include="..\Shaders\ForwardPassPS.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\BasePassPixelLighting.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\Shaders\BasePassPixelTextureSample.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\Shaders\BasePassVertex.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\Shaders\BasePassVertexPosTex.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\Shaders\Common.hlsl">
+    <None Include="..\Shaders\ForwardPassVS.hlsl">
       <FileType>Document</FileType>
     </None>
     <None Include="..\Shaders\ConvertEquirectangularMap_PS.hlsl">

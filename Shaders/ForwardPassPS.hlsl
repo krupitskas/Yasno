@@ -29,9 +29,9 @@ struct RS2PS
 
 struct PBRMetallicRoughness
 {
-	float4 baseColorFactor;
-	float metallicFactor;
-	float roughnessFactor;
+	float4 base_color_factor;
+	float metallic_factor;
+	float roughness_factor;
 
 	int albedo_texture_index;
 	int metallic_roughness_texture_index;
@@ -42,6 +42,7 @@ struct PBRMetallicRoughness
 	int texture_enable_bitmask; // Encoded which textures are should be used
 };
 
+// Input buffers
 cbuffer CameraParameters : register(b0)
 {
 	float4x4 view_projection;
@@ -54,7 +55,7 @@ cbuffer CameraParameters : register(b0)
 
 cbuffer Material : register(b2)
 {
-	PBRMetallicRoughness pbrMetallicRoughness;
+	PBRMetallicRoughness pbr_material;
 };
 
 cbuffer SceneParameters : register(b3)
@@ -67,26 +68,28 @@ cbuffer SceneParameters : register(b3)
 	uint		shadows_enabled;
 };
 
-Texture2D textures[5]				: register(t0);
-Texture2D shadow_map				: register(t6);
+// Input textures
+Texture2D ShadowMap					: register(t0);
 
+// Samplers
 SamplerState ShadowSampler			: register(s0);
 SamplerState LinearSampler			: register(s1);
 
 float ShadowCalculation(float4 position)
 {
-	float3 projected_coordinate;
-	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
-	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
-	projected_coordinate.z = position.z / position.w;
+	return 1.0f;
+	//float3 projected_coordinate;
+	//projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
+	//projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
+	//projected_coordinate.z = position.z / position.w;
 
-	float closest_depth = shadow_map.Sample(ShadowSampler, projected_coordinate.xy);
+	//float closest_depth = ShadowMap.Sample(ShadowSampler, projected_coordinate.xy);
 
-	float current_depth = projected_coordinate.z + 0.005;
+	//float current_depth = projected_coordinate.z + 0.005;
 
-	float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
+	//float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
 
-	return in_shadow;
+	//return in_shadow;
 }
 
 // Lambertian
@@ -120,29 +123,29 @@ float4 main(RS2PS input) : SV_Target
 	tangent = input.tangent;
 #endif
 
-	float4 baseColor = pbrMetallicRoughness.baseColorFactor;
-	float metallicResult = pbrMetallicRoughness.metallicFactor;
-	float roughnessResult = pbrMetallicRoughness.roughnessFactor;
+	float4 base_color = pbr_material.base_color_factor;
+	float metallicResult = pbr_material.metallic_factor;
+	float roughnessResult = pbr_material.roughness_factor;
 	float3 normals = 1;
 	float occlusion = 0;
 	float3 emissive = 0;
 
 #ifdef HAS_TEXCOORD_0
 
-	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BITMASK))
+	if (pbr_material.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BITMASK))
 	{
-		Texture2D albedo_texture = ResourceDescriptorHeap[pbrMetallicRoughness.albedo_texture_index];
-		baseColor *= albedo_texture.Sample(LinearSampler, uv);
+		Texture2D albedo_texture = ResourceDescriptorHeap[pbr_material.albedo_texture_index];
+		base_color *= albedo_texture.Sample(LinearSampler, uv);
 
-		if(baseColor.a < 0.5)
+		if(base_color.a < 0.5)
 		{
 			discard;
 		}
 	}
 
-	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << METALLIC_ROUGHNESS_ENABLED_BITMASK))
+	if (pbr_material.texture_enable_bitmask & (1 << METALLIC_ROUGHNESS_ENABLED_BITMASK))
 	{
-		Texture2D metallic_roughness_texture = ResourceDescriptorHeap[pbrMetallicRoughness.metallic_roughness_texture_index];
+		Texture2D metallic_roughness_texture = ResourceDescriptorHeap[pbr_material.metallic_roughness_texture_index];
 
 		float4 metallicRoughnessResult = metallic_roughness_texture.Sample(LinearSampler, uv);
 
@@ -150,24 +153,24 @@ float4 main(RS2PS input) : SV_Target
 		roughnessResult *= metallicRoughnessResult.g;
 	}
 
-	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << NORMAL_ENABLED_BITMASK))
+	if (pbr_material.texture_enable_bitmask & (1 << NORMAL_ENABLED_BITMASK))
 	{
-		Texture2D normal_texture = ResourceDescriptorHeap[pbrMetallicRoughness.normal_texture_index];
+		Texture2D normal_texture = ResourceDescriptorHeap[pbr_material.normal_texture_index];
 
 		normals = normal_texture.Sample(LinearSampler, uv);
 		normals = 2.0f * normals - 1.0f; // [0,1] ->[-1,1]
 	}
 
-	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BITMASK))
+	if (pbr_material.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BITMASK))
 	{
-		Texture2D occlusion_texture = ResourceDescriptorHeap[pbrMetallicRoughness.occlusion_texture_index];
+		Texture2D occlusion_texture = ResourceDescriptorHeap[pbr_material.occlusion_texture_index];
 
 		occlusion = occlusion_texture.Sample(LinearSampler, uv);
 	}
 
-	if (pbrMetallicRoughness.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BITMASK))
+	if (pbr_material.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BITMASK))
 	{
-		Texture2D emissive_texture = ResourceDescriptorHeap[pbrMetallicRoughness.emissive_texture_index];
+		Texture2D emissive_texture = ResourceDescriptorHeap[pbr_material.emissive_texture_index];
 
 		emissive = emissive_texture.Sample(LinearSampler, uv).rgb;
 	}
@@ -182,8 +185,8 @@ float4 main(RS2PS input) : SV_Target
 
 	float3 dieletricSpecular = { 0.04f, 0.04f, 0.04f };
 	float3 black = { 0.0f, 0.0f, 0.0f };
-	float3 C_ambient = ambient_light_intensity * baseColor;// * occlusion.x;
-	float3 C_diff = lerp(baseColor.rgb * (1.0f - dieletricSpecular.r), black, metallicResult);
+	float3 C_ambient = ambient_light_intensity * base_color;// * occlusion.x;
+	float3 C_diff = lerp(base_color.rgb * (1.0f - dieletricSpecular.r), black, metallicResult);
 	float3 C_diffuse = diffuse(C_diff, directional_light_color.rgb * directional_light_intensity, NdotL);
 
 	const float in_shadow = shadows_enabled > 0 ? ShadowCalculation(input.position_shadow_space) : 1.0;

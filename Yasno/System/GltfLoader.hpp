@@ -1,17 +1,7 @@
 #pragma once
 
-#include <unordered_map>
-#include <memory>
-#include <unordered_set>
-
-#include <d3d12.h>
-#include <d3dx12.h>
-#include <wil/com.h>
-#include <tiny_gltf.h>
 #include <DirectXMath.h>
 
-#include <Renderer/DescriptorHeap.hpp>
-#include <Renderer/GpuTexture.hpp>
 #include <Graphics/RenderScene.hpp>
 
 namespace ysn

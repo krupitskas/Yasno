@@ -5,6 +5,7 @@
 #include <Renderer/DescriptorHeap.hpp>
 #include <Renderer/CommandQueue.hpp>
 #include <Renderer/GpuTexture.hpp>
+#include <Graphics/Techniques/ShadowMapPass.hpp>
 
 namespace ysn
 {
@@ -19,9 +20,10 @@ namespace ysn
 		D3D12_VIEWPORT viewport;
 		D3D12_RECT scissors_rect;
 		wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
+		wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer;
 		D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle;
 		wil::com_ptr<ID3D12Resource> current_back_buffer;
-		wil::com_ptr<ID3D12Resource> shadow_map_buffer;
+		ShadowMapBuffer shadow_map_buffer;
 	};
 
 	struct ForwardPass
