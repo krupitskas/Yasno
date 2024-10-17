@@ -98,11 +98,11 @@ namespace ysn
 		size_t bufferSize = num_elements * element_size;
 
 		const auto gpuBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags);
-		const auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+		const auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
 		// Create a committed resource for the GPU resource in a default heap.
 		ThrowIfFailed(device->CreateCommittedResource(
-			&defaultHeapProperties,
+			&heap_properties,
 			D3D12_HEAP_FLAG_NONE,
 			&gpuBufferDesc,
 			D3D12_RESOURCE_STATE_COMMON, // TODO(task): should be here
@@ -136,17 +136,17 @@ namespace ysn
 		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		D3D12_RESOURCE_DESC resourceDesc = {};
-		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resourceDesc.Width = GpuCamera::GetGpuSize();
-		resourceDesc.Height = 1;
-		resourceDesc.DepthOrArraySize = 1;
-		resourceDesc.MipLevels = 1;
-		resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-		resourceDesc.SampleDesc = { 1, 0 };
-		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		D3D12_RESOURCE_DESC resource_desc = {};
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resource_desc.Width = GpuCamera::GetGpuSize();
+		resource_desc.Height = 1;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+		resource_desc.SampleDesc = { 1, 0 };
+		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_camera_gpu_buffer));
+		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_camera_gpu_buffer));
 
 		if (hr != S_OK)
 		{
@@ -166,17 +166,17 @@ namespace ysn
 		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		D3D12_RESOURCE_DESC resourceDesc = {};
-		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resourceDesc.Width = GpuSceneParameters::GetGpuSize();
-		resourceDesc.Height = 1;
-		resourceDesc.DepthOrArraySize = 1;
-		resourceDesc.MipLevels = 1;
-		resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-		resourceDesc.SampleDesc = { 1, 0 };
-		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		D3D12_RESOURCE_DESC resource_desc = {};
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resource_desc.Width = GpuSceneParameters::GetGpuSize();
+		resource_desc.Height = 1;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+		resource_desc.SampleDesc = { 1, 0 };
+		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_scene_parameters_gpu_buffer));
+		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_scene_parameters_gpu_buffer));
 
 		if (hr != S_OK)
 		{
@@ -258,11 +258,13 @@ namespace ysn
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
 
 		bool load_result = false;
-		{
-			LoadingParameters loading_parameters;
-			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		}
+
+		//{
+		//	LoadingParameters loading_parameters;
+		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		//}
+		
 		{
 			LoadingParameters loading_parameters;
 			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
@@ -274,8 +276,11 @@ namespace ysn
 		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
 		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), loading_parameters);
 		//}
-
-		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
+		
+		//{
+		//	LoadingParameters loading_parameters;
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
+		//}
 
 		for (auto& model : m_render_scene.models)
 		{
@@ -403,20 +408,20 @@ namespace ysn
 
 			// Resize screen dependent resources.
 			// Create a depth buffer.
-			D3D12_CLEAR_VALUE optimizedClearValue = {};
-			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-			optimizedClearValue.DepthStencil = { 1.0f, 0 };
+			D3D12_CLEAR_VALUE optimized_clear_valuie = {};
+			optimized_clear_valuie.Format = DXGI_FORMAT_D32_FLOAT;
+			optimized_clear_valuie.DepthStencil = { 1.0f, 0 };
 
-			const CD3DX12_HEAP_PROPERTIES defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			const CD3DX12_HEAP_PROPERTIES heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
-			const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+			const CD3DX12_RESOURCE_DESC resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
 			ThrowIfFailed(device->CreateCommittedResource(
-				&defaultHeapProperties,
+				&heap_properties,
 				D3D12_HEAP_FLAG_NONE,
-				&resourceDesc,
+				&resource_desc,
 				D3D12_RESOURCE_STATE_DEPTH_WRITE,
-				&optimizedClearValue,
+				&optimized_clear_valuie,
 				IID_PPV_ARGS(&m_depth_buffer)));
 
 			// Update the depth-stencil view.
@@ -443,24 +448,24 @@ namespace ysn
 			auto device = Application::Get().GetDevice();
 			auto renderer = Application::Get().GetRenderer();
 
-			D3D12_CLEAR_VALUE optimizedClearValue = {};
-			optimizedClearValue.Format = Application::Get().GetRenderer()->GetHdrFormat();
-			optimizedClearValue.Color[0] = 0.0f;
-			optimizedClearValue.Color[1] = 0.0f;
-			optimizedClearValue.Color[2] = 0.0f;
-			optimizedClearValue.Color[3] = 0.0f;
+			D3D12_CLEAR_VALUE optimized_clear_valuie = {};
+			optimized_clear_valuie.Format = Application::Get().GetRenderer()->GetHdrFormat();
+			optimized_clear_valuie.Color[0] = 0.0f;
+			optimized_clear_valuie.Color[1] = 0.0f;
+			optimized_clear_valuie.Color[2] = 0.0f;
+			optimized_clear_valuie.Color[3] = 0.0f;
 
-			const auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			const auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
-			const auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			const auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(
 				Application::Get().GetRenderer()->GetHdrFormat(), width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 			ThrowIfFailed(device->CreateCommittedResource(
-				&defaultHeapProperties,
+				&heap_properties,
 				D3D12_HEAP_FLAG_NONE,
-				&resourceDesc,
+				&resource_desc,
 				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				&optimizedClearValue,
+				&optimized_clear_valuie,
 				IID_PPV_ARGS(&m_scene_color_buffer)));
 
 		#ifndef YSN_RELEASE
@@ -498,24 +503,24 @@ namespace ysn
 
 			auto device = Application::Get().GetDevice();
 
-			D3D12_CLEAR_VALUE optimizedClearValue = {};
-			optimizedClearValue.Format = Application::Get().GetRenderer()->GetBackBufferFormat();
-			optimizedClearValue.Color[0] = 0.0f;
-			optimizedClearValue.Color[1] = 0.0f;
-			optimizedClearValue.Color[2] = 0.0f;
-			optimizedClearValue.Color[3] = 0.0f;
+			D3D12_CLEAR_VALUE optimized_clear_valuie = {};
+			optimized_clear_valuie.Format = Application::Get().GetRenderer()->GetBackBufferFormat();
+			optimized_clear_valuie.Color[0] = 0.0f;
+			optimized_clear_valuie.Color[1] = 0.0f;
+			optimized_clear_valuie.Color[2] = 0.0f;
+			optimized_clear_valuie.Color[3] = 0.0f;
 
-			const auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			const auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
-			const auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			const auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(
 				Application::Get().GetRenderer()->GetBackBufferFormat(), width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 			ThrowIfFailed(device->CreateCommittedResource(
-				&defaultHeapProperties,
+				&heap_properties,
 				D3D12_HEAP_FLAG_NONE,
-				&resourceDesc,
+				&resource_desc,
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				&optimizedClearValue,
+				&optimized_clear_valuie,
 				IID_PPV_ARGS(&m_back_buffer)));
 
 		#ifndef YSN_RELEASED
