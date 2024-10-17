@@ -272,7 +272,6 @@
     <ClCompile Include="Renderer\DepthBuffer.cpp" />
     <ClCompile Include="Renderer\DescriptorHeap.cpp" />
     <ClCompile Include="Renderer\GenerateMipsSystem.cpp" />
-    <ClCompile Include="Renderer\GpuMarker.cpp" />
     <ClCompile Include="Renderer\GpuTextureStorage.cpp" />
     <ClCompile Include="Renderer\IndexStorage.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp" />
@@ -281,7 +280,6 @@
     <ClCompile Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.cpp" />
     <ClCompile Include="Renderer\Pso.cpp" />
-    <ClCompile Include="Renderer\PsoStorage.cpp" />
     <ClCompile Include="Renderer\RaytracingContext.cpp" />
     <ClCompile Include="Renderer\RootSignature.cpp" />
     <ClCompile Include="Renderer\ShaderStorage.cpp" />
@@ -335,7 +333,6 @@
     <ClInclude Include="Renderer\GenerateMipsSystem.hpp" />
     <ClInclude Include="Renderer\GpuBuffer.hpp" />
     <ClInclude Include="Renderer\GpuResource.hpp" />
-    <ClInclude Include="Renderer\GpuMarker.hpp" />
     <ClInclude Include="Renderer\GpuTextureStorage.hpp" />
     <ClInclude Include="Renderer\IndexStorage.hpp" />
     <ClInclude Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.h" />
@@ -344,7 +341,6 @@
     <ClInclude Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.h" />
     <ClInclude Include="Renderer\Pso.hpp" />
-    <ClInclude Include="Renderer\PsoStorage.hpp" />
     <ClInclude Include="Renderer\RaytracingContext.hpp" />
     <ClInclude Include="Renderer\RootSignature.hpp" />
     <ClInclude Include="Renderer\ShaderStorage.hpp" />

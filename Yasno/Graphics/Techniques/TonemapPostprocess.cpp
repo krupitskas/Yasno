@@ -4,7 +4,6 @@
 #include <Renderer/DescriptorHeap.hpp>
 #include <System/Math.hpp>
 #include <System/Application.hpp>
-#include <Renderer/GpuMarker.hpp>
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/DxRenderer.hpp>
 #include <System/Filesystem.hpp>
@@ -117,9 +116,7 @@ namespace ysn
 	{
 		UpdateParameters(parameters_buffer, parameters->backbuffer_width, parameters->backbuffer_height, exposure, tonemap_method);
 
-		auto command_list = parameters->command_queue->GetCommandList();
-
-		GpuMarker tonemap_marker(command_list, "Tonemap");
+		auto command_list = parameters->command_queue->GetCommandList("Tonemap");
 
 		command_list->SetPipelineState(pipeline_state.get());
 		command_list->SetComputeRootSignature(root_signature.get());
@@ -135,8 +132,6 @@ namespace ysn
 		command_list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
 
 		command_list->Dispatch(UINT(std::ceil(parameters->backbuffer_width / (float)8)), UINT(std::ceil(parameters->backbuffer_height / (float)8)), 1);
-
-		tonemap_marker.EndEvent();
 
 		parameters->command_queue->ExecuteCommandList(command_list);
 	}

@@ -4,7 +4,6 @@
 #include <imgui_impl_win32.h>
 
 #include <System/Window.hpp>
-#include <Renderer/GpuMarker.hpp>
 #include <Renderer/DxRenderer.hpp>
 
 namespace ysn
@@ -73,11 +72,7 @@ namespace ysn
 
 	void ImguiRenderFrame(wil::com_ptr<ID3D12GraphicsCommandList4> command_list)
 	{
-		GpuMarker imgui_marker(command_list, "Imgui");
-
 		ImGui::Render();
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), command_list.get());
-
-		imgui_marker.EndEvent();
 	}
 }

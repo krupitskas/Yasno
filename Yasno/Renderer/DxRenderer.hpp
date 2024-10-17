@@ -11,7 +11,7 @@
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/IndexStorage.hpp>
 #include <Renderer/VertexStorage.hpp>
-#include <Renderer/PsoStorage.hpp>
+#include <Renderer/Pso.hpp>
 
 namespace ysn
 {
@@ -25,8 +25,8 @@ namespace ysn
 
 		bool CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const;
 
-		std::optional<PsoId> CreatePso(GraphicsPso& pso);
-		GraphicsPso GetPso(PsoId pso_id);
+		std::optional<PsoId> CreatePso(const GraphicsPsoDesc& pso_desc);
+		std::optional<Pso> GetPso(PsoId pso_id);
 
 		wil::com_ptr<ID3D12Device5> GetDevice() const;
 
@@ -64,7 +64,7 @@ namespace ysn
 		VertexStorage m_vertex_storage;
 		IndexStorage m_index_storage;
 		std::shared_ptr<ShaderStorage> m_shader_storage;
-		std::unordered_map<PsoId, GraphicsPso> m_pso_pool;
+		PsoStorage m_pso_storage;
 
 		// Formats
 		DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -94,5 +94,4 @@ namespace ysn
 		bool m_tearing_supported = false;
 		bool m_is_raytracing_supported = false;
 	};
-
 }

@@ -4,7 +4,6 @@
 #include <Renderer/DxRenderer.hpp>
 #include <System/Application.hpp>
 #include <System/Filesystem.hpp>
-#include <Renderer/GpuMarker.hpp>
 
 namespace ysn
 {
@@ -98,9 +97,7 @@ namespace ysn
 
 	void SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
 	{
-		auto command_list = parameters->command_queue->GetCommandList();
-
-		GpuMarker skybox_marker(command_list, "SkyBox");
+		auto command_list = parameters->command_queue->GetCommandList("Skybox");
 
 		ID3D12DescriptorHeap* ppHeaps[] = { parameters->cbv_srv_uav_heap->GetHeapPtr() };
 		command_list->RSSetViewports(1, &parameters->viewport);
@@ -115,8 +112,6 @@ namespace ysn
 		command_list->SetGraphicsRootDescriptorTable(1, parameters->equirectangular_texture->descriptor_handle.gpu);
 		command_list->IASetIndexBuffer(&cube.index_buffer_view);
 		command_list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
-
-		skybox_marker.EndEvent();
 
 		parameters->command_queue->ExecuteCommandList(command_list);
 	}

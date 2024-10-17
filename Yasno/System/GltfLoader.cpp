@@ -20,7 +20,7 @@ using namespace Microsoft::WRL;
 
 struct LoadGltfContext
 {
-	wil::com_ptr<ID3D12GraphicsCommandList> copy_cmd_list;
+	wil::com_ptr<ID3D12GraphicsCommandList4> copy_cmd_list;
 	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
 };
 
@@ -924,11 +924,9 @@ namespace ysn
 		//PIXSetTargetWindow(m_pWindow->GetWindowHandle());
 		//YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
 
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-
 		LoadGltfContext load_gltf_context;
 		load_gltf_context.staging_resources.reserve(256);
-		load_gltf_context.copy_cmd_list = command_queue->GetCommandList();
+		load_gltf_context.copy_cmd_list = command_queue->GetCommandList("GLTF upload");
 
 		if(!BuildBuffers(model, load_gltf_context, gltf_model))
 		{
@@ -958,7 +956,7 @@ namespace ysn
 		// Compute mips 
 		// p_renderer->GetMipGenerator()->GenerateMips(p_renderer, pCopyCommandList, texture);
 
-		auto fence_value = command_queue->ExecuteCommandList(command_list);
+		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
 		command_queue->WaitForFenceValue(fence_value);
 
 		return true;

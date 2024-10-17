@@ -128,9 +128,6 @@
     <ClCompile Include="System\stdafx.cpp">
       <Filter>Source\System</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\GpuMarker.cpp">
-      <Filter>Source\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="System\String.cpp">
       <Filter>Source\System</Filter>
     </ClCompile>
@@ -186,9 +183,6 @@
       <Filter>Source\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\GpuTextureStorage.cpp">
-      <Filter>Source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\PsoStorage.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\RtxMaterial.cpp">
@@ -310,9 +304,6 @@
     <ClInclude Include="System\stdafx.h">
       <Filter>Source\System</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\GpuMarker.hpp">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="System\GlobalDefines.hpp">
       <Filter>Source\System</Filter>
     </ClInclude>
@@ -380,9 +371,6 @@
       <Filter>Source\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\GpuTextureStorage.hpp">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\PsoStorage.hpp">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\GpuBuffer.hpp">

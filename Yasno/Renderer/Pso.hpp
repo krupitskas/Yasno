@@ -10,35 +10,23 @@ namespace ysn
 {
 	using PsoId = size_t;
 
-	enum class PsoType
+	struct ComputePsoDesc
 	{
-		None,
-		Graphics,
-		Compute
+		void SetComputeShader(const void* binary, size_t size);
+		void SetComputeShader(const D3D12_SHADER_BYTECODE& binary);
+	private:
+		D3D12_COMPUTE_PIPELINE_STATE_DESC m_pso_desc = {};
 	};
 
-	// TODO: Split into Pso and PsoDescription
-
-	struct Pso
+	struct GraphicsPsoDesc
 	{
-		Pso() = default;
+		GraphicsPsoDesc(std::string name);
 
-		void SetName(std::string name)
-		{
-			m_name = name;
-		}
-
-		wil::com_ptr<ID3D12RootSignature> m_root_signature = nullptr;
-		wil::com_ptr<ID3D12PipelineState> m_pso = nullptr;
-	protected:
-		PsoId pso_id = 0;
-		PsoType type = PsoType::None;
-		std::string m_name = "Neyasnoe PSO";
-	};
-
-	struct GraphicsPso : public Pso
-	{
-		GraphicsPso();
+		PsoId GenerateId() const;
+		const D3D12_GRAPHICS_PIPELINE_STATE_DESC& GetDesc() const;
+		std::string GetName() const;
+		std::wstring GetNameWString() const;
+		ID3D12RootSignature* GetRootSignature() const;
 
 		void SetRootSignature(ID3D12RootSignature* root_signature);
 
@@ -66,21 +54,34 @@ namespace ysn
 		void SetHullShader(const D3D12_SHADER_BYTECODE& binary);
 		void SetDomainShader(const D3D12_SHADER_BYTECODE& binary);
 
-		std::optional<PsoId> Build(wil::com_ptr<ID3D12Device5> device, std::unordered_map<PsoId, GraphicsPso>& pso_pool);
-	protected:
+		//std::optional<PsoId> Build(wil::com_ptr<ID3D12Device5> device, std::unordered_map<PsoId, GraphicsPso>& pso_pool);
 
+	private:
+		std::string m_name = "Unnamed PSO";
+
+		//wil::com_ptr<ID3D12RootSignature> m_root_signature = nullptr;
+		std::shared_ptr<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_pso_desc = {};
-		std::shared_ptr<const D3D12_INPUT_ELEMENT_DESC> m_input_layout;
 	};
 
-	struct ComputePso : public Pso
+	struct Pso
 	{
-		ComputePso();
+		PsoId pso_id = -1;
+		wil::com_ptr<ID3D12RootSignature> root_signature = nullptr;
+		wil::com_ptr<ID3D12PipelineState> pso = nullptr;
+	};
 
-		void SetComputeShader(const void* binary, size_t size);
-		void SetComputeShader(const D3D12_SHADER_BYTECODE& binary);
-		bool Build(std::unordered_map<PsoId, GraphicsPso>& pso_pool);
-	protected:
-		D3D12_COMPUTE_PIPELINE_STATE_DESC m_pso_desc = {};
+	struct PsoStorage
+	{
+		std::optional<PsoId> CreateGraphicsPso(wil::com_ptr<ID3D12Device5> device, const GraphicsPsoDesc& pso_desc);
+		//std::optional<PsoId> CreateComputePso();
+
+		std::optional<Pso> GetPso(PsoId pso_id);
+		//std::optional<GraphicsPso> GetGraphicsPso();
+
+		//void DeletePso();
+
+		std::unordered_map<PsoId, Pso> m_graphics_pso_pool;
+		//std::unordered_map<PsoId, ComputePso> m_compute_pso_pool;
 	};
 }

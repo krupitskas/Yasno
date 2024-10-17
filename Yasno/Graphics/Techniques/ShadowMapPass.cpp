@@ -2,7 +2,6 @@
 
 
 #include <Renderer/DxRenderer.hpp>
-#include <Renderer/GpuMarker.hpp>
 #include <System/Math.hpp>
 #include <Yasno/Lights.hpp>
 
@@ -214,9 +213,7 @@ namespace ysn
 		ModelRenderContext* pGLTFDrawContext,
 		tinygltf::Model* )
 	{
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-
-		GpuMarker shadow_map_marker(command_list, "ShadowMap");
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("ShadowMap");
 
 		command_list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 		command_list->RSSetViewports(1, &Viewport);
@@ -233,8 +230,6 @@ namespace ysn
 		m_pCameraBuffer->Unmap(0, nullptr);
 
 		RenderGLTF(pGLTFDrawContext, p_renderer, &pGLTFDrawContext->gltfModel, command_list, m_pCameraBuffer, scene_parameters_gpu_buffer, PrimitivePipeline::Shadow, &shadow_map_buffer);
-
-		shadow_map_marker.EndEvent();
 
 		command_queue->ExecuteCommandList(command_list);
 	}

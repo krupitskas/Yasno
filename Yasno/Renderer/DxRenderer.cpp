@@ -119,7 +119,6 @@ namespace
 
 namespace ysn
 {
-
 	bool DxRenderer::Initialize()
 	{
 	#if defined(_DEBUG)
@@ -186,14 +185,14 @@ namespace ysn
 	void DxRenderer::Shutdown()
 	{}
 
-	std::optional<PsoId> DxRenderer::CreatePso(GraphicsPso& pso)
+	std::optional<PsoId> DxRenderer::CreatePso(const GraphicsPsoDesc& pso_desc)
 	{
-		return pso.Build(m_device, m_pso_pool);
+		return m_pso_storage.CreateGraphicsPso(m_device, pso_desc);
 	}
 
-	GraphicsPso DxRenderer::GetPso(PsoId pso_id)
+	std::optional<Pso> DxRenderer::GetPso(PsoId pso_id)
 	{
-		return m_pso_pool[pso_id];
+		return m_pso_storage.GetPso(pso_id);
 	}
 
 	bool DxRenderer::CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const
@@ -321,5 +320,4 @@ namespace ysn
 	{
 		return m_generate_mips_system;
 	}
-
-} // namespace ysn
+}

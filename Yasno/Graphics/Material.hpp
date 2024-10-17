@@ -15,7 +15,5 @@ namespace ysn
 		D3D12_RASTERIZER_DESC rasterizer_desc = {};
 
 		GpuResource gpu_material_parameters;
-
-		PsoId pso_id;
 	};
 }

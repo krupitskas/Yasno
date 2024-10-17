@@ -1,5 +1,7 @@
 ﻿#include "CommandQueue.hpp"
 
+#include <pix3.h>
+
 #include <cassert>
 
 #include <System/Helpers.hpp>
@@ -111,11 +113,19 @@ namespace ysn
 		// retrieved when the command list is executed.
 		ThrowIfFailed(commandList->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.get()));
 
+	#ifndef YSN_RELEASE
+		PIXBeginEvent(commandList.get(), PIX_COLOR_DEFAULT, name.c_str());
+	#endif
+
 		return commandList;
 	}
 
 	uint64_t CommandQueue::ExecuteCommandList(wil::com_ptr<ID3D12GraphicsCommandList4> commandList)
 	{
+	#ifndef YSN_RELEASE
+		PIXEndEvent(commandList.get());
+	#endif
+
 		commandList->Close();
 
 		ID3D12CommandAllocator* commandAllocator;

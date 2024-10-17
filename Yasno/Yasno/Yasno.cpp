@@ -36,19 +36,19 @@ namespace ysn
 		const auto format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 
 		D3D12_RESOURCE_DESC texture_desc = {};
-		texture_desc.Format				 = format;
-		texture_desc.Width				 = size;
-		texture_desc.Height				 = size;
-		texture_desc.Flags				 = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		texture_desc.DepthOrArraySize	 = 6;
-		texture_desc.SampleDesc.Count	 = 1;
-		texture_desc.SampleDesc.Quality	 = 0;
-		texture_desc.Dimension			 = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		texture_desc.Format = format;
+		texture_desc.Width = size;
+		texture_desc.Height = size;
+		texture_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		texture_desc.DepthOrArraySize = 6;
+		texture_desc.SampleDesc.Count = 1;
+		texture_desc.SampleDesc.Quality = 0;
+		texture_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
 		const auto heap_properties_default = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		//const auto heap_properties_upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
-		if(device->CreateCommittedResource(
+		if (device->CreateCommittedResource(
 			&heap_properties_default,
 			D3D12_HEAP_FLAG_NONE,
 			&texture_desc,
@@ -148,7 +148,7 @@ namespace ysn
 
 		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_camera_gpu_buffer));
 
-		if (hr != S_OK) 
+		if (hr != S_OK)
 		{
 			LogFatal << "Can't create camera GPU buffer\n";
 			return false;
@@ -178,7 +178,7 @@ namespace ysn
 
 		auto hr = device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_scene_parameters_gpu_buffer));
 
-		if (hr != S_OK) 
+		if (hr != S_OK)
 		{
 			LogFatal << "Can't create scene parameters GPU buffer\n";
 			return false;
@@ -197,7 +197,7 @@ namespace ysn
 		DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
 		view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_render_scene.camera->GetViewMatrix());
 		view_projection = XMMatrixMultiply(view_projection, m_render_scene.camera->GetProjectionMatrix());
-		
+
 		DirectX::XMVECTOR det;
 
 		XMStoreFloat4x4(&camera_data->view_projection, view_projection);
@@ -249,7 +249,7 @@ namespace ysn
 		//PIXSetTargetWindow(m_pWindow->GetWindowHandle());
 		//YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
 
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
 
 		LoadingParameters loading_parameters;
 
@@ -263,30 +263,30 @@ namespace ysn
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
 
 
-		for(auto& model : m_render_scene.models)
+		for (auto& model : m_render_scene.models)
 		{
-			for(auto& mesh : model.meshes)
+			for (auto& mesh : model.meshes)
 			{
-				for(auto& primitive : mesh.primitives)
+				for (auto& primitive : mesh.primitives)
 				{
 					m_forward_pass.CompilePrimitivePso(primitive, model.materials);
 				}
 			}
 		}
 
-		if(!m_tonemap_pass.Initialize())
+		if (!m_tonemap_pass.Initialize())
 		{
 			LogFatal << "Can't initialize tonemap pass\n";
 			return false;
 		}
 
-		if(!m_convert_to_cubemap_pass.Initialize())
+		if (!m_convert_to_cubemap_pass.Initialize())
 		{
 			LogFatal << "Can't initialize convert to cubemap pass\n";
 			return false;
 		}
 
-		if(!m_skybox_pass.Initialize())
+		if (!m_skybox_pass.Initialize())
 		{
 			LogFatal << "Can't initialize skybox pass\n";
 			return false;
@@ -304,13 +304,13 @@ namespace ysn
 		// TODO(return)
 		//m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_render_scene);
 
-		if(!CreateGpuCameraBuffer())
+		if (!CreateGpuCameraBuffer())
 		{
 			LogFatal << "Yasno app can't create GPU camera buffer\n";
 			return false;
 		}
 
-		if(!CreateGpuSceneParametersBuffer())
+		if (!CreateGpuSceneParametersBuffer())
 		{
 			LogFatal << "Yasno app can't create GPU scene parameters buffer\n";
 			return false;
@@ -346,7 +346,7 @@ namespace ysn
 
 		// Post init
 		const auto cubemap_texture_result = CreateCubemapTexture();
-		if(!cubemap_texture_result.has_value())
+		if (!cubemap_texture_result.has_value())
 		{
 			LogFatal << "Can't create cubemap\n";
 			return false;
@@ -636,7 +636,7 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("Shadows"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Enabled",  &m_render_scene.directional_light.cast_shadow);
+				ImGui::Checkbox("Enabled", &m_render_scene.directional_light.cast_shadow);
 			}
 
 			if (ImGui::CollapsingHeader("Tonemapping"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -657,7 +657,7 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("System"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Vsync",  &m_vSync);
+				ImGui::Checkbox("Vsync", &m_vSync);
 			}
 
 			ImGui::End();
@@ -670,7 +670,7 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("Mode"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				if(m_is_raster)
+				if (m_is_raster)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
 					ImGui::Text("Rasterization");
@@ -700,7 +700,7 @@ namespace ysn
 			RenderUi();
 
 			ImGuizmo::SetRect(0, 0, GetClientWidth(), GetClientHeight());
-			
+
 			XMFLOAT4X4 view;
 			XMFLOAT4X4 projection;
 			XMFLOAT4X4 identity;
@@ -732,9 +732,7 @@ namespace ysn
 		if (m_is_raster)
 		{
 			{
-				wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
-
-				PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
+				wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Clear before forward");
 
 				// Clear the render targets.
 				FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
@@ -746,7 +744,6 @@ namespace ysn
 				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
 
-				PIXEndEvent(command_list.get());
 				command_queue->ExecuteCommandList(command_list);
 
 			}
@@ -756,13 +753,21 @@ namespace ysn
 				render_parameters.command_queue = command_queue;
 				render_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
 				render_parameters.scene_color_buffer = m_scene_color_buffer;
-			
+				render_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
+				render_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
+				render_parameters.viewport = m_viewport;
+				render_parameters.scissors_rect = m_scissors_rect;
+				render_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
+				render_parameters.backbuffer_handle = backbuffer_handle;
+				render_parameters.current_back_buffer = current_back_buffer;
+				render_parameters.shadow_map_buffer = m_shadow_pass.shadow_map_buffer.buffer;
+
 				m_forward_pass.Render(m_render_scene, render_parameters);
 			}
 		}
 		else
 		{
-			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList();
+			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Raytracing");
 
 			PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "RTX Pass");
 
@@ -770,8 +775,7 @@ namespace ysn
 			{
 				FLOAT clear_color[] = { 255.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
 
-				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-					current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 				command_list->ResourceBarrier(1, &barrier);
 				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
@@ -816,7 +820,7 @@ namespace ysn
 		}
 
 		{
-			auto commandListCopyBackBuffer = command_queue->GetCommandList();
+			auto commandListCopyBackBuffer = command_queue->GetCommandList("Copy Backbuffer");
 
 			D3D12_BOX sourceRegion;
 			sourceRegion.left = 0;
@@ -855,7 +859,7 @@ namespace ysn
 		}
 
 		{
-			auto command_list = command_queue->GetCommandList();
+			auto command_list = command_queue->GetCommandList("Imgui");
 
 			ID3D12DescriptorHeap* ppHeaps[] = { Application::Get().GetRenderer()->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 			command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -868,7 +872,7 @@ namespace ysn
 
 		// Present
 		{
-			auto command_list = command_queue->GetCommandList();
+			auto command_list = command_queue->GetCommandList("Present");
 
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 			command_list->ResourceBarrier(1, &barrier);

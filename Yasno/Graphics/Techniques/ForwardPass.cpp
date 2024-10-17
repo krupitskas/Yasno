@@ -3,7 +3,7 @@
 #include <Renderer/DxRenderer.hpp>
 #include <System/Application.hpp>
 #include <System/Filesystem.hpp>
-#include <Renderer/PsoStorage.hpp>
+#include <Renderer/Pso.hpp>
 
 namespace ysn
 {
@@ -138,10 +138,9 @@ namespace ysn
 
 	bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials)
 	{
-		auto renderer = Application::Get().GetRenderer();
+		std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
 
-		GraphicsPso primitive_pso;
-		primitive_pso.SetName("Primitive PSO");
+		GraphicsPsoDesc new_pso_desc("Primitive PSO");
 
 		{
 			bool result = false;
@@ -208,7 +207,7 @@ namespace ysn
 				return false;
 			}
 
-			primitive_pso.SetRootSignature(root_signature);
+			new_pso_desc.SetRootSignature(root_signature);
 		}
 
 		const auto primitive_attributes_defines = BuildAttributeDefines(primitive.attributes);;
@@ -228,7 +227,7 @@ namespace ysn
 				return false;
 			}
 
-			primitive_pso.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
+			new_pso_desc.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
 		}
 
 		// Pixel shader
@@ -246,7 +245,7 @@ namespace ysn
 				return false;
 			}
 
-			primitive_pso.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
+			new_pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
 		}
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc = BuildInputElementDescs(primitive.attributes);
@@ -256,35 +255,35 @@ namespace ysn
 		depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 		depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 
-		primitive_pso.SetDepthStencilState(depth_stencil_desc);
-		primitive_pso.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
-		primitive_pso.SetSampleMask(UINT_MAX);
+		new_pso_desc.SetDepthStencilState(depth_stencil_desc);
+		new_pso_desc.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
+		new_pso_desc.SetSampleMask(UINT_MAX);
 
 		const auto material = materials[primitive.material_id];
 
-		primitive_pso.SetRasterizerState(material.rasterizer_desc);
-		primitive_pso.SetBlendState(material.blend_desc);
+		new_pso_desc.SetRasterizerState(material.rasterizer_desc);
+		new_pso_desc.SetBlendState(material.blend_desc);
 
 		switch (primitive.topology)
 		{
 			case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
 				break;
 			case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
 			case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 				break;
 			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
 			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-				primitive_pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 				break;
 			default:
 				YSN_ASSERT(false);
 		}
 
-		primitive_pso.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+		new_pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
 
-		auto result_pso = renderer->CreatePso(primitive_pso);
+		auto result_pso = renderer->CreatePso(new_pso_desc);
 
 		if (!result_pso.has_value())
 		{
@@ -300,28 +299,13 @@ namespace ysn
 	{
 		auto renderer = Application::Get().GetRenderer();
 
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList();
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList("Forward Pass");
 
 		ID3D12DescriptorHeap* pDescriptorHeaps[] =
 		{
 			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
 		};
 		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-
-		//PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "GeometryPass");
-
-		// Clear the render targets.
-		{
-			FLOAT clear_color[] = { 44.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
-
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			command_list->ResourceBarrier(1, &barrier);
-
-			command_list->ClearRenderTargetView(render_parameters.backbuffer_handle, clear_color, 0, nullptr);
-			command_list->ClearDepthStencilView(render_parameters.dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-			command_list->ClearRenderTargetView(render_parameters.hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
-		}
-
 		command_list->RSSetViewports(1, &render_parameters.viewport);
 		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
 		command_list->OMSetRenderTargets(1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
@@ -332,8 +316,6 @@ namespace ysn
 																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			command_list->ResourceBarrier(1, &barrier);
 		}
-
-
 
 		for(auto& model : render_scene.models)
 		{
@@ -349,52 +331,43 @@ namespace ysn
 					}
 
 					// TODO: check for -1 as pso_id
-					const GraphicsPso pso = renderer->GetPso(primitive.pso_id);
+					const std::optional<Pso> pso = renderer->GetPso(primitive.pso_id);
 
-					command_list->SetGraphicsRootSignature(pso.m_root_signature.get());
-					command_list->SetPipelineState(pso.m_pso.get());
-
-					command_list->IASetPrimitiveTopology(primitive.topology);
-					command_list->SetGraphicsRootConstantBufferView(2, primitive.pMaterial->pBuffer->GetGPUVirtualAddress());
-					command_list->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-					command_list->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
-					command_list->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
-
-					command_list->SetGraphicsRootConstantBufferView(0, pCameraBuffer->GetGPUVirtualAddress());
-					command_list->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
-
-					if (primitive.index_count)
+					if(pso.has_value())
 					{
-						command_list->IASetIndexBuffer(&primitive.index_buffer_view);
-						command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+						const Material& material = model.materials[primitive.material_id];
+
+						command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+						command_list->SetPipelineState(pso.value().pso.get());
+
+						command_list->IASetPrimitiveTopology(primitive.topology);
+						command_list->SetGraphicsRootConstantBufferView(2, material.gpu_material_parameters.GetGPUVirtualAddress());
+						//command_list->SetGraphicsRootConstantBufferView(3, scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						//command_list->SetGraphicsRootDescriptorTable(4, primitive.pMaterial->srv_handle.gpu);
+						//command_list->SetGraphicsRootDescriptorTable(5, p_shadow_map_buffer->srv_handle.gpu);
+
+						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
+						//command_list->SetGraphicsRootConstantBufferView(1, ModelRenderContext->pNodeBuffers[nodeIndex]->GetGPUVirtualAddress());
+
+						if (primitive.index_count)
+						{
+							command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+							command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+						}
+						else
+						{
+							//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+						}
 					}
 					else
 					{
-						//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+						LogWarning << "Can't render primitive because it has't any pso attached\n";
 					}
+
+					
 				}
 			}
 		}
-
-
-
-		//switch (PrimitivePipeline)
-		//{
-		//	case ysn::PrimitivePipeline::ForwardPbr:
-		//{
-
-		//	break;
-		//}
-		//case ysn::PrimitivePipeline::Shadow:
-		//	command_list->SetGraphicsRootSignature(primitive.pShadowRootSignature.get());
-		//	command_list->SetPipelineState(primitive.pShadowPipelineState.get());
-		//	break;
-		//case ysn::PrimitivePipeline::ForwardNoMaterial:
-		//	break;
-
-
-
-
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.get(),
@@ -403,7 +376,6 @@ namespace ysn
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		//PIXEndEvent(command_list.get());
 
 		render_parameters.command_queue->ExecuteCommandList(command_list);
 	}
