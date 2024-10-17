@@ -257,20 +257,18 @@ namespace ysn
 
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
 
-		// TODO(last): Another command list?
 		bool load_result = false;
-		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
 		{
 			LoadingParameters loading_parameters;
 			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
 			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
-		//{
-		//	LoadingParameters loading_parameters;
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-		//}
-		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
+		{
+			LoadingParameters loading_parameters;
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		}
 		
+		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//{
 		//	LoadingParameters loading_parameters;
 		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
@@ -290,6 +288,8 @@ namespace ysn
 				}
 			}
 		}
+
+		m_raytracing_context.CreateAccelerationStructures(command_list, m_render_scene);
 
 		if (!m_tonemap_pass.Initialize())
 		{
@@ -333,9 +333,6 @@ namespace ysn
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
 
-		// TODO(return)
-		//m_raytracing_context.CreateAccelerationStructures(Application::Get().GetRenderer()->GetDevice(), command_list, &m_render_scene);
-
 		if (!CreateGpuCameraBuffer())
 		{
 			LogFatal << "Yasno app can't create GPU camera buffer\n";
@@ -366,11 +363,11 @@ namespace ysn
 		// Setup techniques
 		m_shadow_pass.Initialize(Application::Get().GetRenderer());
 
-		//if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
-		//{
-		//	LogFatal << "Can't initialize raytracing pass\n";
-		//	return false;
-		//}
+		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
+		{
+			LogFatal << "Can't initialize raytracing pass\n";
+			return false;
+		}
 
 		// Setup camera
 		m_render_scene.camera = std::make_shared<ysn::Camera>();
@@ -810,9 +807,7 @@ namespace ysn
 		}
 		else
 		{
-			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Raytracing");
-
-			PIXBeginEvent(command_list.get(), PIX_COLOR_DEFAULT, "RTX Pass");
+			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("RTX Pass");
 
 			// Clear the render targets.
 			{
@@ -827,8 +822,6 @@ namespace ysn
 			}
 
 			m_ray_tracing_pass.Execute(Application::Get().GetRenderer(), command_list, GetClientWidth(), GetClientHeight(), m_scene_color_buffer, m_camera_gpu_buffer);
-
-			PIXEndEvent(command_list.get());
 
 			command_queue->ExecuteCommandList(command_list);
 		}

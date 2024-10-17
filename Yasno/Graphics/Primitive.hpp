@@ -15,6 +15,7 @@ namespace ysn
 		std::string name;
 
 		uint32_t vertex_count = 0;
+		//uint64_t vertex_offset_in_bytes = 0;
 
 		DXGI_FORMAT format;
 		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
@@ -29,6 +30,8 @@ namespace ysn
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 
 		uint32_t index_count = 0;
+		//uint64_t index_offset_in_bytes = 0;
+
 		int material_id = -1;
 
 		std::unordered_map<std::string, Attribute> attributes;

@@ -4,6 +4,7 @@
 #include <Renderer/nv_helpers_dx12/BottomLevelASGenerator.h>
 #include <Renderer/DXRHelper.h>
 #include <System/GltfLoader.hpp>
+#include <System/Application.hpp>
 
 // TODO(postrtx): remove this
 ID3D12Resource* CreateBuffer(ID3D12Device* m_device, uint64_t size, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES initState, const D3D12_HEAP_PROPERTIES& heapProps)
@@ -40,12 +41,9 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBottomLevelAS(wi
 	for (const auto& buffer : vertex_buffers)
 	{
 		bottomLevelAS.AddVertexBuffer(
-			buffer.vertex_buffer.get(),
-			buffer.vertex_offset_in_bytes,
+			buffer.vertex_buffer_view,
+			buffer.index_buffer_view,
 			buffer.vertex_count,
-			buffer.vertex_stride,
-			buffer.index_buffer.get(),
-			buffer.index_offset_in_bytes,
 			buffer.index_count,
 			0,
 			0);
@@ -151,50 +149,50 @@ void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> rend
 
 // Combine the BLAS and TLAS builds to construct the entire acceleration structure required to raytrace the scene
 
-/*
 
-void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Device5> device,
-														  wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-														  ysn::ModelRenderContext* gltf_model_context)
+void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12GraphicsCommandList4> command_list,const RenderScene& render_scene)
 {
-	std::vector<BLASVertexInput> vertex_buffers;
+	std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
 
-	// Vertex buffer
-	// Amout of vertices
-	// Sizeof vertex
-	for (const auto& mesh : gltf_model_context->Meshes)
+	for (auto& model : render_scene.models)
 	{
-		for (const auto& primitive : mesh.primitives)
+		for(int i = 0; i < model.meshes.size(); i++)
 		{
-			BLASVertexInput blas_input;
+			const ysn::Mesh& mesh = model.meshes[i];
+			const ysn::NodeTransform& transform = model.transforms[i];
 
-			blas_input.vertex_buffer = primitive.vertex_buffer;
-			blas_input.vertex_offset_in_bytes = primitive.vertex_offset_in_bytes;
-			blas_input.vertex_count = primitive.vertex_count;
-			blas_input.vertex_stride = primitive.vertex_stride;
-			blas_input.index_buffer = primitive.index_buffer;
-			blas_input.index_offset_in_bytes = primitive.index_offset_in_bytes;
-			blas_input.index_count = primitive.index_count;
+			for (auto& primitive : mesh.primitives)
+			{
+				std::vector<BLASVertexInput> vertex_buffers;
 
-			vertex_buffers.push_back(blas_input);
+				BLASVertexInput blas_input;
+
+				const Attribute& attribute = primitive.attributes.at("POSITION");
+
+				blas_input.vertex_count = attribute.vertex_count;
+				blas_input.index_count = primitive.index_count;
+
+				blas_input.vertex_buffer_view = attribute.vertex_buffer_view;
+				blas_input.index_buffer_view = primitive.index_buffer_view;
+
+				vertex_buffers.push_back(blas_input);
+
+				// Build the bottom AS from the Triangle vertex buffer
+				AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS(renderer->GetDevice(), command_list, vertex_buffers);
+				instances.emplace_back(bottomLevelBuffers.result, transform.transform);
+
+				blas_res.push_back(bottomLevelBuffers.result);
+
+			#ifndef YSN_RELEASE
+				bottomLevelBuffers.result->SetName(L"BLAS");
+			#endif
+			}
 		}
 	}
 
-	// Build the bottom AS from the Triangle vertex buffer
-	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS(device, command_list, vertex_buffers);
-
-	// Just one instance for now
-	instances = { { bottomLevelBuffers.result, DirectX::XMMatrixIdentity() } };
-	CreateTopLevelAS(device, command_list, instances);
-
-	// Store the AS buffers. The rest of the buffers will be released once we exit
-	// the function
-	blas_res = bottomLevelBuffers.result;
+	CreateTopLevelAS(renderer->GetDevice(), command_list, instances);
 
 #ifndef YSN_RELEASE
-	blas_res->SetName(L"BLAS");
 	tlas_buffers.result->SetName(L"TLAS");
 #endif
 }
-
-*/

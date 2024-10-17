@@ -499,7 +499,7 @@ static void BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& model,
 		primitive.index_count = static_cast<uint32_t>(gltf_accessor.count);
 
 		//pRenderPrimitive->index_buffer = pBuffers[gltf_buffer_view.buffer];
-		//pRenderPrimitive->index_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		//primitive->index_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
 	}
 	else
 	{

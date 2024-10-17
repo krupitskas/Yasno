@@ -13,19 +13,19 @@ namespace nv_helpers_dx12
     //--------------------------------------------------------------------------------------------------
     // Add a vertex buffer in GPU memory into the acceleration structure. The
     // vertices are supposed to be represented by 3 float32 value
-    void BottomLevelASGenerator::AddVertexBuffer(
-        ID3D12Resource* vertexBuffer, // Buffer containing the vertex coordinates possibly interleaved with other vertex data
-        UINT64 vertexOffsetInBytes, // Offset of the first vertex in the vertex buffer
-        uint32_t vertexCount, // Number of vertices to consider in the buffer
-        UINT vertexSizeInBytes, // Size of a vertex including all its other data used to stride in the buffer
-        ID3D12Resource* transformBuffer, // Buffer containing a 4x4 transform matrix in GPU memory, to be applied to the vertices. This buffer cannot be nullptr
-        UINT64 transformOffsetInBytes, // Offset of the transform matrix in the transform buffer
-        bool isOpaque /* = true */ // If true, the geometry is considered opaque optimizing the search for a closest hit
-    )
-    {
-        AddVertexBuffer(
-            vertexBuffer, vertexOffsetInBytes, vertexCount, vertexSizeInBytes, nullptr, 0, 0, transformBuffer, transformOffsetInBytes, isOpaque);
-    }
+    //void BottomLevelASGenerator::AddVertexBuffer(
+    //    ID3D12Resource* vertexBuffer, // Buffer containing the vertex coordinates possibly interleaved with other vertex data
+    //    UINT64 vertexOffsetInBytes, // Offset of the first vertex in the vertex buffer
+    //    uint32_t vertexCount, // Number of vertices to consider in the buffer
+    //    UINT vertexSizeInBytes, // Size of a vertex including all its other data used to stride in the buffer
+    //    ID3D12Resource* transformBuffer, // Buffer containing a 4x4 transform matrix in GPU memory, to be applied to the vertices. This buffer cannot be nullptr
+    //    UINT64 transformOffsetInBytes, // Offset of the transform matrix in the transform buffer
+    //    bool isOpaque /* = true */ // If true, the geometry is considered opaque optimizing the search for a closest hit
+    //)
+    //{
+    //    AddVertexBuffer(
+    //        vertexBuffer, vertexOffsetInBytes, vertexCount, vertexSizeInBytes, nullptr, 0, 0, transformBuffer, transformOffsetInBytes, isOpaque);
+    //}
 
     //--------------------------------------------------------------------------------------------------
     // Add a vertex buffer along with its index buffer in GPU memory into the
@@ -36,12 +36,14 @@ namespace nv_helpers_dx12
     //   - 3xfloat32 format
     //   - 32-bit indices
     void BottomLevelASGenerator::AddVertexBuffer(
-        ID3D12Resource* vertexBuffer, // Buffer containing the vertex coordinates possibly interleaved with other vertex data
-        UINT64 vertexOffsetInBytes, // Offset of the first vertex in the vertex buffer
+        D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view,
+        D3D12_INDEX_BUFFER_VIEW index_buffer_view,
+        //ID3D12Resource* vertexBuffer, // Buffer containing the vertex coordinates possibly interleaved with other vertex data
+        //UINT64 vertexOffsetInBytes, // Offset of the first vertex in the vertex buffer
         uint32_t vertexCount, // Number of vertices to consider in the buffer
-        UINT vertexSizeInBytes, // Size of a vertex including all its other data used to stride in the buffer
-        ID3D12Resource* indexBuffer, // Buffer containing the vertex indices describing the triangles
-        UINT64 indexOffsetInBytes, // Offset of the first index in the index buffer
+        //UINT vertexSizeInBytes, // Size of a vertex including all its other data used to stride in the buffer
+        //ID3D12Resource* indexBuffer, // Buffer containing the vertex indices describing the triangles
+        //UINT64 indexOffsetInBytes, // Offset of the first index in the index buffer
         uint32_t indexCount, // Number of indices to consider in the buffer
         ID3D12Resource* transformBuffer, // Buffer containing a 4x4 transform matrix in GPU memory, to be applied to the vertices. This buffer cannot be nullptr
         UINT64 transformOffsetInBytes, // Offset of the transform matrix in the transform buffer
@@ -52,12 +54,12 @@ namespace nv_helpers_dx12
         // opaque triangles, with 3xf32 vertex coordinates and 32-bit indices
         D3D12_RAYTRACING_GEOMETRY_DESC descriptor = {};
         descriptor.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-        descriptor.Triangles.VertexBuffer.StartAddress = vertexBuffer->GetGPUVirtualAddress() + vertexOffsetInBytes;
-        descriptor.Triangles.VertexBuffer.StrideInBytes = vertexSizeInBytes;
+        descriptor.Triangles.VertexBuffer.StartAddress = vertex_buffer_view.BufferLocation;// vertexBuffer->GetGPUVirtualAddress() + vertexOffsetInBytes;
+        descriptor.Triangles.VertexBuffer.StrideInBytes = vertex_buffer_view.StrideInBytes; // vertexSizeInBytes;
         descriptor.Triangles.VertexCount = vertexCount;
         descriptor.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-        descriptor.Triangles.IndexBuffer = indexBuffer ? (indexBuffer->GetGPUVirtualAddress() + indexOffsetInBytes) : 0;
-        descriptor.Triangles.IndexFormat = indexBuffer ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_UNKNOWN; // TODO: DXGI_FORMAT_R32_UINT provide
+        descriptor.Triangles.IndexBuffer = index_buffer_view.BufferLocation;// indexBuffer ? (indexBuffer->GetGPUVirtualAddress() + indexOffsetInBytes) : 0;
+        descriptor.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;// indexBuffer ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_UNKNOWN; // TODO: DXGI_FORMAT_R32_UINT provide
         descriptor.Triangles.IndexCount = indexCount;
         descriptor.Triangles.Transform3x4 = transformBuffer ? (transformBuffer->GetGPUVirtualAddress() + transformOffsetInBytes) : 0;
         descriptor.Flags = isOpaque ? D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE : D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;

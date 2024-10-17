@@ -24,28 +24,20 @@ namespace ysn
 
 	struct BLASVertexInput
 	{
-		wil::com_ptr<ID3D12Resource> vertex_buffer;
-		uint64_t vertex_offset_in_bytes;
-		uint32_t vertex_count;
-		uint32_t vertex_stride;
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 
-		wil::com_ptr<ID3D12Resource> index_buffer;
-		uint64_t index_offset_in_bytes;
+		uint32_t vertex_count;
 		uint32_t index_count;
 	};
 
 	struct RaytracingContext
 	{
-		/// Create the acceleration structure of an instance
-		/// vertex_buffers : pair of buffer and vertex count
 		AccelerationStructureBuffers CreateBottomLevelAS(
 			wil::com_ptr<ID3D12Device5> device,
 			wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-			std::vector<BLASVertexInput> vertex_buffers); // sizeof(Vertex)
+			std::vector<BLASVertexInput> vertex_buffers);
 
-		/// Create the main acceleration structure that holds
-		/// all instances of the scene
-		/// \param     instances : pair of BLAS and transform
 		void CreateTopLevelAS(
 			wil::com_ptr<ID3D12Device5> device,
 			wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
@@ -53,15 +45,11 @@ namespace ysn
 
 		void CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer);
 
-		/// Create all acceleration structures, bottom and top
-		//void CreateAccelerationStructures(
-		//	wil::com_ptr<ID3D12Device5> device,
-		//	wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-		//	ysn::ModelRenderContext* gltf_model_context);
+		void CreateAccelerationStructures(wil::com_ptr<ID3D12GraphicsCommandList4> command_list, const RenderScene& render_scene);
 
 		nv_helpers_dx12::TopLevelASGenerator tlas_generator;
 
-		wil::com_ptr<ID3D12Resource> blas_res;
+		std::vector<wil::com_ptr<ID3D12Resource>> blas_res;
 
 		AccelerationStructureBuffers tlas_buffers;
 		std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>> instances;

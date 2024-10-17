@@ -64,12 +64,14 @@ namespace nv_helpers_dx12
         /// The vertices are supposed to be represented by 3 float32 value, and the indices are 32-bit
         /// unsigned ints
         void AddVertexBuffer(
-            ID3D12Resource* vertexBuffer, /// Buffer containing the vertex coordinates possibly interleaved with other vertex data
-            UINT64 vertexOffsetInBytes, /// Offset of the first vertex in the vertex buffer
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view,
+            D3D12_INDEX_BUFFER_VIEW index_buffer_view,
+            //ID3D12Resource* vertexBuffer, /// Buffer containing the vertex coordinates possibly interleaved with other vertex data
+            //UINT64 vertexOffsetInBytes, /// Offset of the first vertex in the vertex buffer
             uint32_t vertexCount, /// Number of vertices to consider in the buffer
-            UINT vertexSizeInBytes, /// Size of a vertex including all its other data used to stride in the buffer
-            ID3D12Resource* indexBuffer, /// Buffer containing the vertex indices describing the triangles
-            UINT64 indexOffsetInBytes, /// Offset of the first index in the index buffer
+            //UINT vertexSizeInBytes, /// Size of a vertex including all its other data used to stride in the buffer
+            //ID3D12Resource* indexBuffer, /// Buffer containing the vertex indices describing the triangles
+            //UINT64 indexOffsetInBytes, /// Offset of the first index in the index buffer
             uint32_t indexCount, /// Number of indices to consider in the buffer
             ID3D12Resource* transformBuffer, /// Buffer containing a 4x4 transform matrix in GPU memory, to be applied to the vertices. This buffer cannot be nullptr
             UINT64 transformOffsetInBytes, /// Offset of the transform matrix in the transform buffer
