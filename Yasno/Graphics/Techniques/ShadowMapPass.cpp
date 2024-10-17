@@ -1,112 +1,93 @@
 #include "ShadowMapPass.hpp"
 
-
 #include <Renderer/DxRenderer.hpp>
 #include <System/Math.hpp>
 #include <Yasno/Lights.hpp>
+#include <System/Application.hpp>
+#include <System/Filesystem.hpp>
 
 namespace ysn
 {
-
-	/*
-	bool ShadowPipeline(ysn::Primitive* pRenderPrimitive, std::shared_ptr<ysn::DxRenderer> renderer)
+	static std::vector<DxcDefine> BuildAttributeDefines(const std::unordered_map<std::string, Attribute>& attributes)
 	{
-		HRESULT result = S_OK;
+		std::vector<DxcDefine> defines;
 
+		for (const auto& [name, attribute] : attributes)
 		{
-			D3D12_ROOT_PARAMETER rootParams[2] = {
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX }
-			};
-
-			// TEMP
-			rootParams[0].Descriptor.RegisterSpace = 0;
-			rootParams[1].Descriptor.RegisterSpace = 0;
-
-			D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-			rootSignatureDesc.NumParameters = _countof(rootParams);
-			rootSignatureDesc.pParameters = &rootParams[0];
-			rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-			result = renderer->CreateRootSignature(&rootSignatureDesc, &pRenderPrimitive->pShadowRootSignature);
-
-			assert(SUCCEEDED(result));
+			if (attribute.name == "NORMAL")
+			{
+				defines.push_back({ L"HAS_NORMAL", L"1" });
+			}
+			else if (attribute.name == "TANGENT")
+			{
+				defines.push_back({ L"HAS_TANGENT", L"1" });
+			}
+			else if (attribute.name == "TEXCOORD_0")
+			{
+				defines.push_back({ L"HAS_TEXCOORD_0", L"1" });
+			}
+			else if (attribute.name == "TEXCOORD_1")
+			{
+				defines.push_back({ L"HAS_TEXCOORD_1", L"1" });
+			}
 		}
 
-		{
-			ysn::ShaderCompileParameters vs_parameters;
-			vs_parameters.shader_type = ysn::ShaderType::Vertex;
-			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassVertex.hlsl");
-			vs_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
-			vs_parameters.defines.emplace_back(L"SHADOW_PASS");
-
-			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
-
-			if (!vs_shader_result.has_value())
-			{
-				LogError << "Can't compile GLTF shadow pipeline vs shader\n";
-				return false;
-			}
-
-			ysn::ShaderCompileParameters ps_parameters;
-			ps_parameters.shader_type = ysn::ShaderType::Pixel;
-			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/BasePassPixelGray.hlsl");
-			ps_parameters.defines = BuildAttributeDefines(pRenderPrimitive->RenderAttributes);
-
-			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
-
-			if (!ps_shader_result.has_value())
-			{
-				LogError << "Can't compile GLTF shadow pipeline ps shader\n";
-				return false;
-			}
-
-			auto inputElementDescs = BuildInputElementDescs(pRenderPrimitive->RenderAttributes);
-
-			D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
-			pipelineStateDesc.pRootSignature = pRenderPrimitive->pShadowRootSignature.get();
-			pipelineStateDesc.VS = { vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize() };
-			pipelineStateDesc.PS = { ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize() };
-			pipelineStateDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			pipelineStateDesc.SampleMask = UINT_MAX;
-			pipelineStateDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-			pipelineStateDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT; // TODO: Why front?
-			pipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: provide
-			pipelineStateDesc.DepthStencilState.DepthEnable = true;
-			pipelineStateDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-			pipelineStateDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-			pipelineStateDesc.InputLayout = { inputElementDescs.data(), static_cast<UINT>(inputElementDescs.size()) };
-
-			switch (pRenderPrimitive->primitiveTopology)
-			{
-				case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-					break;
-				case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
-				case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-					break;
-				case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
-				case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-					pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-					break;
-				default:
-					assert(false);
-			}
-
-			pipelineStateDesc.NumRenderTargets = 1;
-			pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Provide it from outside
-			pipelineStateDesc.SampleDesc = { 1, 0 };
-
-			result = renderer->GetDevice()->CreateGraphicsPipelineState(
-				&pipelineStateDesc, IID_PPV_ARGS(&pRenderPrimitive->pShadowPipelineState));
-
-			assert(SUCCEEDED(result));
-		}
-
-		return true;
+		return defines;
 	}
-	*/
+
+
+	static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::unordered_map<std::string, Attribute>& render_attributes)
+	{
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
+
+		for (const auto& [name, attribute] : render_attributes)
+		{
+			D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
+
+			input_element_desc.SemanticName = &attribute.name[0];
+			input_element_desc.Format = attribute.format;
+
+			// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
+			if (attribute.name == "TEXCOORD_0")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 0;
+			}
+
+			if (attribute.name == "TEXCOORD_1")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 1;
+			}
+
+			if (attribute.name == "TEXCOORD_2")
+			{
+				input_element_desc.SemanticName = "TEXCOORD_";
+				input_element_desc.SemanticIndex = 2;
+			}
+
+			if (attribute.name == "COLOR_0")
+			{
+				input_element_desc.SemanticName = "COLOR_";
+				input_element_desc.SemanticIndex = 0;
+			}
+
+			if (attribute.name == "COLOR_1")
+			{
+				input_element_desc.SemanticName = "COLOR_";
+				input_element_desc.SemanticIndex = 1;
+			}
+
+			input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
+			input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+
+			input_element_desc_arr.push_back(input_element_desc);
+		}
+
+		return input_element_desc_arr;
+	}
+
 
 	bool ShadowMapPass::InitializeCamera(std::shared_ptr<DxRenderer> p_renderer)
 	{
@@ -125,7 +106,7 @@ namespace ysn
 		resourceDesc.SampleDesc = { 1, 0 };
 		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-		auto result = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pCameraBuffer));
+		auto result = p_renderer->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_camera_buffer));
 
 		if (result != S_OK)
 		{
@@ -141,6 +122,138 @@ namespace ysn
 		InitializeShadowMapBuffer(p_renderer);
 		//InitializeOrthProjection();
 		InitializeCamera(p_renderer);
+	}
+
+	bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials)
+	{
+		std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
+
+		GraphicsPsoDesc new_pso_desc("Shadow PSO");
+
+		{
+			bool result = false;
+
+			D3D12_ROOT_PARAMETER root_params[3] = {
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_VERTEX }
+			};
+
+			root_params[0].Descriptor.RegisterSpace = 0;
+			root_params[1].Descriptor.RegisterSpace = 0;
+			root_params[2].Descriptor.RegisterSpace = 0;
+
+			D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
+			root_signature_desc.NumParameters = _countof(root_params);
+			root_signature_desc.pParameters = &root_params[0];
+			root_signature_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+
+			ID3D12RootSignature* root_signature = nullptr;
+
+			result = renderer->CreateRootSignature(&root_signature_desc, &root_signature);
+
+			if (!result)
+			{
+				LogFatal << "Can't create root signature for primitive\n";
+				return false;
+			}
+
+			new_pso_desc.SetRootSignature(root_signature);
+		}
+
+		const auto primitive_attributes_defines = BuildAttributeDefines(primitive.attributes);
+
+		// Vertex shader
+		{
+			ysn::ShaderCompileParameters vs_parameters;
+			vs_parameters.shader_type = ysn::ShaderType::Vertex;
+			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassVS.hlsl");
+			vs_parameters.defines = primitive_attributes_defines;
+			vs_parameters.defines.emplace_back(L"SHADOW_PASS");
+			
+			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
+
+			if (!vs_shader_result.has_value())
+			{
+				LogError << "Can't compile GLTF shadow pipeline vs shader\n";
+				return false;
+			}
+
+			new_pso_desc.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
+		}
+
+		// Pixel shader
+		{
+			ysn::ShaderCompileParameters ps_parameters;
+			ps_parameters.shader_type = ysn::ShaderType::Pixel;
+			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ShadowPassPS.hlsl");
+			ps_parameters.defines = primitive_attributes_defines;
+
+			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
+
+			if (!ps_shader_result.has_value())
+			{
+				LogError << "Can't compile GLTF shadpw pipeline ps shader\n";
+				return false;
+			}
+
+			new_pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
+		}
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc = BuildInputElementDescs(primitive.attributes);
+
+		D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
+		depth_stencil_desc.DepthEnable = true;
+		depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+		depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+
+		new_pso_desc.SetDepthStencilState(depth_stencil_desc);
+		new_pso_desc.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
+		new_pso_desc.SetSampleMask(UINT_MAX);
+
+		const auto material = materials[primitive.material_id];
+
+		// TODO: Do I need it?
+		auto blend_desc = material.blend_desc;
+		blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		D3D12_RASTERIZER_DESC raster_desc = {};
+		raster_desc.FillMode = D3D12_FILL_MODE_SOLID;
+		raster_desc.CullMode = D3D12_CULL_MODE_FRONT;
+
+		new_pso_desc.SetRasterizerState(raster_desc);
+		new_pso_desc.SetBlendState(blend_desc);
+
+		switch (primitive.topology)
+		{
+			case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+				break;
+			case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
+			case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+				break;
+			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
+			case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
+				new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+				break;
+			default:
+				YSN_ASSERT(false);
+		}
+
+		new_pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+
+		auto result_pso = renderer->CreatePso(new_pso_desc);
+
+		if (!result_pso.has_value())
+		{
+			return false;
+		}
+
+		primitive.shadow_pso_id = *result_pso;
+
+		return true;
 	}
 
 	bool ShadowMapPass::InitializeShadowMapBuffer(std::shared_ptr<DxRenderer> p_renderer)
@@ -204,35 +317,81 @@ namespace ysn
 		InitializeOrthProjection(SimpleMath::Vector3{ directional_light.direction.x, directional_light.direction.y, directional_light.direction.z });
 	}
 
-	/*
-
-	void ShadowMapPass::Render(
-		std::shared_ptr<DxRenderer> p_renderer,
-		std::shared_ptr<CommandQueue> command_queue,
-		wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-		ModelRenderContext* pGLTFDrawContext,
-		tinygltf::Model* )
+	void ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters)
 	{
-		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("ShadowMap");
+		auto renderer = Application::Get().GetRenderer();
+
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = parameters.command_queue->GetCommandList("ShadowMap");
+
+		ID3D12DescriptorHeap* pDescriptorHeaps[] =
+		{
+			renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
+		};
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
 		command_list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 		command_list->RSSetViewports(1, &Viewport);
 		command_list->RSSetScissorRects(1, &ScissorRect);
 		command_list->OMSetRenderTargets(0, nullptr, FALSE, &shadow_map_buffer.dsv_handle.cpu);
 
-		void* pData;
-		m_pCameraBuffer->Map(0, nullptr, &pData);
+		{
+			void* data = nullptr;
+			m_camera_buffer->Map(0, nullptr, &data);
+			auto* pCameraData = static_cast<ShadowCamera*>(data);
+			XMStoreFloat4x4(&pCameraData->shadow_matrix, shadow_matrix);
+			m_camera_buffer->Unmap(0, nullptr);
+		}
+		
+		for(auto& model : render_scene.models)
+		{
+			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
+			{
+				const Mesh& mesh = model.meshes[mesh_id];
+				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
 
-		auto* pCameraData = static_cast<ShadowCamera*>(pData);
+				for(auto& primitive : mesh.primitives)
+				{
+					uint32_t attribute_slot = 0;
+					for(const auto& [name, attribute] : primitive.attributes)
+					{
+						command_list->IASetVertexBuffers(attribute_slot, 1, &attribute.vertex_buffer_view);
+						attribute_slot += 1;
+					}
 
-		XMStoreFloat4x4(&pCameraData->shadow_matrix, shadow_matrix);
+					// TODO: check for -1 as pso_id
+					const std::optional<Pso> pso = renderer->GetPso(primitive.shadow_pso_id);
 
-		m_pCameraBuffer->Unmap(0, nullptr);
+					if(pso.has_value())
+					{
+						const Material& material = model.materials[primitive.material_id];
 
-		RenderGLTF(pGLTFDrawContext, p_renderer, &pGLTFDrawContext->gltfModel, command_list, m_pCameraBuffer, scene_parameters_gpu_buffer, PrimitivePipeline::Shadow, &shadow_map_buffer);
+						command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+						command_list->SetPipelineState(pso.value().pso.get());
 
-		command_queue->ExecuteCommandList(command_list);
+						command_list->IASetPrimitiveTopology(primitive.topology);
+
+						command_list->SetGraphicsRootConstantBufferView(0, m_camera_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(1, node_gpu_buffer.GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(2, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+
+						if (primitive.index_count)
+						{
+							command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+							command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+						}
+						else
+						{
+							//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+						}
+					}
+					else
+					{
+						LogWarning << "Can't render primitive because it has't any pso attached\n";
+					}
+				}
+			}
+		}
+
+		parameters.command_queue->ExecuteCommandList(command_list);
 	}
-
-	*/
-} // namespace ysn
+}

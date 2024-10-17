@@ -7,55 +7,6 @@
 
 namespace ysn
 {
-	//void DrawNode(ysn::ModelRenderContext* ModelRenderContext,
-	//std::shared_ptr<ysn::DxRenderer> p_renderer,
-	//tinygltf::Model* pModel,
-	//wil::com_ptr<ID3D12GraphicsCommandList> command_list,
-	//wil::com_ptr<ID3D12Resource> pCameraBuffer,
-	//wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-	//uint64_t nodeIndex,
-	//ysn::PrimitivePipeline PrimitivePipeline,
-	//ysn::ShadowMapBuffer* p_shadow_map_buffer)
-	//{
-	//	const auto& glTFNode = pModel->nodes[nodeIndex];
-
-	//	if (glTFNode.mesh >= 0)
-	//	{
-	//		const auto& mesh = ModelRenderContext->Meshes[glTFNode.mesh];
-
-	//		for (const ysn::Primitive& primitive : mesh.primitives)
-	//		{
-	//			
-	//		}
-	//	}
-
-	//	for (auto childNodeIndex : glTFNode.children)
-	//	{
-	//		DrawNode(ModelRenderContext, p_renderer, pModel, command_list, pCameraBuffer, scene_parameters_gpu_buffer, childNodeIndex, PrimitivePipeline, p_shadow_map_buffer);
-	//	}
-	//}
-
-	/*
-
-	void ysn::RenderGLTF(
-	ysn::ModelRenderContext* ModelRenderContext,
-	std::shared_ptr<ysn::DxRenderer> p_renderer,
-	tinygltf::Model* pModel,
-	wil::com_ptr<ID3D12GraphicsCommandList> command_list,
-	wil::com_ptr<ID3D12Resource> pCameraBuffer,
-	wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-	ysn::PrimitivePipeline PrimitivePipeline,
-	ysn::ShadowMapBuffer* p_shadow_map_descriptor)
-	{
-	auto& scene = pModel->scenes[pModel->defaultScene];
-
-	for (auto nodeIndex : scene.nodes)
-	{
-	DrawNode(ModelRenderContext, p_renderer, pModel, command_list, pCameraBuffer, scene_parameters_gpu_buffer, nodeIndex, PrimitivePipeline, p_shadow_map_descriptor);
-	}
-	}
-	*/
-
 	static std::vector<DxcDefine> BuildAttributeDefines(const std::unordered_map<std::string, Attribute>& attributes)
 	{
 		std::vector<DxcDefine> defines;
@@ -145,35 +96,23 @@ namespace ysn
 		{
 			bool result = false;
 
-			//D3D12_DESCRIPTOR_RANGE SrvDescriptorRange = {};
-			//SrvDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-			//SrvDescriptorRange.NumDescriptors = 5;
-			//SrvDescriptorRange.BaseShaderRegister = 0;
+			D3D12_DESCRIPTOR_RANGE shadow_input_range = {};
+			shadow_input_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			shadow_input_range.NumDescriptors = 1;
+			shadow_input_range.BaseShaderRegister = 0;
 
-			D3D12_DESCRIPTOR_RANGE DepthInputDescriptorRange = {};
-			DepthInputDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-			DepthInputDescriptorRange.NumDescriptors = 1;
-			DepthInputDescriptorRange.BaseShaderRegister = 0;
-
-			//D3D12_ROOT_PARAMETER srv_range;
-			//srv_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-			//srv_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			//srv_range.DescriptorTable.NumDescriptorRanges = 1;
-			//srv_range.DescriptorTable.pDescriptorRanges = &SrvDescriptorRange;
-
-			D3D12_ROOT_PARAMETER shadow_range;
-			shadow_range.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-			shadow_range.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			shadow_range.DescriptorTable.NumDescriptorRanges = 1;
-			shadow_range.DescriptorTable.pDescriptorRanges = &DepthInputDescriptorRange;
+			D3D12_ROOT_PARAMETER shadow_parameter;
+			shadow_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			shadow_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			shadow_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			shadow_parameter.DescriptorTable.pDescriptorRanges = &shadow_input_range;
 
 			D3D12_ROOT_PARAMETER rootParams[5] = {
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL },
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-				//srv_range,
-				shadow_range
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_ALL },
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
+				shadow_parameter
 			};
 
 			// TEMP
@@ -344,8 +283,8 @@ namespace ysn
 						command_list->SetPipelineState(pso.value().pso.get());
 
 						command_list->IASetPrimitiveTopology(primitive.topology);
-						command_list->SetGraphicsRootConstantBufferView(2, material.gpu_material_parameters.GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(3, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(2, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(3, material.gpu_material_parameters.GetGPUVirtualAddress());
 						command_list->SetGraphicsRootDescriptorTable(4, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
 						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
@@ -365,8 +304,6 @@ namespace ysn
 					{
 						LogWarning << "Can't render primitive because it has't any pso attached\n";
 					}
-
-					
 				}
 			}
 		}

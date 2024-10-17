@@ -53,12 +53,7 @@ cbuffer CameraParameters : register(b0)
 	float3 camera_position;
 };
 
-cbuffer Material : register(b2)
-{
-	PBRMetallicRoughness pbr_material;
-};
-
-cbuffer SceneParameters : register(b3)
+cbuffer SceneParameters : register(b2)
 {
 	float4x4	shadow_matrix;
 	float4		directional_light_color;
@@ -66,6 +61,11 @@ cbuffer SceneParameters : register(b3)
 	float		directional_light_intensity;
 	float		ambient_light_intensity;
 	uint		shadows_enabled;
+};
+
+cbuffer Material : register(b3)
+{
+	PBRMetallicRoughness pbr_material;
 };
 
 // Input textures
@@ -77,19 +77,18 @@ SamplerState LinearSampler			: register(s1);
 
 float ShadowCalculation(float4 position)
 {
-	return 1.0f;
-	//float3 projected_coordinate;
-	//projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
-	//projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
-	//projected_coordinate.z = position.z / position.w;
+	float3 projected_coordinate;
+	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
+	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
+	projected_coordinate.z = position.z / position.w;
 
-	//float closest_depth = ShadowMap.Sample(ShadowSampler, projected_coordinate.xy);
+	float closest_depth = ShadowMap.Sample(ShadowSampler, projected_coordinate.xy);
 
-	//float current_depth = projected_coordinate.z + 0.005;
+	float current_depth = projected_coordinate.z + 0.005;
 
-	//float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
+	float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
 
-	//return in_shadow;
+	return in_shadow;
 }
 
 // Lambertian

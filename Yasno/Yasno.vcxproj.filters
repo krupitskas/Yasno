@@ -445,6 +445,9 @@
     <None Include="..\Docs\Tasks.md">
       <Filter>Docs</Filter>
     </None>
+    <None Include="..\Shaders\ShadowPassPS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

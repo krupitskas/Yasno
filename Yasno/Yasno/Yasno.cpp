@@ -286,6 +286,7 @@ namespace ysn
 				for (auto& primitive : mesh.primitives)
 				{
 					m_forward_pass.CompilePrimitivePso(primitive, model.materials);
+					m_shadow_pass.CompilePrimitivePso(primitive, model.materials);
 				}
 			}
 		}
@@ -758,8 +759,14 @@ namespace ysn
 
 		//m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
 
-		// TODO(return)
-		//m_shadow_pass.Render(Application::Get().GetRenderer(), command_queue, m_scene_parameters_gpu_buffer, &m_render_scene);
+		if (m_is_raster)
+		{
+			ShadowRenderParameters parameters;
+			parameters.command_queue = command_queue;
+			parameters.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer;
+
+			m_shadow_pass.Render(m_render_scene, parameters);
+		}
 
 		UpdateGpuCameraBuffer();
 		UpdateGpuSceneParametersBuffer();

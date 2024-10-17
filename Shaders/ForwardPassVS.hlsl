@@ -66,7 +66,7 @@ cbuffer SceneNodeParameters : register(b1)
 	float4x4 model_matrix;
 };
 
-cbuffer SceneParameters : register(b3)
+cbuffer SceneParameters : register(b2)
 {
 	float4x4	shadow_matrix;
 	float4		directional_light_color;

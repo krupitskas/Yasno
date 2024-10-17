@@ -30,15 +30,18 @@ namespace ysn
 		DescriptorHandle srv_handle;
 	};
 
+	struct ShadowRenderParameters
+	{
+		std::shared_ptr<ysn::CommandQueue> command_queue;
+		wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer;
+	};
+
 	struct ShadowMapPass
 	{
 		void Initialize(std::shared_ptr<ysn::DxRenderer> p_renderer);
+		bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
 		void UpdateLight(const DirectionalLight& Light);
-		//void Render(std::shared_ptr<ysn::DxRenderer> p_renderer,
-		//			std::shared_ptr<ysn::CommandQueue> command_queue,
-		//			wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer,
-		//			ysn::ModelRenderContext* pGLTFDrawContext,
-		//			tinygltf::Model* pModel);
+		void Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters);
 
 		// Shadow Map resources
 		std::uint32_t ShadowMapDimension = 4096;
@@ -55,6 +58,6 @@ namespace ysn
 		void InitializeOrthProjection(SimpleMath::Vector3 direction);
 		bool InitializeCamera(std::shared_ptr<ysn::DxRenderer> p_renderer);
 
-		wil::com_ptr<ID3D12Resource> m_pCameraBuffer;
+		wil::com_ptr<ID3D12Resource> m_camera_buffer;
 	};
 }

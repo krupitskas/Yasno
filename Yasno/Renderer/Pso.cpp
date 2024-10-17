@@ -4,63 +4,6 @@
 
 namespace ysn
 {
-	//ComputePso::ComputePso()
-	//{
-	//	type = PsoType::Compute;
-	//}
-
-	//void ComputePso::SetComputeShader(const void* binary, size_t size)
-	//{
-	//	m_pso_desc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(binary), size);
-	//}
-
-	//void ComputePso::SetComputeShader(const D3D12_SHADER_BYTECODE& binary)
-	//{
-	//	m_pso_desc.CS = binary;
-	//}
-
-	/*
-
-	void ComputePSO::Finalize()
-	{
-	// Make sure the root signature is finalized first
-	m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
-	ASSERT(m_PSODesc.pRootSignature != nullptr);
-
-	size_t hash_code = Utility::HashState(&m_PSODesc);
-
-	ID3D12PipelineState** PSORef = nullptr;
-	bool first_compile = false;
-	{
-	static mutex s_HashMapMutex;
-	lock_guard<mutex> CS(s_HashMapMutex);
-	auto iter = s_ComputePSOHashMap.find(hash_code);
-
-	// Reserve space so the next inquiry will find that someone got here first.
-	if (iter == s_ComputePSOHashMap.end())
-	{
-	first_compile = true;
-	PSORef = s_ComputePSOHashMap[hash_code].GetAddressOf();
-	}
-	else
-	PSORef = iter->second.GetAddressOf();
-	}
-
-	if (first_compile)
-	{
-	ASSERT_SUCCEEDED( g_Device->CreateComputePipelineState(&m_PSODesc, MY_IID_PPV_ARGS(&m_PSO)) );
-	s_ComputePSOHashMap[hash_code].Attach(m_PSO);
-	m_PSO->SetName(m_Name);
-	}
-	else
-	{
-	while (*PSORef == nullptr)
-	this_thread::yield();
-	m_PSO = *PSORef;
-	}
-	}
-	*/
-
 	GraphicsPsoDesc::GraphicsPsoDesc(std::string name)
 	{
 		m_name = name;
@@ -181,9 +124,6 @@ namespace ysn
 			m_input_layout = nullptr;
 		}
 	}
-
-
-	// These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
 
 	void GraphicsPsoDesc::SetVertexShader(const void* Binary, size_t Size)
 	{

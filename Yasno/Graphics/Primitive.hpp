@@ -23,6 +23,7 @@ namespace ysn
 	struct Primitive
 	{
 		PsoId pso_id = -1;
+		PsoId shadow_pso_id = -1;
 
 		D3D_PRIMITIVE_TOPOLOGY topology;
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
