@@ -32,7 +32,7 @@ namespace ysn
 
 		bool m_IsMovementBoostActive = false;
 
-		float mouse_speed = 50.0f;
+		float mouse_speed = 5.0f;
 	private:
 		float m_Yaw = 0.0f;
 		float m_Pitch = 0.0f;

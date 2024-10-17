@@ -251,13 +251,18 @@ namespace ysn
 
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
 
-		LoadingParameters loading_parameters;
-
 		// TODO(last): Another command list?
 		bool load_result = false;
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
-		//load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		{
+			LoadingParameters loading_parameters;
+			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		}
+		{
+			LoadingParameters loading_parameters;
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		}
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);

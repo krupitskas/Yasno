@@ -856,6 +856,8 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			shader_parameters->normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
+			texture.descriptor_handle = srv_handle;
+
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Normals Texture");
 		#endif
@@ -885,6 +887,8 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
+
+			texture.descriptor_handle = srv_handle;
 
 			shader_parameters->occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
 
@@ -920,6 +924,8 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
 
 			shader_parameters->emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
+
+			texture.descriptor_handle = srv_handle;
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Emissive Texture");
@@ -992,7 +998,6 @@ namespace ysn
 		for(const GpuTexture& texture : model.textures)
 		{
 			dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
-			break;
 		}
 
 		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
