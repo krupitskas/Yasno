@@ -1,6 +1,7 @@
 #include "GltfLoader.hpp"
 
 #include <memory>
+#include <unordered_set>
 
 #include <d3d12.h>
 #include <wrl.h>
@@ -178,16 +179,44 @@ static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
 	return HighBit + 1;
 }
 
+void FindAllSrgbTextures(std::unordered_set<int>& srgb_textures, const tinygltf::Model& gltf_model)
+{
+	for (const tinygltf::Material& gltf_material : gltf_model.materials)
+	{
+		const tinygltf::PbrMetallicRoughness& pbr_material = gltf_material.pbrMetallicRoughness;
+
+		const tinygltf::TextureInfo& base_color = pbr_material.baseColorTexture;
+
+		if (base_color.index >= 0)
+		{
+			const tinygltf::Texture& texture = gltf_model.textures[base_color.index];
+
+			if (srgb_textures.contains(texture.source))
+			{
+				LogError << "Base color texture sRGB search collision\n";
+			}
+
+			srgb_textures.emplace(texture.source);
+		}
+	}
+}
+
 static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
 {
 	auto dx_renderer = ysn::Application::Get().GetRenderer();
 
 	HRESULT hr = S_OK;
 
-	for (const tinygltf::Image& image : gltf_model.images)
+	// Mark all albedo and emissive images as srgb
+	std::unordered_set<int> srgb_textures;
+	FindAllSrgbTextures(srgb_textures, gltf_model);
+
+	for (int i = 0; i < gltf_model.images.size(); i++)
 	{
+		const tinygltf::Image& image = gltf_model.images[i];
+
 		const uint32_t num_mips = ComputeNumMips(image.width, image.height);
-		bool is_srgb = false; // TODO: add it back
+		bool is_srgb = srgb_textures.contains(i);
 
 		wil::com_ptr<ID3D12Resource> dst_texture;
 		{
@@ -306,46 +335,6 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
 
 	return true;
 }
-
-//void FindAllSrgbTextures(ysn::ModelRenderContext* model_renderer_context, tinygltf::Model* gltf_model)
-//{
-//	for (const tinygltf::Material& gltf_material : gltf_model->materials)
-//	{
-//		const tinygltf::PbrMetallicRoughness& pbr_material = gltf_material.pbrMetallicRoughness;
-//
-//		{
-//			const tinygltf::TextureInfo& base_color = pbr_material.baseColorTexture;
-//
-//			if (base_color.index >= 0)
-//			{
-//				const tinygltf::Texture& texture = gltf_model->textures[base_color.index];
-//
-//				if (model_renderer_context->srgb_textures.contains(texture.source))
-//				{
-//					LogError << "Base color texture sRGB search collision\n";
-//				}
-//
-//				model_renderer_context->srgb_textures.emplace(texture.source);
-//			}
-//		}
-//
-//		{
-//			const tinygltf::TextureInfo& emissive_texture = gltf_material.emissiveTexture;
-//
-//			if (emissive_texture.index >= 0)
-//			{
-//				const tinygltf::Texture& texture = gltf_model->textures[emissive_texture.index];
-//
-//				if (model_renderer_context->srgb_textures.contains(texture.source))
-//				{
-//					LogError << "Emissive texture sRGB search collision\n";
-//				}
-//
-//				model_renderer_context->srgb_textures.emplace(texture.source);
-//			}
-//		}
-//	}
-//}
 
 static void BuildSamplerDescs(ysn::Model& model, const tinygltf::Model& gltf_model)
 {
@@ -593,7 +582,6 @@ static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 		model.meshes.push_back(mesh);
 	}
 }
-
 
 static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, const ysn::LoadingParameters& loading_parameters)
 {
@@ -974,7 +962,6 @@ namespace ysn
 			LogError << "GLTF loader can't build materials\n";
 			return false;
 		}
-		//FindAllSrgbTextures(ModelRenderContext, pModel);
 		if(!BuildMaterials(model, load_gltf_context, gltf_model))
 		{
 			LogError << "GLTF loader can't build materials\n";
