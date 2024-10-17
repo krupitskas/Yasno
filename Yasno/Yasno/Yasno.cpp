@@ -67,8 +67,8 @@ namespace ysn
 		return cubemap_gpu_texture;
 	}
 
-	Yasno::Yasno(const std::wstring& name, int width, int height, bool vSync) :
-		Game(name, width, height, vSync),
+	Yasno::Yasno(const std::wstring& name, int width, int height, bool vsync) :
+		Game(name, width, height, vsync),
 		m_viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))),
 		m_scissors_rect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 	{}
@@ -244,29 +244,40 @@ namespace ysn
 		// auto command_queue = Application::Get().GetCopyQueue();
 		auto command_queue = Application::Get().GetDirectQueue();
 
-		//PIXCaptureParameters pix_capture_parameters;
-		//pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
-		//PIXSetTargetWindow(m_pWindow->GetWindowHandle());
-		//YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
+		bool capture_loading_pix = false;
+
+		if (capture_loading_pix)
+		{
+
+			PIXCaptureParameters pix_capture_parameters;
+			pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
+			PIXSetTargetWindow(m_pWindow->GetWindowHandle());
+			YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
+		}
 
 		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
 
 		// TODO(last): Another command list?
 		bool load_result = false;
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), Application::Get().GetRenderer(), command_list);
-		{
-			LoadingParameters loading_parameters;
-			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		}
+		//{
+		//	LoadingParameters loading_parameters;
+		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		//}
 		{
 			LoadingParameters loading_parameters;
 			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		}
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
-		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), Application::Get().GetRenderer(), command_list);
-		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
+		
+		//{
+		//	LoadingParameters loading_parameters;
+		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), loading_parameters);
+		//}
 
+		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), Application::Get().GetRenderer(), command_list);
 
 		for (auto& model : m_render_scene.models)
 		{
@@ -300,7 +311,22 @@ namespace ysn
 		InitializeImgui(m_pWindow, renderer);
 
 		const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-		//m_environment_texture = LoadHDRTextureFromFile("assets/HDRI/drackenstein_quarry_puresky_4k.hdr", command_list, device, enviroment_hdr_descriptor_handle);
+
+		{
+			LoadTextureParameters parameter;
+			parameter.filename = "Assets/HDRI/drackenstein_quarry_puresky_4k.hdr";
+			parameter.command_list = command_list;
+			parameter.generate_mips = false;
+			parameter.is_srgb = false;
+			const auto env_texture = LoadTextureFromFile(parameter);
+
+			if(!env_texture.has_value())
+			{
+				return false;
+			}
+
+			m_environment_texture = *env_texture;
+		}
 
 		m_hdr_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
@@ -324,7 +350,10 @@ namespace ysn
 		auto fence_value = command_queue->ExecuteCommandList(command_list);
 		command_queue->WaitForFenceValue(fence_value);
 
-		//YSN_ASSERT(PIXEndCapture(false) != S_OK);
+		if (capture_loading_pix)
+		{
+			YSN_ASSERT(PIXEndCapture(false) != S_OK);
+		}
 
 		m_is_content_loaded = true;
 
@@ -599,6 +628,9 @@ namespace ysn
 		// Track shader updates
 		Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
 	#endif
+
+		// Clear stage GPU resources
+		Application::Get().GetRenderer()->stage_heap.clear();
 	}
 
 	void Yasno::RenderUi()
@@ -662,7 +694,7 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("System"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Vsync", &m_vSync);
+				ImGui::Checkbox("Vsync", &m_vsync);
 			}
 
 			ImGui::End();
@@ -713,8 +745,6 @@ namespace ysn
 			XMStoreFloat4x4(&view, m_render_scene.camera->GetViewMatrix());
 			XMStoreFloat4x4(&projection, m_render_scene.camera->GetProjectionMatrix());
 			XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
-
-			ImGuizmo::DrawGrid(&view.m[0][0], &projection.m[0][0], &identity.m[0][0], 100.f);
 
 			ImGuizmo::Manipulate(&view.m[0][0], &projection.m[0][0], ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &identity.m[0][0]);
 		}
@@ -796,21 +826,21 @@ namespace ysn
 			command_queue->ExecuteCommandList(command_list);
 		}
 
-		//if (m_is_raster)
-		//{
-		//	SkyboxPassParameters skybox_parameters;
-		//	skybox_parameters.command_queue = command_queue;
-		//	skybox_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
-		//	skybox_parameters.scene_color_buffer = m_scene_color_buffer;
-		//	skybox_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
-		//	skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
-		//	skybox_parameters.viewport = m_viewport;
-		//	skybox_parameters.scissors_rect = m_scissors_rect;
-		//	skybox_parameters.equirectangular_texture = &m_environment_texture;
-		//	skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
-		//	
-		//	m_skybox_pass.RenderSkybox(&skybox_parameters);
-		//}
+		if (m_is_raster)
+		{
+			SkyboxPassParameters skybox_parameters;
+			skybox_parameters.command_queue = command_queue;
+			skybox_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
+			skybox_parameters.scene_color_buffer = m_scene_color_buffer;
+			skybox_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
+			skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
+			skybox_parameters.viewport = m_viewport;
+			skybox_parameters.scissors_rect = m_scissors_rect;
+			skybox_parameters.equirectangular_texture = &m_environment_texture;
+			skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
+			
+			m_skybox_pass.RenderSkybox(&skybox_parameters);
+		}
 
 		{
 			TonemapPostprocessParameters tonemap_parameters;

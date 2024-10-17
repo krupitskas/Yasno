@@ -960,11 +960,6 @@ namespace ysn
 		auto dx_renderer = Application::Get().GetRenderer();
 		auto command_queue = Application::Get().GetDirectQueue();
 
-		//PIXCaptureParameters pix_capture_parameters;
-		//pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
-		//PIXSetTargetWindow(m_pWindow->GetWindowHandle());
-		//YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
-
 		LoadGltfContext load_gltf_context;
 		load_gltf_context.staging_resources.reserve(256);
 		load_gltf_context.copy_cmd_list = command_queue->GetCommandList("GLTF upload");

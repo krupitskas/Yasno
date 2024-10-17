@@ -35,7 +35,7 @@ namespace ysn
 	class Yasno : public Game
 	{
 	public:
-		Yasno(const std::wstring& name, int width, int height, bool vSync = false);
+		Yasno(const std::wstring& name, int width, int height, bool vsync = false);
 
 		bool LoadContent() override;
 		void UnloadContent() override;

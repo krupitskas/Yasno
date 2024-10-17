@@ -55,7 +55,7 @@ namespace ysn
 		std::wstring m_Name;
 		int m_Width;
 		int m_Height;
-		bool m_vSync;
+		bool m_vsync;
 	};
 
 }

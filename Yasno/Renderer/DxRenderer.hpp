@@ -30,6 +30,7 @@ namespace ysn
 
 		wil::com_ptr<ID3D12Device5> GetDevice() const;
 
+
 		std::shared_ptr<CommandQueue> GetDirectQueue() const;
 		std::shared_ptr<CommandQueue> GetComputeQueue() const;
 		std::shared_ptr<CommandQueue> GetCopyQueue() const;
@@ -48,6 +49,8 @@ namespace ysn
 		void FlushQueues();
 
 		bool IsTearingSupported();
+
+		std::vector<wil::com_ptr<ID3D12Resource>> stage_heap;
 
 	private:
 		bool CheckRaytracingSupport();

@@ -10,8 +10,8 @@
 namespace ysn
 {
 
-	Game::Game(const std::wstring& name, int width, int height, bool vSync) :
-		m_Name(name), m_Width(width), m_Height(height), m_vSync(vSync)
+	Game::Game(const std::wstring& name, int width, int height, bool vsync) :
+		m_Name(name), m_Width(width), m_Height(height), m_vsync(vsync)
 	{}
 
 	Game::~Game()

@@ -23,17 +23,13 @@ namespace ysn
 		DescriptorHandle descriptor_handle;
 	};
 
-	// TODO: TextureUsage textureUsage for srgb
-	// TODO: Replace with wstring
-	// TODO: Unite with LoadHDRTextureFromFile
+	struct LoadTextureParameters
+	{
+		std::string filename = ""; 
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list;
+		bool generate_mips = false;
+		bool is_srgb = false;
+	};
 
-	//Texture LoadTextureFromFile(const std::string& filename,
-	//	wil::com_ptr<ID3D12GraphicsCommandList2> commandList,
-	//	wil::com_ptr<ID3D12Device5> device,
-	//	const ysn::DescriptorHandle& srv_handle);
-
-	//Texture LoadHDRTextureFromFile(const std::string& filename,
-	//	wil::com_ptr<ID3D12GraphicsCommandList2> commandList,
-	//	wil::com_ptr<ID3D12Device5> device,
-	//	const ysn::DescriptorHandle& srv_handle);
-} // namespace ysn
+	std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& parameters);
+}
