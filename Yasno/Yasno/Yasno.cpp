@@ -259,16 +259,16 @@ namespace ysn
 
 		bool load_result = false;
 
-		//{
-		//	LoadingParameters loading_parameters;
-		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		//}
-		
 		{
 			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
+		
+		//{
+		//	LoadingParameters loading_parameters;
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		//}
 		
 		//LoadGLTFModel(&m_gltf_draw_context, GetVirtualFilesystemPath(L"Assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), Application::Get().GetRenderer(), command_list);
 		//{
@@ -654,6 +654,8 @@ namespace ysn
 		{
 			ImGui::Begin(CONTROLS_NAME);
 
+			ImGui::Checkbox("Indirect", &m_is_indirect);
+
 			if (ImGui::CollapsingHeader("Lighting"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
 				static float color[3] = { m_render_scene.directional_light.color.x, m_render_scene.directional_light.color.y, m_render_scene.directional_light.color.z };
@@ -807,7 +809,15 @@ namespace ysn
 				render_parameters.shadow_map_buffer = m_shadow_pass.shadow_map_buffer;
 				render_parameters.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer;
 
-				m_forward_pass.Render(m_render_scene, render_parameters);
+				if (m_is_indirect)
+				{
+					m_forward_pass.RenderIndirect(m_render_scene, render_parameters);
+				}
+				else
+				{
+					m_forward_pass.Render(m_render_scene, render_parameters);
+				}
+
 			}
 		}
 		else

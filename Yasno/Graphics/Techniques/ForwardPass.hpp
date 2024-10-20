@@ -31,5 +31,6 @@ namespace ysn
 		//void Initialize();
 		bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
 		void Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
+		void RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
 	};
 }

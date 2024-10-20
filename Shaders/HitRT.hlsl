@@ -19,10 +19,20 @@ struct Attributes
 	float2 bary;
 };
 
+struct VertexLayout
+{
+
+};
+
+StructuredBuffer<VertexLayout> VertexBuffer		: register(t0);
+StructuredBuffer<uint> IndexBuffer				: register(t1);
+
 [shader("closesthit")]
 void ClosestHit(inout HitInfo payload, Attributes attrib)
 {
 	Texture2D albedo_texture = ResourceDescriptorHeap[3];
+
+	uint primitive_index = PrimitiveIndex();
 	
 	float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
 

@@ -35,9 +35,6 @@ cbuffer CameraParameters : register(b0)
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH	: register(t0);
 
-ByteAddressBuffer IndicesBuffer				: register(t1);
-ByteAddressBuffer VerticesBuffer			: register(t2);
-
 [shader("raygeneration")]
 void RayGen()
 {
@@ -62,6 +59,7 @@ void RayGen()
 	ray.Direction = mul(view_inverse, float4(target.xyz, 0));
 	ray.TMin = 0;
 	ray.TMax = 100000;
+
 
 	// Trace the ray
 	TraceRay(

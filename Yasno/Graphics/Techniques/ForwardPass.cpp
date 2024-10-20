@@ -297,7 +297,7 @@ namespace ysn
 						}
 						else
 						{
-							//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+							//ccommand_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
 						}
 					}
 					else
@@ -305,6 +305,92 @@ namespace ysn
 						LogWarning << "Can't render primitive because it has't any pso attached\n";
 					}
 				}
+			}
+		}
+
+		{
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(),
+																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																					D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			command_list->ResourceBarrier(1, &barrier);
+		}
+
+
+		render_parameters.command_queue->ExecuteCommandList(command_list);
+	}
+
+
+	void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
+	{
+		auto renderer = Application::Get().GetRenderer();
+
+		wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList("Forward Pass Indirect");
+
+		ID3D12DescriptorHeap* pDescriptorHeaps[] =
+		{
+			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
+		};
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+		command_list->RSSetViewports(1, &render_parameters.viewport);
+		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+		command_list->OMSetRenderTargets(1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
+
+		{
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(),
+																					D3D12_RESOURCE_STATE_DEPTH_WRITE,
+																					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			command_list->ResourceBarrier(1, &barrier);
+		}
+
+		for(auto& model : render_scene.models)
+		{
+			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
+			{
+				const Mesh& mesh = model.meshes[mesh_id];
+				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
+
+				//for(auto& primitive : mesh.primitives)
+				//{
+				//	uint32_t attribute_slot = 0;
+				//	for(const auto& [name, attribute] : primitive.attributes)
+				//	{
+				//		command_list->IASetVertexBuffers(attribute_slot, 1, &attribute.vertex_buffer_view);
+				//		attribute_slot += 1;
+				//	}
+
+				//	// TODO: check for -1 as pso_id
+				//	const std::optional<Pso> pso = renderer->GetPso(primitive.pso_id);
+
+				//	if(pso.has_value())
+				//	{
+				//		const Material& material = model.materials[primitive.material_id];
+
+				//		command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+				//		command_list->SetPipelineState(pso.value().pso.get());
+
+				//		command_list->IASetPrimitiveTopology(primitive.topology);
+				//		command_list->SetGraphicsRootConstantBufferView(2, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+				//		command_list->SetGraphicsRootConstantBufferView(3, material.gpu_material_parameters.GetGPUVirtualAddress());
+				//		command_list->SetGraphicsRootDescriptorTable(4, render_parameters.shadow_map_buffer.srv_handle.gpu);
+
+				//		command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
+				//		command_list->SetGraphicsRootConstantBufferView(1, node_gpu_buffer.GetGPUVirtualAddress());
+
+				//		if (primitive.index_count)
+				//		{
+				//			command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+				//			command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+				//		}
+				//		else
+				//		{
+				//			//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+				//		}
+				//	}
+				//	else
+				//	{
+				//		LogWarning << "Can't render primitive because it has't any pso attached\n";
+				//	}
+				//}
 			}
 		}
 

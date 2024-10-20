@@ -23,7 +23,9 @@ namespace ysn
 			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/,
 			D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
 			0 /*heap slot where the UAV is defined*/},
-			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/, 1},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // IndexBuffer
 			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 2} });
 
 		return rsc.Generate(renderer->GetDevice().get(), true);
@@ -210,7 +212,10 @@ namespace ysn
 		return pBuffer;
 	}
 
-	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
+	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer,
+												  wil::com_ptr<ID3D12Resource> scene_color,
+												  RaytracingContext& rtx_context,
+												  wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
 		// The SBT helper class collects calls to Add*Program.  If called several
 		// times, the helper must be emptied before re-adding shaders.
@@ -283,7 +288,12 @@ namespace ysn
 		return true;
 	}
 
-	void RaytracingPass::Execute(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer)
+	void RaytracingPass::Execute(std::shared_ptr<ysn::DxRenderer> renderer,
+								 wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
+								 uint32_t width,
+								 uint32_t height,
+								 wil::com_ptr<ID3D12Resource> scene_color,
+								 wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -339,6 +349,7 @@ namespace ysn
 		// We can then do the actual copy, before transitioning the render target
 		// buffer into a render target, that will be then used to display the image
 		transition = CD3DX12_RESOURCE_BARRIER::Transition(scene_color.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET); // TODO(rtx): This transition is done in Tonemap, so it's duplicatr
+
 		command_list->ResourceBarrier(1, &transition);
 	}
 }

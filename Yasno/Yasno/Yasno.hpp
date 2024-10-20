@@ -95,6 +95,7 @@ namespace ysn
 		wil::com_ptr<ID3D12Resource> m_scene_parameters_gpu_buffer;
 
 		bool m_is_raster = true;
+		bool m_is_indirect = false;
 		bool m_is_raster_pressed = false;
 
 		bool m_is_content_loaded = false;
