@@ -32,5 +32,12 @@ namespace ysn
 		bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
 		void Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
 		void RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
+
+		bool m_enable_culling = false;
+
+		// TODO(indirect):
+		// 1. Big buffer of materials
+		// 2. Big buffer of transformations (as for instancing)
+
 	};
 }

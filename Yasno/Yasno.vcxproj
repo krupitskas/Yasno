@@ -251,6 +251,8 @@
   <ItemGroup>
     <None Include="..\Docs\Docs.md" />
     <None Include="..\Docs\Tasks.md" />
+    <None Include="..\Docs\Task_Indirect_Draw.md" />
+    <None Include="..\Docs\Task_Reference_PT.md" />
     <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl" />
     <None Include="..\Shaders\Skybox_PS.hlsl" />
     <None Include="..\Shaders\Skybox_VS.hlsl" />
@@ -422,6 +424,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\ShadowPassPS.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\FrustumCulling_CS.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\Shaders\IndirectForwardPass_VS.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

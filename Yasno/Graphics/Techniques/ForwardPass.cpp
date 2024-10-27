@@ -319,6 +319,34 @@ namespace ysn
 		render_parameters.command_queue->ExecuteCommandList(command_list);
 	}
 
+	// Data structure to match the command signature used for ExecuteIndirect.
+	struct IndirectCommand
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
+		D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
+		D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
+	};
+
+	void Initialize()
+	{
+		// Each command consists of a CBV update and a DrawInstanced call.
+		D3D12_INDIRECT_ARGUMENT_DESC argument_desc[3] = {};
+
+		argument_desc[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
+		argument_desc[0].ConstantBufferView.RootParameterIndex = 0;
+
+		argument_desc[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
+		argument_desc[1].ConstantBufferView.RootParameterIndex = 1;
+
+		argument_desc[2].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		D3D12_COMMAND_SIGNATURE_DESC command_sig_desc = {};
+		command_sig_desc.pArgumentDescs = argument_desc;
+		command_sig_desc.NumArgumentDescs = _countof(argument_desc);
+		command_sig_desc.ByteStride = sizeof(IndirectCommand);
+
+		//ThrowIfFailed(m_device->CreateCommandSignature(&command_sig_desc, m_rootSignature.Get(), IID_PPV_ARGS(&m_commandSignature)));
+	}
 
 	void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
 	{
@@ -342,12 +370,32 @@ namespace ysn
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		for(auto& model : render_scene.models)
+		for(const ysn::Model& model : render_scene.models)
 		{
+			//command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+			//command_list->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+			//command_list->IASetPrimitiveTopology(primitive.topology);
+			//command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+			//command_list->SetPipelineState(pso.value().pso.get());
+			
+			//	for(const auto& [name, attribute] : primitive.attributes)
+			//	{
+			//		command_list->IASetVertexBuffers(attribute_slot, 1, &attribute.vertex_buffer_view);
+			//		attribute_slot += 1;
+
 			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 			{
 				const Mesh& mesh = model.meshes[mesh_id];
 				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
+
+				if (m_enable_culling)
+				{
+					// later	
+				}
+				else
+				{
+					//command_list->ExecuteIndirect();
+				}
 
 				//for(auto& primitive : mesh.primitives)
 				//{

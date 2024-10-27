@@ -75,8 +75,10 @@ namespace ysn
 		uint64_t m_fence_values[Window::BufferCount] = {};
 
 		wil::com_ptr<ID3D12Resource> m_depth_buffer;
-		wil::com_ptr<ID3D12Resource> m_scene_color_buffer;
 		wil::com_ptr<ID3D12Resource> m_back_buffer;
+		// Two HDR buffers for history
+		wil::com_ptr<ID3D12Resource> m_scene_color_buffer;
+		//wil::com_ptr<ID3D12Resource> m_scene_color_buffer_1;
 
 		DescriptorHandle m_hdr_uav_descriptor_handle;
 		DescriptorHandle m_backbuffer_uav_descriptor_handle;

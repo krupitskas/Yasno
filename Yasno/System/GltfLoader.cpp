@@ -259,6 +259,18 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
 			new_texture.width = image.width;
 			new_texture.height = image.height;
 
+			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Format = is_srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = num_mips;
+
+			dx_renderer->GetDevice()->CreateShaderResourceView(new_texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
+
+			new_texture.descriptor_handle = srv_handle;
+
 			model.textures.push_back(new_texture);
 		}
 
@@ -769,15 +781,10 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_pbr_material.baseColorTexture.index];
 
-			// TODO: Preallocate 5 handles and provide them through array, do not save first handle
-			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
-
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source]; // TODO: use it for srgb?
-			texture.descriptor_handle = srv_handle;
 			texture.is_srgb = true;
 
-			shader_parameters->albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
+			shader_parameters->albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
 
@@ -786,17 +793,6 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 		#endif
 
 			texture.name = L"Albedo Texture";
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = texture_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
-
-			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
-
-			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
-			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, RenderMaterial.sampler_handle.cpu);
 		}
 
 		if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index > 0)
@@ -806,30 +802,13 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 			const tinygltf::Texture& gltfTexture = gltf_model.textures[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltfTexture.source];
 
-			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
-
-			texture.descriptor_handle = srv_handle;
-			shader_parameters->metallic_roughness_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
+			shader_parameters->metallic_roughness_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Metallic Roughness Texture");
 		#endif
 
 			texture.name = L"Metallic Roughness Texture";
-
-			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = texture_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
-
-			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
-
-			//auto& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
 		if (gltf_material.normalTexture.index > 0)
@@ -839,31 +818,13 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.normalTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
-
-			shader_parameters->normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
-
-			texture.descriptor_handle = srv_handle;
+			shader_parameters->normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Normals Texture");
 		#endif
 
 			texture.name = L"Normals Texture";
-
-			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = texture_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
-
-			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
-
-			//D3D12_SAMPLER_DESC& SamplerDesc = pModelRenderContext->SamplerDescs[GltfTexture.sampler];
-			//p_renderer->GetDevice()->CreateSampler(&SamplerDesc, SamplerDescriptor);
 		}
 
 		if (gltf_material.occlusionTexture.index > 0)
@@ -873,31 +834,13 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.occlusionTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
-
-			texture.descriptor_handle = srv_handle;
-
-			shader_parameters->occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
+			shader_parameters->occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Occlusion Texture");
 		#endif
 
 			texture.name = L"Occlusion Texture";
-
-			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = texture_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
-
-			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
-
-			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
 		if (gltf_material.emissiveTexture.index > 0)
@@ -906,33 +849,14 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.emissiveTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
-			texture.is_srgb = true;
 
-			const auto srv_handle = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-			const auto sampler_handle = dx_renderer->GetSamplerDescriptorHeap()->GetNewHandle();
-
-			shader_parameters->emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(srv_handle);
-
-			texture.descriptor_handle = srv_handle;
+			shader_parameters->emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Emissive Texture");
 		#endif
 
 			texture.name = L"Emissive Texture";
-
-			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = texture_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = texture_desc.MipLevels;
-
-			dx_renderer->GetDevice()->CreateShaderResourceView(texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
-
-			//D3D12_SAMPLER_DESC& samplerDesc = pModelRenderContext->SamplerDescs[gltfTexture.sampler];
-			//p_renderer->GetDevice()->CreateSampler(&samplerDesc, SamplerDescriptor);
 		}
 
 		material.gpu_material_parameters.resource->Unmap(0, nullptr);
@@ -967,19 +891,20 @@ namespace ysn
 			LogError << "GLTF loader can't build materials\n";
 			return false;
 		}
-		BuildSamplerDescs(model, gltf_model);
-		BuildMeshes(model, gltf_model);
-		if(!BuildNodes(model, gltf_model, loading_parameters))
-		{
-			LogError << "GLTF loader can't build nodes\n";
-			return false;
-		}
 
 		// Build pipelines
 		// Compute mips 
 		for(const GpuTexture& texture : model.textures)
 		{
 			dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
+		}
+
+		BuildSamplerDescs(model, gltf_model);
+		BuildMeshes(model, gltf_model);
+		if(!BuildNodes(model, gltf_model, loading_parameters))
+		{
+			LogError << "GLTF loader can't build nodes\n";
+			return false;
 		}
 
 		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);

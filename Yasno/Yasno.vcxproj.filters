@@ -448,6 +448,21 @@
     <None Include="..\Shaders\ShadowPassPS.hlsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="..\Shaders\FrustumCulling_CS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\Shaders\IndirectForwardPass_VS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\Docs\Task_Indirect_Draw.md">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="..\Docs\Task_Reference_PT.md">
+      <Filter>Docs</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
