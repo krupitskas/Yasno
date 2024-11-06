@@ -59,7 +59,7 @@ namespace nv_helpers_dx12
         descriptor.Triangles.VertexCount = vertexCount;
         descriptor.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
         descriptor.Triangles.IndexBuffer = index_buffer_view.BufferLocation;// indexBuffer ? (indexBuffer->GetGPUVirtualAddress() + indexOffsetInBytes) : 0;
-        descriptor.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;// indexBuffer ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_UNKNOWN; // TODO: DXGI_FORMAT_R32_UINT provide
+        descriptor.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;// indexBuffer ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_UNKNOWN; // TODO: DXGI_FORMAT_R32_UINT provide
         descriptor.Triangles.IndexCount = indexCount;
         descriptor.Triangles.Transform3x4 = transformBuffer ? (transformBuffer->GetGPUVirtualAddress() + transformOffsetInBytes) : 0;
         descriptor.Flags = isOpaque ? D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE : D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
