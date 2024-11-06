@@ -10,6 +10,15 @@
 
 namespace ysn
 {
+	// TODO: add
+	// float3 emissive;
+	// metallic_factor -> metalness
+	// roughness_factor -> roughness
+	// opacity
+	// alphaMode 0: Opaque, 1: Blend, 2: Masked
+	// alphaCutoff
+	// doubleSided 0: false, 1: true
+	
 	// Default PBR material
 	YSN_SHADER_STRUCT SurfaceShaderParameters
 	{

@@ -7,6 +7,7 @@
 
 #include <Renderer/Pso.hpp>
 #include <Renderer/VertexStorage.hpp>
+#include <Graphics/AABB.hpp>
 
 namespace ysn
 {
@@ -35,6 +36,12 @@ namespace ysn
 		int material_id = -1;
 
 		std::unordered_map<std::string, Attribute> attributes;
+
+		// Moving to new way of render
+		bool					opaque = true; // for rtx
+		AABB					bbox;
+		std::vector<Vertex>		vertices;
+		std::vector<uint32_t>	indices;
 	};
 
 	// TODO: Rename it into some CSG mesh

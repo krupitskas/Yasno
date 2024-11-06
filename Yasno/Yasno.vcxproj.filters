@@ -379,6 +379,9 @@
     <ClInclude Include="Graphics\RtxMaterial.hpp">
       <Filter>Source\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Graphics\AABB.hpp">
+      <Filter>Source\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\ForwardPassPS.hlsl">

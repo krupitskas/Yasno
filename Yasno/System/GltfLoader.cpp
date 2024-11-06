@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_set>
+#include <algorithm>
 
 #include <d3d12.h>
 #include <wrl.h>
@@ -24,6 +25,11 @@ struct LoadGltfContext
 {
 	wil::com_ptr<ID3D12GraphicsCommandList4> copy_cmd_list;
 	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
+};
+
+struct BuildMeshResult
+{
+	uint32_t mesh_indices_count = 0;
 };
 
 static bool BuildBuffers(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
@@ -485,38 +491,67 @@ static bool BuildPrimitiveTopology(ysn::Primitive& primitive, int gltf_primitive
 	return true;
 }
 
-static void BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& model, int indices_index, const tinygltf::Model& gltf_model)
+static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& model, int indices_index, const tinygltf::Model& gltf_model)
 {
 	if (indices_index >= 0)
 	{
-		const tinygltf::Accessor& gltf_accessor = gltf_model.accessors[indices_index];
-		const tinygltf::BufferView& gltf_buffer_view = gltf_model.bufferViews[gltf_accessor.bufferView];
+		const tinygltf::Accessor& index_accessor = gltf_model.accessors[indices_index];
 
-		primitive.index_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
-		primitive.index_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
+		primitive.indices.resize(index_accessor.count);
 
-		switch (gltf_accessor.componentType)
+		const tinygltf::BufferView& index_buffer_view = gltf_model.bufferViews[index_accessor.bufferView];
+		const tinygltf::Buffer& index_buffer = gltf_model.buffers[index_buffer_view.buffer];
+
+		const UINT8* index_buffer_address = index_buffer.data.data();
+		const UINT8* base_address = index_buffer_address + index_buffer_view.byteOffset + index_accessor.byteOffset;
+
+		//primitive.index_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		//primitive.index_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
+		//primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
+	
+		const int index_stride = tinygltf::GetComponentSizeInBytes(index_accessor.componentType) * tinygltf::GetNumComponentsInType(index_accessor.type);
+
+		if (index_stride == 1)
 		{
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-				primitive.index_buffer_view.Format = DXGI_FORMAT_R8_UINT;
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				primitive.index_buffer_view.Format = DXGI_FORMAT_R16_UINT;
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
-				break;
+			std::vector<UINT8> quarter;
+			quarter.resize(index_accessor.count);
+
+			memcpy(quarter.data(), base_address, (index_accessor.count * index_stride));
+
+			// Convert quarter precision indices to full precision
+			for (size_t i = 0; i < index_accessor.count; i++)
+			{
+				primitive.indices[i] = quarter[i];
+			}
+		}
+		else if (index_stride == 2)
+		{
+			std::vector<UINT16> half;
+			half.resize(index_accessor.count);
+
+			memcpy(half.data(), base_address, (index_accessor.count * index_stride));
+
+			//std::copy(base_address, base_address + (index_accessor.count * index_stride), half.data());
+
+			// Convert half precision indices to full precision
+			for (size_t i = 0; i < index_accessor.count; i++)
+			{
+				primitive.indices[i] = half[i];
+			}
+		}
+		else
+		{
+			memcpy(primitive.indices.data(), base_address, (index_accessor.count * index_stride));
 		}
 
-		primitive.index_count = static_cast<uint32_t>(gltf_accessor.count);
-
-		//pRenderPrimitive->index_buffer = pBuffers[gltf_buffer_view.buffer];
-		//primitive->index_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
+		return index_accessor.count;
 	}
 	else
 	{
-		LogWarning << "GLTF primitive don't have indices\n";
+		LogError << "GLTF primitive don't have indices\n";
 	}
+
+	return 0;
 }
 
 static void BuildAccessorType(ysn::Attribute& attribute, const int gltf_accessorType)
@@ -571,8 +606,10 @@ static void BuildAttributesAccessors(ysn::Primitive& primitive,
 	}
 }
 
-static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
+static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 {
+	BuildMeshResult result;
+
 	for (const tinygltf::Mesh& gltf_mesh : gltf_model.meshes)
 	{
 		ysn::Mesh mesh;
@@ -583,7 +620,7 @@ static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 			ysn::Primitive primitive;
 
 			BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
-			BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
+			result.mesh_indices_count += BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
 
 			primitive.material_id = gltf_primitive.material;
@@ -593,6 +630,8 @@ static void BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
 
 		model.meshes.push_back(mesh);
 	}
+
+	return result;
 }
 
 static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, const ysn::LoadingParameters& loading_parameters)
@@ -867,7 +906,7 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 namespace ysn
 {
-	bool ReadModel(Model& model, const tinygltf::Model& gltf_model, const LoadingParameters& loading_parameters)
+	bool ReadModel(RenderScene& render_scene, Model& model, const tinygltf::Model& gltf_model, const LoadingParameters& loading_parameters)
 	{
 		auto dx_renderer = Application::Get().GetRenderer();
 		auto command_queue = Application::Get().GetDirectQueue();
@@ -900,7 +939,7 @@ namespace ysn
 		}
 
 		BuildSamplerDescs(model, gltf_model);
-		BuildMeshes(model, gltf_model);
+		const BuildMeshResult mesh_result = BuildMeshes(model, gltf_model);
 		if(!BuildNodes(model, gltf_model, loading_parameters))
 		{
 			LogError << "GLTF loader can't build nodes\n";
@@ -909,6 +948,9 @@ namespace ysn
 
 		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
 		command_queue->WaitForFenceValue(fence_value);
+
+		// Write stats
+		render_scene.indices_count += mesh_result.mesh_indices_count;
 
 		return true;
 	}
@@ -944,7 +986,7 @@ namespace ysn
 
 		Model model;
 
-		if(!ReadModel(model, gltf_model, loading_parameters))
+		if(!ReadModel(render_scene, model, gltf_model, loading_parameters))
 		{
 			LogInfo << "GLTF can't load model\n";
 			return false;

@@ -9,6 +9,23 @@
 
 namespace ysn
 {
+    struct Vertex
+    {
+        DirectX::XMFLOAT3 position;
+        DirectX::XMFLOAT3 normal;
+        DirectX::XMFLOAT4 tangent;
+        DirectX::XMFLOAT2 uv0;
+
+        Vertex& operator=(const Vertex& v)
+        {
+            position = v.position;
+            normal = v.normal;
+            tangent = v.tangent;
+            uv0 = v.uv0;
+            return *this;
+        }
+    };
+
     struct VertexPosTexCoord
     {
         DirectX::XMFLOAT3 pos;

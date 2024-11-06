@@ -274,6 +274,7 @@
     <ClCompile Include="Renderer\DepthBuffer.cpp" />
     <ClCompile Include="Renderer\DescriptorHeap.cpp" />
     <ClCompile Include="Renderer\GenerateMipsSystem.cpp" />
+    <ClCompile Include="Renderer\GpuBuffer.cpp" />
     <ClCompile Include="Renderer\GpuTextureStorage.cpp" />
     <ClCompile Include="Renderer\IndexStorage.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp" />
@@ -313,6 +314,7 @@
     <ClCompile Include="Yasno\YasnoSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Graphics\AABB.hpp" />
     <ClInclude Include="Graphics\Material.hpp" />
     <ClInclude Include="Graphics\Mesh.hpp" />
     <ClInclude Include="Graphics\Primitive.hpp" />

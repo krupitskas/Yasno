@@ -12,6 +12,7 @@
 #include <Yasno/CameraController.hpp>
 #include <Renderer/GpuResource.hpp>
 #include <Renderer/GpuTexture.hpp>
+#include <Renderer/GpuBuffer.hpp>
 
 namespace ysn
 {
@@ -55,6 +56,10 @@ namespace ysn
 		EnvironmentLight environment_light;
 
 		std::vector<Model> models;
+
+		// Temp GPU resources for indices and vertices
+		uint32_t indices_count = 0;
+		GpuBuffer indices_buffer;
 	};
 }
 

@@ -18,6 +18,7 @@
 #include <System/Filesystem.hpp>
 #include <System/Math.hpp>
 #include <Graphics/EngineStats.hpp>
+#include <Renderer/GpuBuffer.hpp>
 
 namespace ysn
 {
@@ -121,7 +122,7 @@ namespace ysn
 			D3D12_SUBRESOURCE_DATA subresource_ata = {};
 			subresource_ata.pData = buffer_data;
 			subresource_ata.RowPitch = bufferSize;
-			subresource_ata.SlicePitch = subresource_ata.RowPitch;
+			subresource_ata.SlicePitch = bufferSize;
 
 			UpdateSubresources(commandList.get(), *destination_resource, *intermediate_resource, 0, 0, 1, &subresource_ata);
 		}
@@ -259,16 +260,16 @@ namespace ysn
 
 		bool load_result = false;
 
-		//{
-		//	LoadingParameters loading_parameters;
-		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		//}
-		
 		{
 			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
+		
+		//{
+		//	LoadingParameters loading_parameters;
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		//}
 		
 		//{
 		//	LoadingParameters loading_parameters;
@@ -280,6 +281,53 @@ namespace ysn
 		//	LoadingParameters loading_parameters;
 		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
 		//}
+
+		// Finish index buffer
+		{
+			// Index buffer
+			{
+				const uint32_t indices_buffer_size = m_render_scene.indices_count * sizeof(uint32_t);
+
+				GpuBufferCreateInfo create_info {
+					.size = indices_buffer_size,
+					.heap_type = D3D12_HEAP_TYPE_DEFAULT,
+					.state = D3D12_RESOURCE_STATE_COPY_DEST
+				};
+
+				const auto indices_buffer_result = CreateGpuBuffer(create_info, "Indices Buffer");
+
+				if (!indices_buffer_result.has_value())
+				{
+					LogFatal << "Can't create indices buffer\n";
+					return false;
+				}
+
+				m_render_scene.indices_buffer = indices_buffer_result.value();
+
+				std::vector<uint32_t> all_indices_buffer;
+				all_indices_buffer.reserve(m_render_scene.indices_count);
+
+				for (auto& model : m_render_scene.models)
+				{
+					for (auto& mesh : model.meshes)
+					{
+						for (auto& primitive : mesh.primitives)
+						{
+							primitive.index_buffer_view.BufferLocation = m_render_scene.indices_buffer.GetGPUVirtualAddress() + all_indices_buffer.size() * sizeof(uint32_t);
+							primitive.index_buffer_view.SizeInBytes = primitive.indices.size() * sizeof(uint32_t);
+							primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
+
+							primitive.index_count = primitive.indices.size();
+
+							// Append indices
+							all_indices_buffer.insert(all_indices_buffer.end(), primitive.indices.begin(), primitive.indices.end());
+						}
+					}
+				}
+
+				UploadToGpuBuffer(command_list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			}
+		}
 
 		for (auto& model : m_render_scene.models)
 		{
