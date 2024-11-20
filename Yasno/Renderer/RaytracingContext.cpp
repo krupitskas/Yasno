@@ -169,7 +169,7 @@ void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Gra
 
 				const Attribute& attribute = primitive.attributes.at("POSITION");
 
-				blas_input.vertex_count = attribute.vertex_count;
+				blas_input.vertex_count = primitive.vertex_count;
 				blas_input.index_count = primitive.index_count;
 
 				blas_input.vertex_buffer_view = attribute.vertex_buffer_view;

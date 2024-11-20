@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_set>
 #include <algorithm>
+#include <map>
 
 #include <d3d12.h>
 #include <wrl.h>
@@ -30,6 +31,7 @@ struct LoadGltfContext
 struct BuildMeshResult
 {
 	uint32_t mesh_indices_count = 0;
+	uint32_t mesh_vertices_count = 0;
 };
 
 static bool BuildBuffers(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
@@ -592,18 +594,138 @@ static void BuildAttributesAccessors(ysn::Primitive& primitive,
 		vertex_buffer_view.StrideInBytes = gltf_accessor.ByteStride(gltf_buffer_view);
 
 		render_attribute.vertex_buffer_view = vertex_buffer_view;
-		render_attribute.vertex_count = static_cast<uint32_t>(gltf_accessor.count);
-
-		//if (gltf_attribute_name == "POSITION")
-		//{
-		//	primitive->vertex_count = = static_cast<uint32_t>(gltf_accessor.count);;
-		//	primitive->vertex_buffer = pGltfBuffers[gltf_buffer_view.buffer];
-		//	primitive->vertex_stride = render_attribute.vertexBufferView.StrideInBytes;
-		//	primitive->vertex_offset_in_bytes = gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
-		//}
 
 		primitive.attributes.emplace(gltf_attribute_name, render_attribute);
 	}
+}
+
+static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Primitive& gltf_primitive, const tinygltf::Model& gltf_model)
+{
+	int position_index = -1;
+	int normal_index = -1;
+	int tangent_index = -1;
+	int uv0_index = -1;
+
+	if (gltf_primitive.attributes.contains("POSITION"))
+	{
+		position_index = gltf_primitive.attributes.at("POSITION");
+	}
+
+	if (gltf_primitive.attributes.contains("NORMAL"))
+	{
+		normal_index = gltf_primitive.attributes.at("NORMAL");
+	}
+
+	if (gltf_primitive.attributes.contains("TANGENT"))
+	{
+		tangent_index = gltf_primitive.attributes.at("TANGENT");
+	}
+
+	if (gltf_primitive.attributes.contains("TEXCOORD_0"))
+	{
+		uv0_index = gltf_primitive.attributes.at("TEXCOORD_0");
+	}
+
+	// AABB
+	if (position_index > -1)
+	{
+		const std::vector<double>& min = gltf_model.accessors[position_index].minValues;
+		const std::vector<double>& max = gltf_model.accessors[position_index].maxValues;
+
+		primitive.bbox.min = { (float)min[0], (float)min[1], (float)min[2] };
+		primitive.bbox.max = { (float)max[0], (float)max[1], (float)max[2] };
+	}
+
+	// Vertex positions
+	const tinygltf::Accessor& position_accessor = gltf_model.accessors[position_index];
+	const tinygltf::BufferView& position_buffer_view = gltf_model.bufferViews[position_accessor.bufferView];
+	const tinygltf::Buffer& position_buffer = gltf_model.buffers[position_buffer_view.buffer];
+	const UINT8* position_buffer_address = position_buffer.data.data();
+	const int position_stride = tinygltf::GetComponentSizeInBytes(position_accessor.componentType) * tinygltf::GetNumComponentsInType(position_accessor.type);
+	YSN_ASSERT_MSG(position_stride == 12, "GLTF model vertex position stride not equals 12");
+
+	// Vertex normals
+	tinygltf::Accessor normal_accessor;
+	tinygltf::BufferView normal_buffer_view;
+	const UINT8* normal_buffer_address = nullptr;
+	int normal_stride = -1;
+	if (normal_index > -1)
+	{
+		normal_accessor = gltf_model.accessors[normal_index];
+		normal_buffer_view = gltf_model.bufferViews[normal_accessor.bufferView];
+		const tinygltf::Buffer& normal_buffer = gltf_model.buffers[normal_buffer_view.buffer];
+		normal_buffer_address = normal_buffer.data.data();
+		normal_stride = tinygltf::GetComponentSizeInBytes(normal_accessor.componentType) * tinygltf::GetNumComponentsInType(normal_accessor.type);
+		YSN_ASSERT_MSG(normal_stride == 12, "GLTF model vertex normal stride not equals 12");
+	}
+
+	// Vertex tangents
+	tinygltf::Accessor tangent_accessor;
+	tinygltf::BufferView tangent_buffer_view;
+	const UINT8* tangent_buffer_address = nullptr;
+	int tangent_stride = -1;
+	if (tangent_index > -1)
+	{
+		tangent_accessor = gltf_model.accessors[tangent_index];
+		tangent_buffer_view = gltf_model.bufferViews[tangent_accessor.bufferView];
+		const tinygltf::Buffer& tangent_buffer = gltf_model.buffers[tangent_buffer_view.buffer];
+		tangent_buffer_address = tangent_buffer.data.data();
+		tangent_stride = tinygltf::GetComponentSizeInBytes(tangent_accessor.componentType) * tinygltf::GetNumComponentsInType(tangent_accessor.type);
+		YSN_ASSERT_MSG(tangent_stride == 16, "GLTF model vertex tangent stride not equals 12");
+	}
+
+	// Vertex texture coordinates
+	tinygltf::Accessor uv0_accessor;
+	tinygltf::BufferView uv0_buffer_view;
+	const UINT8* uv0_buffer_address = nullptr;
+	int uv0_stride = -1;
+	if (uv0_index > -1)
+	{
+		uv0_accessor = gltf_model.accessors[uv0_index];
+		uv0_buffer_view = gltf_model.bufferViews[uv0_accessor.bufferView];
+		const tinygltf::Buffer& uv0Buffer = gltf_model.buffers[uv0_buffer_view.buffer];
+		uv0_buffer_address = uv0Buffer.data.data();
+		uv0_stride = tinygltf::GetComponentSizeInBytes(uv0_accessor.componentType) * tinygltf::GetNumComponentsInType(uv0_accessor.type);
+		YSN_ASSERT_MSG(uv0_stride == 8, "GLTF model vertex uv0 stride not equals 12");
+	}
+
+	primitive.vertices.reserve(position_accessor.count);
+
+	// Get the vertex data
+	for (size_t vertex_index = 0; vertex_index < position_accessor.count; vertex_index++)
+	{
+		ysn::Vertex v;
+
+		// position
+		{
+			const UINT8* address = position_buffer_address + position_buffer_view.byteOffset + position_accessor.byteOffset + (vertex_index * position_stride);
+			memcpy(&v.position, address, position_stride);
+		}
+
+		if (normal_index > -1)
+		{
+			const UINT8* address = normal_buffer_address + normal_buffer_view.byteOffset + normal_accessor.byteOffset + (vertex_index * normal_stride);
+			memcpy(&v.normal, address, normal_stride);
+		}
+
+		if (tangent_index > -1)
+		{
+			const UINT8* address = tangent_buffer_address + tangent_buffer_view.byteOffset + tangent_accessor.byteOffset + (vertex_index * tangent_stride);
+			memcpy(&v.tangent, address, tangent_stride);
+		}
+
+		if (uv0_index > -1)
+		{
+			const UINT8* address = uv0_buffer_address + uv0_buffer_view.byteOffset + uv0_accessor.byteOffset + (vertex_index * uv0_stride);
+			memcpy(&v.uv0, address, uv0_stride);
+
+			// TODO: Add UV adj
+		}
+
+		primitive.vertices.push_back(v);
+	}
+
+	return position_accessor.count;
 }
 
 static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
@@ -619,6 +741,7 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 		{
 			ysn::Primitive primitive;
 
+			result.mesh_vertices_count += BuildVertexBuffer(primitive, gltf_primitive, gltf_model);
 			BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
 			result.mesh_indices_count += BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
@@ -951,6 +1074,7 @@ namespace ysn
 
 		// Write stats
 		render_scene.indices_count += mesh_result.mesh_indices_count;
+		render_scene.vertices_count += mesh_result.mesh_vertices_count;
 
 		return true;
 	}

@@ -327,6 +327,54 @@ namespace ysn
 
 				UploadToGpuBuffer(command_list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			}
+
+			// Vertex Buffer
+			{
+				const uint32_t vertices_buffer_size = m_render_scene.vertices_count * sizeof(Vertex);
+
+				GpuBufferCreateInfo create_info {
+					.size = vertices_buffer_size,
+					.heap_type = D3D12_HEAP_TYPE_DEFAULT,
+					.state = D3D12_RESOURCE_STATE_COPY_DEST
+				};
+
+				const auto vertices_buffer_result = CreateGpuBuffer(create_info, "Vertices Buffer");
+
+				if (!vertices_buffer_result.has_value())
+				{
+					LogFatal << "Can't create vertices buffer\n";
+					return false;
+				}
+
+				m_render_scene.vertices_buffer = vertices_buffer_result.value();
+
+				std::vector<Vertex> all_vertices_buffer;
+				all_vertices_buffer.reserve(m_render_scene.vertices_count);
+
+				for (auto& model : m_render_scene.models)
+				{
+					for (auto& mesh : model.meshes)
+					{
+						for (auto& primitive : mesh.primitives)
+						{
+							primitive.vertex_buffer_view.BufferLocation = m_render_scene.vertices_buffer.GetGPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
+							primitive.vertex_buffer_view.SizeInBytes = primitive.vertices.size() * sizeof(Vertex);
+							primitive.vertex_buffer_view.StrideInBytes = sizeof(Vertex);
+
+							primitive.vertex_count = primitive.vertices.size();
+
+							// Append vertices
+							all_vertices_buffer.insert(all_vertices_buffer.end(), primitive.vertices.begin(), primitive.vertices.end());
+						}
+					}
+				}
+
+				UploadToGpuBuffer(command_list, m_render_scene.vertices_buffer, all_vertices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			}
+
+			// Material buffer
+			{
+			}
 		}
 
 		for (auto& model : m_render_scene.models)

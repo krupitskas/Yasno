@@ -59,7 +59,9 @@ namespace ysn
 
 		// Temp GPU resources for indices and vertices
 		uint32_t indices_count = 0;
+		uint32_t vertices_count = 0;
 		GpuBuffer indices_buffer;
+		GpuBuffer vertices_buffer;
 	};
 }
 
