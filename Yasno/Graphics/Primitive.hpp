@@ -11,14 +11,6 @@
 
 namespace ysn
 {
-	struct Attribute
-	{
-		std::string name;
-
-		DXGI_FORMAT format;
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-	};
-
 	struct Primitive
 	{
 		PsoId pso_id = -1;
@@ -33,8 +25,6 @@ namespace ysn
 		uint32_t vertex_count = 0;
 
 		int material_id = -1;
-
-		std::unordered_map<std::string, Attribute> attributes;
 
 		// Moving to new way of render
 		bool					opaque = true; // for rtx

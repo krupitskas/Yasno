@@ -249,7 +249,6 @@ namespace ysn
 
 		if (capture_loading_pix)
 		{
-
 			PIXCaptureParameters pix_capture_parameters;
 			pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
 			PIXSetTargetWindow(m_pWindow->GetWindowHandle());

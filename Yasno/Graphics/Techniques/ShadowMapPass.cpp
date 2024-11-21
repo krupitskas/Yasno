@@ -8,85 +8,57 @@
 
 namespace ysn
 {
-	static std::vector<DxcDefine> BuildAttributeDefines(const std::unordered_map<std::string, Attribute>& attributes)
-	{
-		std::vector<DxcDefine> defines;
+	//static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::unordered_map<std::string, Attribute>& render_attributes)
+	//{
+	//	std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
 
-		for (const auto& [name, attribute] : attributes)
-		{
-			if (attribute.name == "NORMAL")
-			{
-				defines.push_back({ L"HAS_NORMAL", L"1" });
-			}
-			else if (attribute.name == "TANGENT")
-			{
-				defines.push_back({ L"HAS_TANGENT", L"1" });
-			}
-			else if (attribute.name == "TEXCOORD_0")
-			{
-				defines.push_back({ L"HAS_TEXCOORD_0", L"1" });
-			}
-			else if (attribute.name == "TEXCOORD_1")
-			{
-				defines.push_back({ L"HAS_TEXCOORD_1", L"1" });
-			}
-		}
+	//	for (const auto& [name, attribute] : render_attributes)
+	//	{
+	//		D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
 
-		return defines;
-	}
+	//		input_element_desc.SemanticName = &attribute.name[0];
+	//		input_element_desc.Format = attribute.format;
 
+	//		// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
+	//		if (attribute.name == "TEXCOORD_0")
+	//		{
+	//			input_element_desc.SemanticName = "TEXCOORD_";
+	//			input_element_desc.SemanticIndex = 0;
+	//		}
 
-	static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::unordered_map<std::string, Attribute>& render_attributes)
-	{
-		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
+	//		if (attribute.name == "TEXCOORD_1")
+	//		{
+	//			input_element_desc.SemanticName = "TEXCOORD_";
+	//			input_element_desc.SemanticIndex = 1;
+	//		}
 
-		for (const auto& [name, attribute] : render_attributes)
-		{
-			D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
+	//		if (attribute.name == "TEXCOORD_2")
+	//		{
+	//			input_element_desc.SemanticName = "TEXCOORD_";
+	//			input_element_desc.SemanticIndex = 2;
+	//		}
 
-			input_element_desc.SemanticName = &attribute.name[0];
-			input_element_desc.Format = attribute.format;
+	//		if (attribute.name == "COLOR_0")
+	//		{
+	//			input_element_desc.SemanticName = "COLOR_";
+	//			input_element_desc.SemanticIndex = 0;
+	//		}
 
-			// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
-			if (attribute.name == "TEXCOORD_0")
-			{
-				input_element_desc.SemanticName = "TEXCOORD_";
-				input_element_desc.SemanticIndex = 0;
-			}
+	//		if (attribute.name == "COLOR_1")
+	//		{
+	//			input_element_desc.SemanticName = "COLOR_";
+	//			input_element_desc.SemanticIndex = 1;
+	//		}
 
-			if (attribute.name == "TEXCOORD_1")
-			{
-				input_element_desc.SemanticName = "TEXCOORD_";
-				input_element_desc.SemanticIndex = 1;
-			}
+	//		input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
+	//		input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	//		input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
-			if (attribute.name == "TEXCOORD_2")
-			{
-				input_element_desc.SemanticName = "TEXCOORD_";
-				input_element_desc.SemanticIndex = 2;
-			}
+	//		input_element_desc_arr.push_back(input_element_desc);
+	//	}
 
-			if (attribute.name == "COLOR_0")
-			{
-				input_element_desc.SemanticName = "COLOR_";
-				input_element_desc.SemanticIndex = 0;
-			}
-
-			if (attribute.name == "COLOR_1")
-			{
-				input_element_desc.SemanticName = "COLOR_";
-				input_element_desc.SemanticIndex = 1;
-			}
-
-			input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
-			input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-			input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-
-			input_element_desc_arr.push_back(input_element_desc);
-		}
-
-		return input_element_desc_arr;
-	}
+	//	return input_element_desc_arr;
+	//}
 
 
 	bool ShadowMapPass::InitializeCamera(std::shared_ptr<DxRenderer> p_renderer)
@@ -162,14 +134,12 @@ namespace ysn
 			new_pso_desc.SetRootSignature(root_signature);
 		}
 
-		const auto primitive_attributes_defines = BuildAttributeDefines(primitive.attributes);
 
 		// Vertex shader
 		{
 			ysn::ShaderCompileParameters vs_parameters;
 			vs_parameters.shader_type = ysn::ShaderType::Vertex;
 			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassVS.hlsl");
-			vs_parameters.defines = primitive_attributes_defines;
 			vs_parameters.defines.emplace_back(L"SHADOW_PASS");
 			
 			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
@@ -188,7 +158,6 @@ namespace ysn
 			ysn::ShaderCompileParameters ps_parameters;
 			ps_parameters.shader_type = ysn::ShaderType::Pixel;
 			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ShadowPassPS.hlsl");
-			ps_parameters.defines = primitive_attributes_defines;
 
 			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
 
@@ -201,7 +170,7 @@ namespace ysn
 			new_pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
 		}
 
-		std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc = BuildInputElementDescs(primitive.attributes);
+		const auto& input_element_desc = renderer->GetInputElementsDesc();
 
 		D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
 		depth_stencil_desc.DepthEnable = true;
@@ -351,12 +320,7 @@ namespace ysn
 
 				for(auto& primitive : mesh.primitives)
 				{
-					uint32_t attribute_slot = 0;
-					for(const auto& [name, attribute] : primitive.attributes)
-					{
-						command_list->IASetVertexBuffers(attribute_slot, 1, &attribute.vertex_buffer_view);
-						attribute_slot += 1;
-					}
+					command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
 					// TODO: check for -1 as pso_id
 					const std::optional<Pso> pso = renderer->GetPso(primitive.shadow_pso_id);
@@ -381,7 +345,7 @@ namespace ysn
 						}
 						else
 						{
-							//command_list->DrawInstanced(primitive.vertexCount, 1, 0, 0);
+							command_list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
 						}
 					}
 					else

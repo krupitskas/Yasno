@@ -34,117 +34,6 @@ struct BuildMeshResult
 	uint32_t mesh_vertices_count = 0;
 };
 
-static bool BuildBuffers(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
-{
-	HRESULT hr = S_OK;
-
-	auto dx_renderer = ysn::Application::Get().GetRenderer();
-
-	model.buffers.reserve(gltf_model.buffers.size());
-
-	for (const tinygltf::Buffer& buffer : gltf_model.buffers)
-	{
-		wil::com_ptr<ID3D12Resource> dst_buffer;
-		{
-			D3D12_HEAP_PROPERTIES heap_properties = {};
-			heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resource_desc = {};
-			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resource_desc.Alignment = 0;
-			resource_desc.Width = buffer.data.size();
-			resource_desc.Height = 1;
-			resource_desc.DepthOrArraySize = 1;
-			resource_desc.MipLevels = 1;
-			resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-			resource_desc.SampleDesc = { 1, 0 };
-			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties,
-																  D3D12_HEAP_FLAG_NONE,
-																  &resource_desc,
-																  D3D12_RESOURCE_STATE_COPY_DEST,
-																  nullptr,
-																  IID_PPV_ARGS(&dst_buffer));
-
-		#ifndef YSN_RELEASE
-			std::wstring name(buffer.name.begin(), buffer.name.end());
-			name = name.empty() ? L"GLTF Buffer Dest" : name;
-			dst_buffer->SetName(name.c_str());
-		#endif
-
-			if (hr != S_OK)
-			{
-				LogError << "Can't allocate GLTF dst buffer\n";
-				return false;
-			}
-		}
-
-		wil::com_ptr<ID3D12Resource> src_buffer;
-		{
-			D3D12_HEAP_PROPERTIES heap_properties = {};
-			heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-			heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resource_desc = {};
-			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resource_desc.Alignment = 0;
-			resource_desc.Width = buffer.data.size();
-			resource_desc.Height = 1;
-			resource_desc.DepthOrArraySize = 1;
-			resource_desc.MipLevels = 1;
-			resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-			resource_desc.SampleDesc = { 1, 0 };
-			resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-			hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties,
-																  D3D12_HEAP_FLAG_NONE,
-																  &resource_desc,
-																  D3D12_RESOURCE_STATE_GENERIC_READ,
-																  nullptr, IID_PPV_ARGS(&src_buffer));
-
-			if (hr != S_OK)
-			{
-				LogError << "Can't allocate GLTF src buffer\n";
-				return false;
-			}
-
-			build_context.staging_resources.push_back(src_buffer);
-
-		#ifndef YSN_RELEASE
-			std::wstring name(buffer.name.begin(), buffer.name.end());
-			name = name.empty() ? L"GLTF Buffer Source" : name;
-			src_buffer->SetName(name.c_str());
-		#endif
-
-			void* data_ptr;
-			hr = src_buffer->Map(0, nullptr, &data_ptr);
-
-			if (hr != S_OK)
-			{
-				LogError << "Can't map GLTF src buffer\n";
-				return false;
-			}
-
-			// Copy cpu data to cpu src buffer
-			memcpy(data_ptr, &buffer.data[0], buffer.data.size());
-		}
-
-		// Copy from CPU to GPU buffer
-		build_context.copy_cmd_list->CopyBufferRegion(dst_buffer.get(), 0, src_buffer.get(), 0, buffer.data.size());
-
-		model.buffers.push_back(dst_buffer);
-	}
-
-	return true;
-}
-
-
 static DXGI_FORMAT GetSrgbFormat(DXGI_FORMAT format)
 {
 	switch (format)
@@ -507,10 +396,6 @@ static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& mo
 		const UINT8* index_buffer_address = index_buffer.data.data();
 		const UINT8* base_address = index_buffer_address + index_buffer_view.byteOffset + index_accessor.byteOffset;
 
-		//primitive.index_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
-		//primitive.index_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
-		//primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
-	
 		const int index_stride = tinygltf::GetComponentSizeInBytes(index_accessor.componentType) * tinygltf::GetNumComponentsInType(index_accessor.type);
 
 		if (index_stride == 1)
@@ -533,8 +418,6 @@ static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& mo
 
 			memcpy(half.data(), base_address, (index_accessor.count * index_stride));
 
-			//std::copy(base_address, base_address + (index_accessor.count * index_stride), half.data());
-
 			// Convert half precision indices to full precision
 			for (size_t i = 0; i < index_accessor.count; i++)
 			{
@@ -554,49 +437,6 @@ static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& mo
 	}
 
 	return 0;
-}
-
-static void BuildAccessorType(ysn::Attribute& attribute, const int gltf_accessorType)
-{
-	switch (gltf_accessorType)
-	{
-		case TINYGLTF_TYPE_VEC2:
-			attribute.format = DXGI_FORMAT_R32G32_FLOAT;
-			break;
-		case TINYGLTF_TYPE_VEC3:
-			attribute.format = DXGI_FORMAT_R32G32B32_FLOAT;
-			break;
-		case TINYGLTF_TYPE_VEC4:
-			attribute.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			break;
-		default:;
-	}
-}
-
-static void BuildAttributesAccessors(ysn::Primitive& primitive,
-							  const ysn::Model& model,
-							  const tinygltf::Model& gltf_model,
-							  const std::map<std::string, int>& gltf_primitive_attributes)
-{
-	for (const auto& [gltf_attribute_name, gltf_accessor_index] : gltf_primitive_attributes)
-	{
-		const tinygltf::Accessor& gltf_accessor = gltf_model.accessors[gltf_accessor_index];
-		const tinygltf::BufferView& gltf_buffer_view = gltf_model.bufferViews[gltf_accessor.bufferView];
-
-		ysn::Attribute render_attribute;
-		render_attribute.name = gltf_attribute_name;
-
-		BuildAccessorType(render_attribute, gltf_accessor.type);
-
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {};
-		vertex_buffer_view.BufferLocation = model.buffers[gltf_buffer_view.buffer].GetGPUVirtualAddress() + gltf_buffer_view.byteOffset + gltf_accessor.byteOffset;
-		vertex_buffer_view.SizeInBytes = static_cast<UINT>(gltf_buffer_view.byteLength - gltf_accessor.byteOffset);
-		vertex_buffer_view.StrideInBytes = gltf_accessor.ByteStride(gltf_buffer_view);
-
-		render_attribute.vertex_buffer_view = vertex_buffer_view;
-
-		primitive.attributes.emplace(gltf_attribute_name, render_attribute);
-	}
 }
 
 static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Primitive& gltf_primitive, const tinygltf::Model& gltf_model)
@@ -671,7 +511,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 		const tinygltf::Buffer& tangent_buffer = gltf_model.buffers[tangent_buffer_view.buffer];
 		tangent_buffer_address = tangent_buffer.data.data();
 		tangent_stride = tinygltf::GetComponentSizeInBytes(tangent_accessor.componentType) * tinygltf::GetNumComponentsInType(tangent_accessor.type);
-		YSN_ASSERT_MSG(tangent_stride == 16, "GLTF model vertex tangent stride not equals 12");
+		YSN_ASSERT_MSG(tangent_stride == 16, "GLTF model vertex tangent stride not equals 16");
 	}
 
 	// Vertex texture coordinates
@@ -742,7 +582,7 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 			ysn::Primitive primitive;
 
 			result.mesh_vertices_count += BuildVertexBuffer(primitive, gltf_primitive, gltf_model);
-			BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
+			//BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
 			result.mesh_indices_count += BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
 
@@ -1038,16 +878,12 @@ namespace ysn
 		load_gltf_context.staging_resources.reserve(256);
 		load_gltf_context.copy_cmd_list = command_queue->GetCommandList("GLTF upload");
 
-		if(!BuildBuffers(model, load_gltf_context, gltf_model))
-		{
-			LogError << "GLTF loader can't build buffers\n";
-			return false;
-		}
 		if(!BuildImages(model, load_gltf_context, gltf_model))
 		{
 			LogError << "GLTF loader can't build materials\n";
 			return false;
 		}
+
 		if(!BuildMaterials(model, load_gltf_context, gltf_model))
 		{
 			LogError << "GLTF loader can't build materials\n";

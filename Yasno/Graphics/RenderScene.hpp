@@ -39,7 +39,6 @@ namespace ysn
 		std::vector<NodeTransform> transforms;
 
 		// Not sure about that
-		std::vector<GpuResource> buffers;
 		std::vector<GpuTexture> textures;
 
 		// Not sure about that x2

@@ -115,6 +115,42 @@ namespace
 
 		return allow_tearing;
 	}
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> CreateDefaultInputElementDescArray()
+	{
+		std::vector<D3D12_INPUT_ELEMENT_DESC> result;
+
+		result.push_back({
+			.SemanticName = "POSITION",
+			.Format = DXGI_FORMAT_R32G32B32_FLOAT,
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+		});
+
+		result.push_back({
+			.SemanticName = "NORMAL",
+			.Format = DXGI_FORMAT_R32G32B32_FLOAT,
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+		});
+
+		result.push_back({
+			.SemanticName = "TANGENT",
+			.Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+		});
+
+		result.push_back({
+			.SemanticName = "TEXCOORD_",
+			.SemanticIndex = 0,
+			.Format = DXGI_FORMAT_R32G32_FLOAT,
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
+		});
+
+		return result;
+	}
 } // namespace
 
 namespace ysn
@@ -178,6 +214,8 @@ namespace ysn
 			LogError << "Can't initialize generate mips system\n";
 			return false;
 		}
+
+		m_default_input_elements_desc = CreateDefaultInputElementDescArray();
 
 		return true;
 	}
@@ -267,6 +305,11 @@ namespace ysn
 	DXGI_FORMAT DxRenderer::GetBackBufferFormat() const
 	{
 		return backbuffer_format;
+	}
+
+	const std::vector<D3D12_INPUT_ELEMENT_DESC>& DxRenderer::GetInputElementsDesc()
+	{
+		return m_default_input_elements_desc;
 	}
 
 	void DxRenderer::FlushQueues()

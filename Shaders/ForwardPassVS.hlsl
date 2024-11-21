@@ -1,22 +1,9 @@
 struct IA2VS
 {
 	float3 position : POSITION;
-
-#ifdef HAS_NORMAL
     float3 normal : NORMAL;
-#endif
-
-#ifdef HAS_TANGENT
     float4 tangent : TANGENT;
-#endif
-
-#ifdef HAS_TEXCOORD_0
     float2 texcoord_0: TEXCOORD_0;
-#endif
-
-#ifdef HAS_TEXCOORD_1
-	float2 texcoord_1: TEXCOORD_1;
-#endif
 };
 
 struct VS2RS
@@ -26,22 +13,9 @@ struct VS2RS
 #ifndef SHADOW_PASS
 	float4 position_shadow_space : POSITION;
 #endif
-
-#ifdef HAS_NORMAL
 	float3 normal : NORMAL;
-#endif
-
-#ifdef HAS_TANGENT
 	float4 tangent : TANGENT;
-#endif
-
-#ifdef HAS_TEXCOORD_0
     float2 texcoord_0: TEXCOORD_0;
-#endif
-
-#ifdef HAS_TEXCOORD_1
-	float2 texcoord_1: TEXCOORD_1;
-#endif
 };
 
 #ifdef SHADOW_PASS
@@ -91,23 +65,10 @@ VS2RS main(IA2VS input)
 #endif
 
 	output.position = mul(view_projection, output.position);
-
-#ifdef HAS_NORMAL
 	output.normal = mul(float4(input.normal, 1.0), model_matrix);
-#endif
-
-#ifdef HAS_TANGENT
 	output.tangent.xyz = mul(float4(input.tangent.xyz, 1.0), model_matrix);
 	output.tangent.w = input.tangent.w;
-#endif
-
-#ifdef HAS_TEXCOORD_0
     output.texcoord_0 = input.texcoord_0;
-#endif
-
-#ifdef HAS_TEXCOORD_1
-	output.texcoord_1 = input.texcoord_1;
-#endif
 
 	return output;
 }

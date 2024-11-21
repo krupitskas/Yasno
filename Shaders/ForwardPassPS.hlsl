@@ -1,24 +1,10 @@
 struct RS2PS
 {
 	float4 position : SV_POSITION;
-
 	float4 position_shadow_space : POSITION;
-
-#ifdef HAS_NORMAL
 	float3 normal : NORMAL;
-#endif
-
-#ifdef HAS_TANGENT
 	float4 tangent : TANGENT;
-#endif
-
-#ifdef HAS_TEXCOORD_0
 	float2 texcoord_0: TEXCOORD_0;
-#endif
-
-#ifdef HAS_TEXCOORD_1
-	float2 texcoord_1: TEXCOORD_1;
-#endif
 };
 
 #define ALBEDO_ENABLED_BITMASK				0
@@ -110,17 +96,9 @@ float4 main(RS2PS input) : SV_Target
 	float3 normal = 0;
 	float4 tangent = 0;
 
-#ifdef HAS_TEXCOORD_0
 	uv = input.texcoord_0;
-#endif
-
-#ifdef HAS_NORMAL
 	normal = input.normal;
-#endif
-
-#ifdef HAS_TANGENT
 	tangent = input.tangent;
-#endif
 
 	float4 base_color = pbr_material.base_color_factor;
 	float metallicResult = pbr_material.metallic_factor;
@@ -128,8 +106,6 @@ float4 main(RS2PS input) : SV_Target
 	float3 normals = 1;
 	float occlusion = 0;
 	float3 emissive = 0;
-
-#ifdef HAS_TEXCOORD_0
 
 	if (pbr_material.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BITMASK))
 	{
@@ -173,8 +149,6 @@ float4 main(RS2PS input) : SV_Target
 
 		emissive = emissive_texture.Sample(LinearSampler, uv).rgb;
 	}
-
-#endif // HAS_TEXCOORD_0
 
 	float3 V = normalize(camera_position.xyz - input.position.xyz); // From the shading location to the camera
 	float3 L = directional_light_direction.xyz; //normalize(LightPosition.xyz - input.position.xyz); // From the shading location to the LIGHT

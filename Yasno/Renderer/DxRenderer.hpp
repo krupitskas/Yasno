@@ -46,6 +46,8 @@ namespace ysn
 		DXGI_FORMAT GetHdrFormat() const;
 		DXGI_FORMAT GetBackBufferFormat() const;
 
+		const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputElementsDesc();
+
 		void FlushQueues();
 
 		bool IsTearingSupported();
@@ -64,6 +66,7 @@ namespace ysn
 		wil::com_ptr<IDXGISwapChain4> m_swap_chain;
 
 		// Data
+		std::vector<D3D12_INPUT_ELEMENT_DESC> m_default_input_elements_desc;
 		VertexStorage m_vertex_storage;
 		IndexStorage m_index_storage;
 		std::shared_ptr<ShaderStorage> m_shader_storage;
