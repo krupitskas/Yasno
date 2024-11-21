@@ -68,10 +68,32 @@ namespace ysn
 		{
 			bool result = false;
 
+			D3D12_DESCRIPTOR_RANGE instance_data_input_range = {};
+			instance_data_input_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			instance_data_input_range.NumDescriptors = 1;
+			instance_data_input_range.BaseShaderRegister = 0;
+
+			D3D12_ROOT_PARAMETER instance_buffer_parameter;
+			instance_buffer_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			instance_buffer_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			instance_buffer_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			instance_buffer_parameter.DescriptorTable.pDescriptorRanges = &instance_data_input_range;
+
+			D3D12_DESCRIPTOR_RANGE materials_input_range = {};
+			materials_input_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			materials_input_range.NumDescriptors = 1;
+			materials_input_range.BaseShaderRegister = 1;
+
+			D3D12_ROOT_PARAMETER materials_buffer_parameter;
+			materials_buffer_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			materials_buffer_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			materials_buffer_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			materials_buffer_parameter.DescriptorTable.pDescriptorRanges = &materials_input_range;
+
 			D3D12_DESCRIPTOR_RANGE shadow_input_range = {};
 			shadow_input_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 			shadow_input_range.NumDescriptors = 1;
-			shadow_input_range.BaseShaderRegister = 0;
+			shadow_input_range.BaseShaderRegister = 2;
 
 			D3D12_ROOT_PARAMETER shadow_parameter;
 			shadow_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -79,19 +101,29 @@ namespace ysn
 			shadow_parameter.DescriptorTable.NumDescriptorRanges = 1;
 			shadow_parameter.DescriptorTable.pDescriptorRanges = &shadow_input_range;
 
-			D3D12_ROOT_PARAMETER rootParams[5] = {
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_ALL },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 3, 0 }, D3D12_SHADER_VISIBILITY_PIXEL },
-				shadow_parameter
+			D3D12_ROOT_PARAMETER rootParams[6] = {
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_ALL }, // CameraParameters
+				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_ALL }, // SceneParameters
+
+				// InstanceID
+				{
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+					.Constants = {
+						.ShaderRegister = 2,
+						.RegisterSpace = 0,
+						.Num32BitValues = 1
+					},
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+				},
+
+				instance_buffer_parameter, // PerInstanceData
+				materials_buffer_parameter, // Materials buffer
+				shadow_parameter	// Shadow Map input
 			};
 
 			// TEMP
 			rootParams[0].Descriptor.RegisterSpace = 0;
 			rootParams[1].Descriptor.RegisterSpace = 0;
-			rootParams[2].Descriptor.RegisterSpace = 0;
-			rootParams[3].Descriptor.RegisterSpace = 0;
 
 			// 0 ShadowSampler
 			// 1 LinearSampler
@@ -100,7 +132,7 @@ namespace ysn
 			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, 0, D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters = 5;
+			RootSignatureDesc.NumParameters = 6;
 			RootSignatureDesc.pParameters = &rootParams[0];
 			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 				| D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
@@ -224,15 +256,18 @@ namespace ysn
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
+		uint32_t instance_id = 0;
+
 		for(auto& model : render_scene.models)
 		{
 			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 			{
 				const Mesh& mesh = model.meshes[mesh_id];
-				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
 
-				for(auto& primitive : mesh.primitives)
+				for(int primitive_id = 0; primitive_id < mesh.primitives.size(); primitive_id++)
 				{
+					const Primitive& primitive = mesh.primitives[primitive_id];
+
 					command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
 					// TODO: check for -1 as pso_id
@@ -246,12 +281,14 @@ namespace ysn
 						command_list->SetPipelineState(pso.value().pso.get());
 
 						command_list->IASetPrimitiveTopology(primitive.topology);
-						command_list->SetGraphicsRootConstantBufferView(2, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(3, material.gpu_material_parameters.GetGPUVirtualAddress());
-						command_list->SetGraphicsRootDescriptorTable(4, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
 						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(1, node_gpu_buffer.GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(1, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
+
+						command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
 						if (primitive.index_count)
 						{
@@ -265,8 +302,10 @@ namespace ysn
 					}
 					else
 					{
-						LogWarning << "Can't render primitive because it has't any pso attached\n";
+						LogWarning << "Can't render primitive because it haven't any PSO\n";
 					}
+
+					instance_id++;
 				}
 			}
 		}
@@ -349,7 +388,7 @@ namespace ysn
 			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 			{
 				const Mesh& mesh = model.meshes[mesh_id];
-				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
+				//const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
 
 				if (m_enable_culling)
 				{

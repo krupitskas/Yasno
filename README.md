@@ -1,8 +1,8 @@
-<div align="center">
+s<div align="center">
 
 # `🌩️ Yasno`
 
-**Personal DirectX 12 research renderer oriented for fast iterations and easy usage**
+**Personal DirectX 12 research p_renderer->GetDevice()-> oriented for fast iterations and easy usage**
 
 </div>
 ## Features

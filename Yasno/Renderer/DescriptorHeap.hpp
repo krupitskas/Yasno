@@ -27,7 +27,7 @@ namespace ysn
 
 		uint32_t GetDescriptorIndex(const DescriptorHandle& descriptorHandle) const
 		{	
-			const uint32_t handle_ptr = descriptorHandle.gpu.ptr;
+			const uint32_t handle_ptr = (uint32_t)descriptorHandle.gpu.ptr;
 			const uint32_t heap_start_ptr = uint32_t(m_descriptor_heap->GetGPUDescriptorHandleForHeapStart().ptr);
 			const uint32_t increment = GetDescriptorHandleIncrementSize();
 			return static_cast<uint32_t>((handle_ptr - heap_start_ptr) / increment);

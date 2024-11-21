@@ -32,6 +32,7 @@ struct BuildMeshResult
 {
 	uint32_t mesh_indices_count = 0;
 	uint32_t mesh_vertices_count = 0;
+	uint32_t primitives_count = 0;
 };
 
 static DXGI_FORMAT GetSrgbFormat(DXGI_FORMAT format)
@@ -220,9 +221,9 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
 			}
 
 			// Move data from gltf texture to resource
-			for (UINT i = 0; i != row_count; i++)
+			for (UINT row = 0; row != row_count; row++)
 			{
-				memcpy(static_cast<uint8_t*>(data_ptr) + row_size * i, &image.image[0] + image.width * image.component * i, image.width * image.component);
+				memcpy(static_cast<uint8_t*>(data_ptr) + row_size * row, &image.image[0] + image.width * image.component * row, image.width * image.component);
 			}
 
 			// TODO: try to unmap here?
@@ -591,67 +592,26 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 			mesh.primitives.push_back(primitive);
 		}
 
+		result.primitives_count += gltf_mesh.primitives.size();
+
 		model.meshes.push_back(mesh);
 	}
 
 	return result;
 }
 
-static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, const ysn::LoadingParameters& loading_parameters)
+static void BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, const ysn::LoadingParameters& loading_parameters)
 {
 	auto dx_renderer = ysn::Application::Get().GetRenderer();
 
-	HRESULT hr = S_OK;
-
 	for (const tinygltf::Node& gltf_node : gltf_model.nodes)
 	{
-		D3D12_HEAP_PROPERTIES heap_properties = {};
-		heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		D3D12_RESOURCE_DESC resource_desc = {};
-		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resource_desc.Width = ysn::AlignPow2(sizeof(DirectX::XMFLOAT4X4), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-		resource_desc.Height = 1;
-		resource_desc.DepthOrArraySize = 1;
-		resource_desc.MipLevels = 1;
-		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-		resource_desc.SampleDesc = { 1, 0 };
-		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-		wil::com_ptr<ID3D12Resource> buffer;
-		hr = dx_renderer->GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
-
-		if (hr != S_OK)
-		{
-			LogError << "GLTF Build Nodes can't allocate buffer\n";
-			return false;
-		}
-
-		void* data_ptr;
-		hr = buffer->Map(0, nullptr, &data_ptr);
-
-		if (hr != S_OK)
-		{
-			LogError << "GLTF Build Nodes can't map buffer\n";
-			return false;
-		}
-
 		if (gltf_node.matrix.empty())
 		{
-			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), loading_parameters.model_modifier);
-
 			model.transforms.push_back(loading_parameters.model_modifier);
 		}
 		else
 		{
-			if (gltf_node.matrix.size() != 16)
-			{
-				LogError << "GLTF node has broken matrix!\n";
-				return false;
-			}
-
 			std::array<float, 16> float_array;
 
 			// Convert to floats
@@ -665,20 +625,14 @@ static bool BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 			// Apply loading modifier
 			model_matrix *= loading_parameters.model_modifier;
 
-			XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(data_ptr), model_matrix);
-
 			model.transforms.push_back(model_matrix);
 		}
-
-		model.node_buffers.push_back(buffer);
 	}
 }
 
-static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
+static uint32_t BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
 {
 	auto dx_renderer = ysn::Application::Get().GetRenderer();
-
-	HRESULT hr = S_OK;
 
 	for (const tinygltf::Material& gltf_material : gltf_model.materials)
 	{
@@ -726,67 +680,28 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 		material.rasterizer_desc.ForcedSampleCount = 0;
 		material.rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-		D3D12_HEAP_PROPERTIES heap_properties = {};
-		heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		D3D12_RESOURCE_DESC resource_desc = {};
-		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resource_desc.Width = ysn::AlignPow2(sizeof(ysn::SurfaceShaderParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-		resource_desc.Height = 1;
-		resource_desc.DepthOrArraySize = 1;
-		resource_desc.MipLevels = 1;
-		resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-		resource_desc.SampleDesc = { 1, 0 };
-		resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-		void* material_data_buffer;
-
-		hr = dx_renderer->GetDevice()->CreateCommittedResource(
-			&heap_properties,
-			D3D12_HEAP_FLAG_NONE,
-			&resource_desc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&material.gpu_material_parameters.resource));
-
-		if (hr != S_OK)
-		{
-			LogError << "GLTF build materials can't create buffer\n";
-			return false;
-		}
-
-		hr = material.gpu_material_parameters.resource->Map(0, nullptr, &material_data_buffer);
-
-		if (hr != S_OK)
-		{
-			LogError << "GLTF build materials can't map buffer\n";
-			return false;
-		}
-
 		const tinygltf::PbrMetallicRoughness& gltf_pbr_material = gltf_material.pbrMetallicRoughness;
-		ysn::SurfaceShaderParameters* shader_parameters = static_cast<ysn::SurfaceShaderParameters*>(material_data_buffer);
+		ysn::SurfaceShaderParameters shader_parameters = {};
 
-		DirectX::XMFLOAT4& base_color_factor = shader_parameters->base_color_factor;
+		DirectX::XMFLOAT4& base_color_factor = shader_parameters.base_color_factor;
 		base_color_factor.x = static_cast<float>(gltf_pbr_material.baseColorFactor[0]);
 		base_color_factor.y = static_cast<float>(gltf_pbr_material.baseColorFactor[1]);
 		base_color_factor.z = static_cast<float>(gltf_pbr_material.baseColorFactor[2]);
 		base_color_factor.w = static_cast<float>(gltf_pbr_material.baseColorFactor[3]);
 
-		shader_parameters->metallic_factor = static_cast<float>(gltf_pbr_material.metallicFactor);
-		shader_parameters->roughness_factor = static_cast<float>(gltf_pbr_material.roughnessFactor);
+		shader_parameters.metallic_factor = static_cast<float>(gltf_pbr_material.metallicFactor);
+		shader_parameters.roughness_factor = static_cast<float>(gltf_pbr_material.roughnessFactor);
 
 		if (gltf_pbr_material.baseColorTexture.index >= 0)
 		{
-			shader_parameters->texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BIT;
+			shader_parameters.texture_enable_bitmask |= 1 << ALBEDO_ENABLED_BIT;
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_pbr_material.baseColorTexture.index];
 
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source]; // TODO: use it for srgb?
 			texture.is_srgb = true;
 
-			shader_parameters->albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
+			shader_parameters.albedo_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 			D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
 
@@ -799,12 +714,12 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 		if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index > 0)
 		{
-			shader_parameters->texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
+			shader_parameters.texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
 
 			const tinygltf::Texture& gltfTexture = gltf_model.textures[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltfTexture.source];
 
-			shader_parameters->metallic_roughness_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
+			shader_parameters.metallic_roughness_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Metallic Roughness Texture");
@@ -815,12 +730,12 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 		if (gltf_material.normalTexture.index > 0)
 		{
-			shader_parameters->texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
+			shader_parameters.texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.normalTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			shader_parameters->normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
+			shader_parameters.normal_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Normals Texture");
@@ -831,12 +746,12 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 		if (gltf_material.occlusionTexture.index > 0)
 		{
-			shader_parameters->texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
+			shader_parameters.texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.occlusionTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			shader_parameters->occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
+			shader_parameters.occlusion_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Occlusion Texture");
@@ -847,12 +762,12 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 
 		if (gltf_material.emissiveTexture.index > 0)
 		{
-			shader_parameters->texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
+			shader_parameters.texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
 
 			const tinygltf::Texture& gltf_texture = gltf_model.textures[gltf_material.emissiveTexture.index];
 			ysn::GpuTexture& texture = model.textures[gltf_texture.source];
 
-			shader_parameters->emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
+			shader_parameters.emissive_texture_index = dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
 		#ifndef YSN_RELEASE
 			texture.gpu_resource->SetName(L"Emissive Texture");
@@ -861,10 +776,12 @@ static bool BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, co
 			texture.name = L"Emissive Texture";
 		}
 
-		material.gpu_material_parameters.resource->Unmap(0, nullptr);
+		material.shader_parameters = shader_parameters;
 
 		model.materials.push_back(material);
 	}
+
+	return gltf_model.materials.size();
 }
 
 namespace ysn
@@ -884,11 +801,7 @@ namespace ysn
 			return false;
 		}
 
-		if(!BuildMaterials(model, load_gltf_context, gltf_model))
-		{
-			LogError << "GLTF loader can't build materials\n";
-			return false;
-		}
+		render_scene.materials_count += BuildMaterials(model, load_gltf_context, gltf_model);
 
 		// Build pipelines
 		// Compute mips 
@@ -899,18 +812,14 @@ namespace ysn
 
 		BuildSamplerDescs(model, gltf_model);
 		const BuildMeshResult mesh_result = BuildMeshes(model, gltf_model);
-		if(!BuildNodes(model, gltf_model, loading_parameters))
-		{
-			LogError << "GLTF loader can't build nodes\n";
-			return false;
-		}
+		BuildNodes(model, gltf_model, loading_parameters);
 
 		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
 		command_queue->WaitForFenceValue(fence_value);
 
-		// Write stats
 		render_scene.indices_count += mesh_result.mesh_indices_count;
 		render_scene.vertices_count += mesh_result.mesh_vertices_count;
+		render_scene.primitives_count += mesh_result.primitives_count;
 
 		return true;
 	}

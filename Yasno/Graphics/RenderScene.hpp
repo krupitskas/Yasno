@@ -42,8 +42,15 @@ namespace ysn
 		std::vector<GpuTexture> textures;
 
 		// Not sure about that x2
-		std::vector<GpuResource> node_buffers; // Per node GPU data
 		std::vector<D3D12_SAMPLER_DESC> sampler_descs;
+	};
+
+	// Per instance data for rendering
+	YSN_SHADER_STRUCT RenderInstanceData
+	{
+		DirectX::XMMATRIX model_matrix;
+		int32_t material_id;
+		int32_t pad[3]; 
 	};
 
 	struct RenderScene
@@ -58,9 +65,21 @@ namespace ysn
 
 		// Temp GPU resources for indices and vertices
 		uint32_t indices_count = 0;
-		uint32_t vertices_count = 0;
 		GpuBuffer indices_buffer;
+
+		// Vertices
+		uint32_t vertices_count = 0;
 		GpuBuffer vertices_buffer;
+
+		// Materials
+		uint32_t materials_count = 0;
+		GpuBuffer materials_buffer;
+		DescriptorHandle materials_buffer_srv;
+
+		// Per instance data
+		uint32_t primitives_count = 0;
+		GpuBuffer instance_buffer;
+		DescriptorHandle instance_buffer_srv;
 	};
 }
 

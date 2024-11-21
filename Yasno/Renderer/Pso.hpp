@@ -8,7 +8,7 @@
 
 namespace ysn
 {
-	using PsoId = size_t;
+	using PsoId = int64_t;
 
 	struct ComputePsoDesc
 	{

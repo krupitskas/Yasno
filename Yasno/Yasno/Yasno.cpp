@@ -265,10 +265,10 @@ namespace ysn
 			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 		
-		//{
-		//	LoadingParameters loading_parameters;
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-		//}
+		{
+			LoadingParameters loading_parameters;
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		}
 		
 		//{
 		//	LoadingParameters loading_parameters;
@@ -357,10 +357,10 @@ namespace ysn
 						for (auto& primitive : mesh.primitives)
 						{
 							primitive.vertex_buffer_view.BufferLocation = m_render_scene.vertices_buffer.GetGPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
-							primitive.vertex_buffer_view.SizeInBytes = primitive.vertices.size() * sizeof(Vertex);
+							primitive.vertex_buffer_view.SizeInBytes = UINT(primitive.vertices.size() * sizeof(Vertex));
 							primitive.vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 
-							primitive.vertex_count = primitive.vertices.size();
+							primitive.vertex_count = static_cast<uint32_t>(primitive.vertices.size());
 
 							// Append vertices
 							all_vertices_buffer.insert(all_vertices_buffer.end(), primitive.vertices.begin(), primitive.vertices.end());
@@ -373,7 +373,111 @@ namespace ysn
 
 			// Material buffer
 			{
+				GpuBufferCreateInfo create_info {
+					.size = m_render_scene.materials_count * sizeof(SurfaceShaderParameters),
+					.heap_type = D3D12_HEAP_TYPE_DEFAULT,
+					.state = D3D12_RESOURCE_STATE_COPY_DEST
+				};
+
+				const auto materials_buffer_result = CreateGpuBuffer(create_info, "Materials Buffer");
+
+				if (!materials_buffer_result.has_value())
+				{
+					LogFatal << "Can't create materials buffer\n";
+					return false;
+				}
+
+				m_render_scene.materials_buffer = materials_buffer_result.value();
+
+				std::vector<SurfaceShaderParameters> all_materials_buffer;
+				all_materials_buffer.reserve(m_render_scene.materials_count);
+
+				for (auto& model : m_render_scene.models)
+				{
+					for (auto& material : model.materials)
+					{
+						all_materials_buffer.push_back(material.shader_parameters);
+					}
+				}
+
+				UploadToGpuBuffer(command_list, m_render_scene.materials_buffer, all_materials_buffer.data(), {}, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+				// Create SRV
+				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = 0;
+				srv_desc.Buffer.NumElements = static_cast<UINT>(all_materials_buffer.size());
+				srv_desc.Buffer.StructureByteStride = sizeof(SurfaceShaderParameters);
+				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+				srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+				m_render_scene.materials_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+				renderer->GetDevice()->CreateShaderResourceView(m_render_scene.materials_buffer.resource.get(), &srv_desc, m_render_scene.materials_buffer_srv.cpu);
 			}
+
+			// Instance buffer
+			{
+				GpuBufferCreateInfo create_info {
+					.size = m_render_scene.primitives_count * sizeof(RenderInstanceData),
+					.heap_type = D3D12_HEAP_TYPE_DEFAULT,
+					.state = D3D12_RESOURCE_STATE_COPY_DEST
+				};
+
+				const auto per_instance_buffer_result = CreateGpuBuffer(create_info, "RenderInstance Buffer");
+
+				if (!per_instance_buffer_result.has_value())
+				{
+					LogFatal << "Can't create RenderInstance buffer\n";
+					return false;
+				}
+
+				m_render_scene.instance_buffer = per_instance_buffer_result.value();
+
+				std::vector<RenderInstanceData> per_instance_data_buffer;
+				per_instance_data_buffer.reserve(m_render_scene.primitives_count);
+
+				for (auto& model : m_render_scene.models)
+				{
+					for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
+					{
+						const Mesh& mesh = model.meshes[mesh_id];
+
+						for (auto& primitive : mesh.primitives)
+						{
+							RenderInstanceData instance_data;
+							if (primitive.material_id == -1)
+							{
+								LogWarning << "Material ID is negative when filling instance data buffer - investigate";
+								// TODO: Assign "broken" material
+								instance_data.material_id = 0;
+							}
+							else
+							{
+								instance_data.material_id = primitive.material_id;
+							}
+
+							instance_data.model_matrix = model.transforms[mesh_id].transform;
+
+							per_instance_data_buffer.push_back(instance_data);
+						}
+					}
+				}
+
+				UploadToGpuBuffer(command_list, m_render_scene.instance_buffer, per_instance_data_buffer.data(), {}, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+				// Create SRV
+				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = 0;
+				srv_desc.Buffer.NumElements = static_cast<UINT>(m_render_scene.primitives_count);
+				srv_desc.Buffer.StructureByteStride = sizeof(RenderInstanceData);
+				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+				srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+				m_render_scene.instance_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+				renderer->GetDevice()->CreateShaderResourceView(m_render_scene.instance_buffer.resource.get(), &srv_desc, m_render_scene.instance_buffer_srv.cpu);
+			}
+
 		}
 
 		for (auto& model : m_render_scene.models)
@@ -841,7 +945,7 @@ namespace ysn
 
 			RenderUi();
 
-			ImGuizmo::SetRect(0, 0, GetClientWidth(), GetClientHeight());
+			ImGuizmo::SetRect(0, 0, static_cast<float>(GetClientWidth()), static_cast<float>(GetClientHeight()));
 
 			XMFLOAT4X4 view;
 			XMFLOAT4X4 projection;

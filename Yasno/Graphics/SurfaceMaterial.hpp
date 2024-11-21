@@ -23,16 +23,16 @@ namespace ysn
 	YSN_SHADER_STRUCT SurfaceShaderParameters
 	{
 		DirectX::XMFLOAT4 base_color_factor;
-		float metallic_factor;
-		float roughness_factor;
+		float metallic_factor = 0.0f;
+		float roughness_factor = 0.0f;
 
 		// Encods which textures are active
-		int32_t texture_enable_bitmask;
+		int32_t texture_enable_bitmask = 0;
 
-		int32_t albedo_texture_index;
-		int32_t metallic_roughness_texture_index;
-		int32_t normal_texture_index;
-		int32_t occlusion_texture_index;
-		int32_t emissive_texture_index;
+		int32_t albedo_texture_index = 0;
+		int32_t metallic_roughness_texture_index = 0;
+		int32_t normal_texture_index = 0;
+		int32_t occlusion_texture_index = 0;
+		int32_t emissive_texture_index = 0;
 	};
 }

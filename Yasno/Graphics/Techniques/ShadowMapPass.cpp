@@ -105,15 +105,37 @@ namespace ysn
 		{
 			bool result = false;
 
-			D3D12_ROOT_PARAMETER root_params[3] = {
+			D3D12_DESCRIPTOR_RANGE instance_data_input_range = {};
+			instance_data_input_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			instance_data_input_range.NumDescriptors = 1;
+			instance_data_input_range.BaseShaderRegister = 0;
+
+			D3D12_ROOT_PARAMETER instance_buffer_parameter;
+			instance_buffer_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			instance_buffer_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			instance_buffer_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			instance_buffer_parameter.DescriptorTable.pDescriptorRanges = &instance_data_input_range;
+
+			D3D12_ROOT_PARAMETER root_params[4] = {
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 0, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
 				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 1, 0 }, D3D12_SHADER_VISIBILITY_VERTEX },
-				{ D3D12_ROOT_PARAMETER_TYPE_CBV, { 2, 0 }, D3D12_SHADER_VISIBILITY_VERTEX }
+
+				// InstanceID
+				{
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+					.Constants = {
+					.ShaderRegister = 2,
+					.RegisterSpace = 0,
+					.Num32BitValues = 1
+			},
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+				},
+
+				instance_buffer_parameter
 			};
 
 			root_params[0].Descriptor.RegisterSpace = 0;
 			root_params[1].Descriptor.RegisterSpace = 0;
-			root_params[2].Descriptor.RegisterSpace = 0;
 
 			D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
 			root_signature_desc.NumParameters = _countof(root_params);
@@ -311,15 +333,18 @@ namespace ysn
 			m_camera_buffer->Unmap(0, nullptr);
 		}
 		
+		uint32_t instance_id = 0;
+
 		for(auto& model : render_scene.models)
 		{
 			for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 			{
 				const Mesh& mesh = model.meshes[mesh_id];
-				const GpuResource& node_gpu_buffer = model.node_buffers[mesh_id];
 
-				for(auto& primitive : mesh.primitives)
+				for(int primitive_id = 0; primitive_id < mesh.primitives.size(); primitive_id++)
 				{
+					const Primitive& primitive = mesh.primitives[primitive_id];
+
 					command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
 					// TODO: check for -1 as pso_id
@@ -335,8 +360,10 @@ namespace ysn
 						command_list->IASetPrimitiveTopology(primitive.topology);
 
 						command_list->SetGraphicsRootConstantBufferView(0, m_camera_buffer->GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(1, node_gpu_buffer.GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(2, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(1, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
+
+						command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu); // PerInstanceData
 
 						if (primitive.index_count)
 						{
@@ -352,6 +379,8 @@ namespace ysn
 					{
 						LogWarning << "Can't render primitive because it has't any pso attached\n";
 					}
+
+					instance_id++;
 				}
 			}
 		}

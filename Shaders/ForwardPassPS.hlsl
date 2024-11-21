@@ -13,7 +13,7 @@ struct RS2PS
 #define OCCLUSION_ENABLED_BITMASK			3
 #define EMISSIVE_ENABLED_BITMASK			4
 
-struct PBRMetallicRoughness
+struct SurfaceShaderParameters
 {
 	float4 base_color_factor;
 	float metallic_factor;
@@ -39,7 +39,7 @@ cbuffer CameraParameters : register(b0)
 	float3 camera_position;
 };
 
-cbuffer SceneParameters : register(b2)
+cbuffer SceneParameters : register(b1)
 {
 	float4x4	shadow_matrix;
 	float4		directional_light_color;
@@ -49,13 +49,24 @@ cbuffer SceneParameters : register(b2)
 	uint		shadows_enabled;
 };
 
-cbuffer Material : register(b3)
+cbuffer InstanceId : register(b2)
 {
-	PBRMetallicRoughness pbr_material;
+    uint instance_id;
 };
 
+struct PerInstanceData
+{
+	float4x4 model_matrix;
+	int material_id;
+	int pad[3];
+};
+StructuredBuffer<PerInstanceData> per_instance_data : register(t0);
+
+// Global material buffer
+StructuredBuffer<SurfaceShaderParameters> materials_buffer : register(t1);
+
 // Input textures
-Texture2D ShadowMap					: register(t0);
+Texture2D ShadowMap					: register(t2);
 
 // Samplers
 SamplerState ShadowSampler			: register(s0);
@@ -99,6 +110,10 @@ float4 main(RS2PS input) : SV_Target
 	uv = input.texcoord_0;
 	normal = input.normal;
 	tangent = input.tangent;
+
+	PerInstanceData instance_data = per_instance_data[instance_id];
+	
+	SurfaceShaderParameters pbr_material = materials_buffer[instance_data.material_id];
 
 	float4 base_color = pbr_material.base_color_factor;
 	float metallicResult = pbr_material.metallic_factor;
