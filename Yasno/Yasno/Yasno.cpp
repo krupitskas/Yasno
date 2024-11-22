@@ -259,11 +259,11 @@ namespace ysn
 
 		bool load_result = false;
 
-		{
-			LoadingParameters loading_parameters;
-			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
-		}
+		//{
+		//	LoadingParameters loading_parameters;
+		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+		//}
 		
 		{
 			LoadingParameters loading_parameters;
@@ -476,6 +476,9 @@ namespace ysn
 
 				m_render_scene.instance_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 				renderer->GetDevice()->CreateShaderResourceView(m_render_scene.instance_buffer.resource.get(), &srv_desc, m_render_scene.instance_buffer_srv.cpu);
+			}
+
+			{
 			}
 
 		}

@@ -90,12 +90,12 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBottomLevelAS(wi
 void ysn::RaytracingContext::CreateTopLevelAS(
 	wil::com_ptr<ID3D12Device5> device,
 	wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-	const std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>>& input_instances)
+	const std::vector<TlasInput>& input_instances)
 {
 	// Gather all the instances into the builder helper
 	for (size_t i = 0; i < input_instances.size(); i++)
 	{
-		tlas_generator.AddInstance(input_instances[i].first.get(), input_instances[i].second, static_cast<uint32_t>(i), static_cast<uint32_t>(0));
+		tlas_generator.AddInstance(input_instances[i].blas.get(), input_instances[i].transform, input_instances[i].instance_id, static_cast<uint32_t>(0));
 	}
 
 	// As for the bottom-level AS, the building the AS requires some scratch space
@@ -178,7 +178,13 @@ void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Gra
 
 				// Build the bottom AS from the Triangle vertex buffer
 				AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS(renderer->GetDevice(), command_list, vertex_buffers);
-				instances.emplace_back(bottomLevelBuffers.result, transform.transform);
+
+				TlasInput tlas_input;
+				tlas_input.blas = bottomLevelBuffers.result;
+				tlas_input.transform = transform.transform;
+				tlas_input.instance_id = PackInstanceID(primitive.material_id, primitive.index);
+
+				instances.emplace_back(tlas_input);
 
 				blas_res.push_back(bottomLevelBuffers.result);
 

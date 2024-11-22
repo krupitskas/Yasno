@@ -109,6 +109,8 @@ namespace ysn
 			return false;
 		}
 
+		dxc_include_handler->LoadSource(L"", m_include_blob.get());
+
 		return true;
 	}
 
@@ -173,6 +175,7 @@ namespace ysn
 		}
 
 		IDxcOperationResult* dxc_op_result;
+
 		if (auto result = dxc_compiler->Compile(dxc_text_blob,
 			filename.c_str(),
 			parameters->entry_point.c_str(),

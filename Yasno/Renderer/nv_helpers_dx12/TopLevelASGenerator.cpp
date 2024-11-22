@@ -190,8 +190,7 @@ namespace nv_helpers_dx12
             memcpy(instanceDescs[i].Transform, &m, sizeof(instanceDescs[i].Transform));
             // Get access to the bottom level
             instanceDescs[i].AccelerationStructure = m_instances[i].bottomLevelAS->GetGPUVirtualAddress();
-            // Visibility mask, always visible here - TODO: should be accessible from
-            // outside
+            // Visibility mask, always visible here - TODO: should be accessible from outside
             instanceDescs[i].InstanceMask = 0xFF;
         }
 

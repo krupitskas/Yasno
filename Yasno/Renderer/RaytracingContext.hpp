@@ -31,6 +31,13 @@ namespace ysn
 		uint32_t index_count;
 	};
 
+	struct TlasInput
+	{
+		wil::com_ptr<ID3D12Resource> blas;
+		DirectX::XMMATRIX transform;
+		uint32_t instance_id = 0;
+	};
+
 	struct RaytracingContext
 	{
 		AccelerationStructureBuffers CreateBottomLevelAS(
@@ -41,7 +48,7 @@ namespace ysn
 		void CreateTopLevelAS(
 			wil::com_ptr<ID3D12Device5> device,
 			wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
-			const std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>>& instances);
+			const std::vector<TlasInput>& instances);
 
 		void CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer);
 
@@ -52,7 +59,7 @@ namespace ysn
 		std::vector<wil::com_ptr<ID3D12Resource>> blas_res;
 
 		AccelerationStructureBuffers tlas_buffers;
-		std::vector<std::pair<wil::com_ptr<ID3D12Resource>, DirectX::XMMATRIX>> instances;
+		std::vector<TlasInput> instances;
 	};
 
 } 

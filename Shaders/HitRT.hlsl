@@ -21,8 +21,22 @@ struct Attributes
 
 struct VertexLayout
 {
-
+	float3 position;
+    float3 normal;
+    float4 tangent;
+    float2 texcoord_0;
 };
+
+inline uint PackInstanceID(uint material_id, uint geometry_id)
+{
+	return ((geometry_id & 0x3FFF) << 10) | (material_id & 0x3FF);
+}
+
+inline void UnpackInstanceID(uint instanceID, out uint material_id, out uint geometry_id) 
+{
+	material_id = instanceID & 0x3FF;
+	geometry_id = (instanceID >> 10) & 0x3FFF;
+}
 
 StructuredBuffer<VertexLayout> VertexBuffer		: register(t0);
 StructuredBuffer<uint> IndexBuffer				: register(t1);
@@ -35,6 +49,13 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 	uint primitive_index = PrimitiveIndex();
 	
 	float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+
+	uint material_id;
+	uint geometry_id;
+	UnpackInstanceID(primitive_index, material_id, geometry_id);
+	
+	//VertexLayout vertex_data = GetVertexAttributes(geometry_id, primitive_index, barycentrics);
+
 
 	const float3 A = float3(1, 0, 0);
 	const float3 B = float3(0, 1, 0);

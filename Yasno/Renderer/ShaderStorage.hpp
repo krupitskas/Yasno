@@ -49,5 +49,7 @@ namespace ysn
 		std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
 		std::map<std::wstring, std::time_t> m_shaders_modified_time;
 	#endif
+
+		//wil::com_ptr<IDxcBlob> m_include_blob;
 	};
 }

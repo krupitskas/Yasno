@@ -13,6 +13,8 @@ namespace ysn
 {
 	struct Primitive
 	{
+		uint32_t index = 0;
+
 		PsoId pso_id = -1;
 		PsoId shadow_pso_id = -1;
 

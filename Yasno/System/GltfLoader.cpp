@@ -573,6 +573,8 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 {
 	BuildMeshResult result;
 
+	uint32_t primitive_index_count = 0;
+
 	for (const tinygltf::Mesh& gltf_mesh : gltf_model.meshes)
 	{
 		ysn::Mesh mesh;
@@ -588,8 +590,11 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
 
 			primitive.material_id = gltf_primitive.material;
+			primitive.index = primitive_index_count;
 
 			mesh.primitives.push_back(primitive);
+
+			primitive_index_count++;
 		}
 
 		result.primitives_count += gltf_mesh.primitives.size();
