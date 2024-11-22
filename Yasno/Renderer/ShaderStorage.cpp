@@ -109,7 +109,7 @@ namespace ysn
 			return false;
 		}
 
-		dxc_include_handler->LoadSource(L"", m_include_blob.get());
+		//dxc_include_handler->LoadSource(L"", m_include_blob.get());
 
 		return true;
 	}

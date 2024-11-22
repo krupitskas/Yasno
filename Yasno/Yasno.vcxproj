@@ -253,6 +253,7 @@
     <None Include="..\Docs\Tasks.md" />
     <None Include="..\Docs\Task_Indirect_Draw.md" />
     <None Include="..\Docs\Task_Reference_PT.md" />
+    <None Include="..\Shaders\CommonStructures.hlsl" />
     <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl" />
     <None Include="..\Shaders\Skybox_PS.hlsl" />
     <None Include="..\Shaders\Skybox_VS.hlsl" />

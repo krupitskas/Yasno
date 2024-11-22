@@ -6,6 +6,11 @@
 
 </div>
 
+<p align="center">
+    <img src="Docs/Images/Raster.png" style="width: 40%; height: 40%">
+    <img src="Docs/Images/Pathtracing.png" style="width: 40%; height: 40%">
+</p>
+
 ## Current research goal idea
 
 Yasno has two modes - raster and pathtracing for reference image.  

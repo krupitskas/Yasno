@@ -188,6 +188,9 @@
     <ClCompile Include="Graphics\RtxMaterial.cpp">
       <Filter>Source\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer\GpuBuffer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Yasno\Camera.hpp">
@@ -465,6 +468,9 @@
     </None>
     <None Include="..\Docs\Task_Reference_PT.md">
       <Filter>Docs</Filter>
+    </None>
+    <None Include="..\Shaders\CommonStructures.hlsl">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
