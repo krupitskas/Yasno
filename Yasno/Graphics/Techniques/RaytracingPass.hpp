@@ -19,9 +19,32 @@ namespace ysn
 	class RaytracingPass
 	{
 	public:
-		bool Initialize(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
+		bool Initialize(std::shared_ptr<ysn::DxRenderer> renderer,
+						wil::com_ptr<ID3D12Resource> scene_color,
+						RaytracingContext& rtx_context,
+						wil::com_ptr<ID3D12Resource> camera_buffer,
+						wil::com_ptr<ID3D12Resource> vertex_buffer,
+						wil::com_ptr<ID3D12Resource> index_buffer,
+						wil::com_ptr<ID3D12Resource> material_buffer,
+						wil::com_ptr<ID3D12Resource> per_instance_buffer,
+						uint32_t vertices_count,
+						uint32_t indices_count,
+						uint32_t materials_count,
+						uint32_t primitives_count);
+
 		bool CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer);
-		bool CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer);
+		bool CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer,
+									  wil::com_ptr<ID3D12Resource> scene_color,
+									  RaytracingContext& rtx_context,
+									  wil::com_ptr<ID3D12Resource> camera_buffer,
+									  wil::com_ptr<ID3D12Resource> vertex_buffer,
+									  wil::com_ptr<ID3D12Resource> index_buffer,
+									  wil::com_ptr<ID3D12Resource> material_buffer,
+									  wil::com_ptr<ID3D12Resource> per_instance_buffer,
+									  uint32_t vertices_count,
+									  uint32_t indices_count,
+									  uint32_t materials_count,
+									  uint32_t primitives_count);
 
 		void Execute(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList4> command_list, uint32_t width, uint32_t height, wil::com_ptr<ID3D12Resource> scene_color, wil::com_ptr<ID3D12Resource> camera_buffer);
 
@@ -47,5 +70,7 @@ namespace ysn
 		wil::com_ptr<ID3D12StateObjectProperties> m_rt_state_object_props;
 
 		nv_helpers_dx12::ShaderBindingTableGenerator m_sbt_helper;
+
+		std::vector<D3D12_STATIC_SAMPLER_DESC> m_static_samplers;
 	};
 }

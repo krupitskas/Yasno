@@ -81,8 +81,47 @@ uint4 Pcg4d(uint4 v)
 	return v;
 }
 
+struct VertexLayout
+{
+	float3 position;
+    float3 normal;
+    float4 tangent;
+    float2 texcoord_0;
+};
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH	: register(t0);
+StructuredBuffer<VertexLayout> VertexBuffer	: register(t1);
+StructuredBuffer<uint> IndexBuffer			: register(t2);
+
+// Material Buffer Data
+struct SurfaceShaderParameters
+{
+	float4 base_color_factor;
+	float metallic_factor;
+	float roughness_factor;
+
+	int texture_enable_bitmask; // Encoded which textures are should be used
+
+	int albedo_texture_index;
+	int metallic_roughness_texture_index;
+	int normal_texture_index;
+	int occlusion_texture_index;
+	int emissive_texture_index;
+};
+StructuredBuffer<SurfaceShaderParameters> MaterialBuffer : register(t3);
+
+struct PerInstanceData
+{
+	float4x4 model_matrix;
+	int material_id;
+	int indices_count;
+	int indices_before;
+	int pad;
+};
+StructuredBuffer<PerInstanceData> PerInstanceBuffer : register(t4);
+
+// Texture Sampler
+SamplerState LinearSampler							: register(s0);
 
 [shader("raygeneration")]
 void RayGen()
@@ -114,19 +153,6 @@ void RayGen()
 	ray.TMin = 0;
 	ray.TMax = 100000;
 
-	const int max_bounces = 16;
-
-	for (int i = 0; i < max_bounces; i++)
-	{
-		
-	}
-
-	float3 geometryNormal;
-	float3 shadingNormal;
-
-	//DecodeNormals(payload.encodedNormals, geometryNormal, shadingNormal);
-
-
 	TraceRay(SceneBVH,
 		RAY_FLAG_NONE,
 		0xFF,
@@ -137,5 +163,13 @@ void RayGen()
 		payload
 	);
 
-	gOutput[pixel_xy] = float4(payload.color_distance.rgb, 1.f);
+	SurfaceShaderParameters mat = MaterialBuffer[0];
+
+	Texture2D albedo_texture = ResourceDescriptorHeap[mat.albedo_texture_index];
+
+	float2 uvs = float2(0.0f, 0.0f);
+
+	float3 albedo_color = albedo_texture.SampleLevel(LinearSampler, uvs, 0.0f).rgb;
+
+	gOutput[pixel_xy] = float4(payload.color_distance.rgb * albedo_color.rgb, 1.f);
 }

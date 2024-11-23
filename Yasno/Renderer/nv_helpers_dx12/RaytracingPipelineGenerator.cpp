@@ -120,8 +120,6 @@ namespace nv_helpers_dx12
         m_maxAttributeSizeInBytes = sizeInBytes;
     }
 
-    //--------------------------------------------------------------------------------------------------
-    //
     // Upon hitting a surface, a closest hit shader can issue a new TraceRay call. This parameter
     // indicates the maximum level of recursion. Note that this depth should be kept as low as
     // possible, typically 2, to allow hit shaders to trace shadow rays. Recursive ray tracing
@@ -131,8 +129,6 @@ namespace nv_helpers_dx12
         m_maxRecursionDepth = maxDepth;
     }
 
-    //--------------------------------------------------------------------------------------------------
-    //
     // Compiles the raytracing state object
     ID3D12StateObject* RayTracingPipelineGenerator::Generate()
     {
@@ -289,7 +285,7 @@ namespace nv_helpers_dx12
         rootDesc.NumParameters = 0;
         rootDesc.pParameters = nullptr;
         // A global root signature is the default, hence this flag
-        rootDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+        rootDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
         HRESULT hr = 0;
 

@@ -57,12 +57,14 @@ namespace ysn
 		geometry_id = (instance_id >> 10) & 0x3FFF;
 	}
 
-	// Per instance data for rendering
+	// Per instance data for rendering, this can be split into smaller parts
 	YSN_SHADER_STRUCT RenderInstanceData
 	{
 		DirectX::XMMATRIX model_matrix;
 		int32_t material_id;
-		int32_t pad[3]; 
+		int32_t indices_count;
+		int32_t indices_before; // offset
+		int32_t pad; 
 	};
 
 	struct RenderScene

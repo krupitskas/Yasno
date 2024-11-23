@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\Build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.props" Condition="Exists('..\Build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.props')" />
   <Import Project="..\packages\Microsoft.Direct3D.DXC.1.8.2405.17\build\native\Microsoft.Direct3D.DXC.props" Condition="Exists('..\packages\Microsoft.Direct3D.DXC.1.8.2405.17\build\native\Microsoft.Direct3D.DXC.props')" />
@@ -249,10 +249,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\Docs\Docs.md" />
-    <None Include="..\Docs\Tasks.md" />
-    <None Include="..\Docs\Task_Indirect_Draw.md" />
-    <None Include="..\Docs\Task_Reference_PT.md" />
     <None Include="..\Shaders\CommonStructures.hlsl" />
     <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl" />
     <None Include="..\Shaders\Skybox_PS.hlsl" />

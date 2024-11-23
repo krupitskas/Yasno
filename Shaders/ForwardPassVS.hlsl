@@ -55,7 +55,9 @@ struct PerInstanceData
 {
 	float4x4 model_matrix;
 	int material_id;
-	int pad[3];
+	int indices_count;
+	int indices_before;
+	int pad;
 };
 StructuredBuffer<PerInstanceData> per_instance_data : register(t0);
 

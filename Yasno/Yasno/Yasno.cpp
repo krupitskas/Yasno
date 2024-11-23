@@ -436,6 +436,8 @@ namespace ysn
 				std::vector<RenderInstanceData> per_instance_data_buffer;
 				per_instance_data_buffer.reserve(m_render_scene.primitives_count);
 
+				uint32_t total_indices = 0;
+
 				for (auto& model : m_render_scene.models)
 				{
 					for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
@@ -457,6 +459,10 @@ namespace ysn
 							}
 
 							instance_data.model_matrix = model.transforms[mesh_id].transform;
+							instance_data.indices_count = primitive.index_count;
+							instance_data.indices_before = total_indices;
+
+							total_indices += instance_data.indices_count;
 
 							per_instance_data_buffer.push_back(instance_data);
 						}
@@ -477,10 +483,6 @@ namespace ysn
 				m_render_scene.instance_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 				renderer->GetDevice()->CreateShaderResourceView(m_render_scene.instance_buffer.resource.get(), &srv_desc, m_render_scene.instance_buffer_srv.cpu);
 			}
-
-			{
-			}
-
 		}
 
 		for (auto& model : m_render_scene.models)
@@ -569,7 +571,18 @@ namespace ysn
 		// Setup techniques
 		m_shadow_pass.Initialize(Application::Get().GetRenderer());
 
-		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(), m_scene_color_buffer, m_raytracing_context, m_camera_gpu_buffer))
+		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(),
+			m_scene_color_buffer,
+			m_raytracing_context,
+			m_camera_gpu_buffer,
+			m_render_scene.vertices_buffer.resource,
+			m_render_scene.indices_buffer.resource,
+			m_render_scene.materials_buffer.resource,
+			m_render_scene.instance_buffer.resource,
+			m_render_scene.vertices_count,
+			m_render_scene.indices_count,
+			m_render_scene.materials_count,
+			m_render_scene.primitives_count))
 		{
 			LogFatal << "Can't initialize raytracing pass\n";
 			return false;

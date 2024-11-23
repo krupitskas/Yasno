@@ -155,7 +155,7 @@ namespace nv_helpers_dx12
     //--------------------------------------------------------------------------------------------------
     //
     // Create the root signature from the set of parameters, in the order of the addition calls
-    ID3D12RootSignature* RootSignatureGenerator::Generate(ID3D12Device* device, bool isLocal)
+    ID3D12RootSignature* RootSignatureGenerator::Generate(ID3D12Device* device, bool isLocal, std::vector<D3D12_STATIC_SAMPLER_DESC> samplers)
     {
         // Go through all the parameters, and set the actual addresses of the heap range descriptors based
         // on their indices in the range set array
@@ -166,6 +166,7 @@ namespace nv_helpers_dx12
                 m_parameters[i].DescriptorTable.pDescriptorRanges = m_ranges[m_rangeLocations[i]].data();
             }
         }
+
         // Specify the root signature with its set of parameters
         D3D12_ROOT_SIGNATURE_DESC rootDesc = {};
         rootDesc.NumParameters = static_cast<UINT>(m_parameters.size());
@@ -174,12 +175,43 @@ namespace nv_helpers_dx12
         // and pixel shaders. For raytracing shaders the root signatures are local.
         rootDesc.Flags = isLocal ? D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE : D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
+        D3D12_STATIC_SAMPLER_DESC static_sampler = {};
+        static_sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        static_sampler.MipLODBias = 0.f;
+        static_sampler.MaxAnisotropy = 1;
+        static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+        static_sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+        static_sampler.MinLOD = 0.f;
+        static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+        static_sampler.ShaderRegister = 0;
+        static_sampler.RegisterSpace = 0;
+        static_sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+        rootDesc.NumStaticSamplers = 1;
+        rootDesc.pStaticSamplers = &static_sampler;
+
+        //if(!isLocal)
+        //{
+        //    rootDesc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+        //}
+
+        //if(!samplers.empty())
+        //{
+        //    rootDesc.NumStaticSamplers = samplers.size();
+        //    rootDesc.pStaticSamplers = samplers.data();
+        //}
+
         // Create the root signature from its descriptor
         ID3DBlob* pSigBlob;
         ID3DBlob* pErrorBlob;
         HRESULT hr = D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &pSigBlob, &pErrorBlob);
         if (FAILED(hr))
         {
+            const auto error = static_cast<char*>(pErrorBlob->GetBufferPointer());
+            LogError << "Can't create root signature: " << error << "\n";
             throw std::logic_error("Cannot serialize root signature");
         }
         ID3D12RootSignature* pRootSig;

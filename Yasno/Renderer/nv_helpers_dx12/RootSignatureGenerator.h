@@ -102,7 +102,7 @@ namespace nv_helpers_dx12
         void AddRootParameter(D3D12_ROOT_PARAMETER_TYPE type, UINT shaderRegister = 0, UINT registerSpace = 0, UINT numRootConstants = 1);
 
         /// Create the root signature from the set of parameters, in the order of the addition calls
-        ID3D12RootSignature* Generate(ID3D12Device* device, bool isLocal);
+        ID3D12RootSignature* Generate(ID3D12Device* device, bool isLocal, std::vector<D3D12_STATIC_SAMPLER_DESC> samplers);
 
     private:
         /// Heap range descriptors

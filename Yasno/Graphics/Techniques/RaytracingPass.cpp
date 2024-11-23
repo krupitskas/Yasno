@@ -20,15 +20,17 @@ namespace ysn
 		nv_helpers_dx12::RootSignatureGenerator rsc;
 
 		rsc.AddHeapRangesParameter(
-			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/,
-			D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
-			0 /*heap slot where the UAV is defined*/},
+			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
 			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
-			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // VertexBuffer
-			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // IndexBuffer
-			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 2} });
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
 
-		return rsc.Generate(renderer->GetDevice().get(), true);
+
+
+		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
 	// The hit shader communicates only through the ray payload, and therefore does
@@ -36,7 +38,7 @@ namespace ysn
 	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateHitSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
-		return rsc.Generate(renderer->GetDevice().get(), true);
+		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
 	// The miss shader communicates only through the ray payload, and therefore
@@ -44,18 +46,44 @@ namespace ysn
 	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateMissSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
-		return rsc.Generate(renderer->GetDevice().get(), true);
+		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
-	bool RaytracingPass::Initialize(std::shared_ptr<ysn::DxRenderer> renderer, wil::com_ptr<ID3D12Resource> scene_color, RaytracingContext& rtx_context, wil::com_ptr<ID3D12Resource> camera_buffer)
+	bool RaytracingPass::Initialize(std::shared_ptr<ysn::DxRenderer> renderer,
+									wil::com_ptr<ID3D12Resource> scene_color,
+									RaytracingContext& rtx_context,
+									wil::com_ptr<ID3D12Resource> camera_buffer,
+									wil::com_ptr<ID3D12Resource> vertex_buffer,
+									wil::com_ptr<ID3D12Resource> index_buffer,
+									wil::com_ptr<ID3D12Resource> material_buffer,
+									wil::com_ptr<ID3D12Resource> per_instance_buffer,
+									uint32_t vertices_count,
+									uint32_t indices_count,
+									uint32_t materials_count,
+									uint32_t primitives_count)
 	{
+
+
+		/*m_static_samplers.push_back(static_sampler);*/
+
 		if (!CreateRaytracingPipeline(renderer))
 		{
 			LogFatal << "Can't create raytracing pass pipeline\n";
 			return false;
 		}
 
-		if (!CreateShaderBindingTable(renderer, scene_color, rtx_context, camera_buffer))
+		if (!CreateShaderBindingTable(renderer,
+			scene_color,
+			rtx_context,
+			camera_buffer,
+			vertex_buffer,
+			index_buffer,
+			material_buffer,
+			per_instance_buffer,
+			vertices_count,
+			indices_count,
+			materials_count,
+			primitives_count))
 		{
 			LogFatal << "Can't create raytracing pass shader binding table\n";
 			return false;
@@ -215,7 +243,15 @@ namespace ysn
 	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer,
 												  wil::com_ptr<ID3D12Resource> scene_color,
 												  RaytracingContext& rtx_context,
-												  wil::com_ptr<ID3D12Resource> camera_buffer)
+												  wil::com_ptr<ID3D12Resource> camera_buffer,
+												  wil::com_ptr<ID3D12Resource> vertex_buffer,
+												  wil::com_ptr<ID3D12Resource> index_buffer,
+												  wil::com_ptr<ID3D12Resource> material_buffer,
+												  wil::com_ptr<ID3D12Resource> per_instance_buffer,
+												  uint32_t vertices_count,
+												  uint32_t indices_count,
+												  uint32_t materials_count,
+												  uint32_t primitives_count)
 	{
 		// The SBT helper class collects calls to Add*Program.  If called several
 		// times, the helper must be emptied before re-adding shaders.
@@ -237,13 +273,72 @@ namespace ysn
 		// Second SRV - TLAS
 		rtx_context.CreateTlasSrv(renderer);
 
-		// Third SRV - Camera
+		// Third SRV - Vertex Buffer
+		{
+			// Create SRV
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srv_desc.Buffer.FirstElement = 0;
+			srv_desc.Buffer.NumElements = static_cast<UINT>(vertices_count);
+			srv_desc.Buffer.StructureByteStride = sizeof(Vertex);
+			srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			auto vertices_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			renderer->GetDevice()->CreateShaderResourceView(vertex_buffer.get(), &srv_desc, vertices_buffer_srv.cpu);
+		}
+
+		// Fourth SRV - Index Buffer
+		{
+			// Create SRV
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srv_desc.Buffer.FirstElement = 0;
+			srv_desc.Buffer.NumElements = static_cast<UINT>(indices_count);
+			srv_desc.Buffer.StructureByteStride = sizeof(uint32_t);
+			srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			auto indices_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			renderer->GetDevice()->CreateShaderResourceView(index_buffer.get(), &srv_desc, indices_buffer_srv.cpu);
+		}
+
+		// 5. SRV - Material Buffer
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srv_desc.Buffer.FirstElement = 0;
+			srv_desc.Buffer.NumElements = static_cast<UINT>(materials_count);
+			srv_desc.Buffer.StructureByteStride = sizeof(SurfaceShaderParameters);
+			srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			const auto materials_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			renderer->GetDevice()->CreateShaderResourceView(material_buffer.get(), &srv_desc, materials_buffer_srv.cpu);
+		}
+
+		// 6. SRV - Per Instance Data buffer
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srv_desc.Buffer.FirstElement = 0;
+			srv_desc.Buffer.NumElements = static_cast<UINT>(primitives_count);
+			srv_desc.Buffer.StructureByteStride = sizeof(RenderInstanceData);
+			srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			const auto per_instance_data_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+			renderer->GetDevice()->CreateShaderResourceView(per_instance_buffer.get(), &srv_desc, per_instance_data_buffer_srv.cpu);
+		}
+
+		// 7. SRV - Camera
 		{
 			const auto camera_srv_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
 			cbv_desc.BufferLocation = camera_buffer->GetGPUVirtualAddress();
 			cbv_desc.SizeInBytes = GpuCamera::GetGpuSize();
+
 			renderer->GetDevice()->CreateConstantBufferView(&cbv_desc, camera_srv_handle.cpu);
 		}
 
