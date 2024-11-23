@@ -74,7 +74,7 @@ struct PerInstanceData
 {
 	float4x4 model_matrix;
 	int material_id;
-	int indices_count;
+	int vertices_before;
 	int indices_before;
 	int pad;
 };
@@ -106,7 +106,8 @@ VertexData GetVertexData(uint geometry_id, uint triangle_index, float3 barycentr
 	// Interpolate the vertex attributes
 	//for (uint i = 0; i < 3; i++)
 	//{
-	//	int address = (indices[i] * 12) * 4;
+	//	//int address = (indices[i] * 12) * 4;
+	//	int addess = VertexBuffer[geometry_id].vertices_before;
 	//
 	//	// Load and interpolate position and transform it to world space
 	//	triangle_vertices[i] = mul(ObjectToWorld3x4(), float4(asfloat(VertexBuffer[geometry_id].Load3(address)), 1.0f)).xyz;

@@ -114,7 +114,7 @@ struct PerInstanceData
 {
 	float4x4 model_matrix;
 	int material_id;
-	int indices_count;
+	int vertices_before;
 	int indices_before;
 	int pad;
 };

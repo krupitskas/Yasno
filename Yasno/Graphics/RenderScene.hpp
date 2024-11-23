@@ -62,7 +62,7 @@ namespace ysn
 	{
 		DirectX::XMMATRIX model_matrix;
 		int32_t material_id;
-		int32_t indices_count;
+		int32_t vertices_before;
 		int32_t indices_before; // offset
 		int32_t pad; 
 	};

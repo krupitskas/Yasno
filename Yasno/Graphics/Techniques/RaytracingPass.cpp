@@ -28,8 +28,6 @@ namespace ysn
 			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
 			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
 
-
-
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 

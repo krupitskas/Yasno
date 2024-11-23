@@ -175,6 +175,7 @@ namespace nv_helpers_dx12
         // and pixel shaders. For raytracing shaders the root signatures are local.
         rootDesc.Flags = isLocal ? D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE : D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
+        // Setup single linear sampler to s0
         D3D12_STATIC_SAMPLER_DESC static_sampler = {};
         static_sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
         static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -192,17 +193,6 @@ namespace nv_helpers_dx12
 
         rootDesc.NumStaticSamplers = 1;
         rootDesc.pStaticSamplers = &static_sampler;
-
-        //if(!isLocal)
-        //{
-        //    rootDesc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
-        //}
-
-        //if(!samplers.empty())
-        //{
-        //    rootDesc.NumStaticSamplers = samplers.size();
-        //    rootDesc.pStaticSamplers = samplers.data();
-        //}
 
         // Create the root signature from its descriptor
         ID3DBlob* pSigBlob;

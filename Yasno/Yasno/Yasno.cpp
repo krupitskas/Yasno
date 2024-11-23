@@ -437,6 +437,7 @@ namespace ysn
 				per_instance_data_buffer.reserve(m_render_scene.primitives_count);
 
 				uint32_t total_indices = 0;
+				uint32_t total_vertices = 0;
 
 				for (auto& model : m_render_scene.models)
 				{
@@ -459,10 +460,11 @@ namespace ysn
 							}
 
 							instance_data.model_matrix = model.transforms[mesh_id].transform;
-							instance_data.indices_count = primitive.index_count;
+							instance_data.vertices_before = total_vertices;
 							instance_data.indices_before = total_indices;
 
-							total_indices += instance_data.indices_count;
+							total_indices += primitive.index_count;
+							total_vertices += primitive.vertex_count;
 
 							per_instance_data_buffer.push_back(instance_data);
 						}
