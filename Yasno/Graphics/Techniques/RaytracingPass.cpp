@@ -13,6 +13,14 @@
 
 namespace ysn
 {
+	struct HitInfo
+	{
+		DirectX::XMFLOAT4 encoded_normals; // Octahedron encoded
+		DirectX::XMFLOAT3 hit_position;
+		uint32_t material_id;
+		DirectX::XMFLOAT2 uvs;
+	};
+
 	// The ray generation shader needs to access 2 resources: the raytracing output
 	// and the top-level acceleration structure
 	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateRayGenSignature(std::shared_ptr<ysn::DxRenderer> renderer)
@@ -36,6 +44,16 @@ namespace ysn
 	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateHitSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
+
+		rsc.AddHeapRangesParameter(
+			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
+
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
@@ -44,6 +62,16 @@ namespace ysn
 	wil::com_ptr<ID3D12RootSignature> RaytracingPass::CreateMissSignature(std::shared_ptr<ysn::DxRenderer> renderer)
 	{
 		nv_helpers_dx12::RootSignatureGenerator rsc;
+
+		rsc.AddHeapRangesParameter(
+			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
+
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
@@ -190,7 +218,7 @@ namespace ysn
 		// exchanged between shaders, such as the HitInfo structure in the HLSL code.
 		// It is important to keep this value as low as possible as a too high value
 		// would result in unnecessary memory consumption and cache trashing.
-		pipeline.SetMaxPayloadSize(4 * sizeof(float)); // RGB + distance
+		pipeline.SetMaxPayloadSize(sizeof(HitInfo));
 
 		// Upon hitting a surface, DXR can provide several attributes to the hit. In
 		// our sample we just use the barycentric coordinates defined by the weights
@@ -258,7 +286,7 @@ namespace ysn
 		// The pointer to the beginning of the heap is the only parameter required by shaders without root parameters
 		//const auto srvUavHeapHandle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
-		// First SRV again scene
+		// 1. SRV again scene
 		const auto scene_color_uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
@@ -268,10 +296,10 @@ namespace ysn
 			renderer->GetDevice()->CreateUnorderedAccessView(scene_color.get(), nullptr, &uavDesc, scene_color_uav_handle.cpu);
 		}
 
-		// Second SRV - TLAS
+		// 2. SRV - TLAS
 		rtx_context.CreateTlasSrv(renderer);
 
-		// Third SRV - Vertex Buffer
+		// 3. SRV - Vertex Buffer
 		{
 			// Create SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -286,7 +314,7 @@ namespace ysn
 			renderer->GetDevice()->CreateShaderResourceView(vertex_buffer.get(), &srv_desc, vertices_buffer_srv.cpu);
 		}
 
-		// Fourth SRV - Index Buffer
+		// 4. SRV - Index Buffer
 		{
 			// Create SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -352,10 +380,10 @@ namespace ysn
 
 		// The miss and hit shaders do not access any external resources: instead they
 		// communicate their results through the ray payload
-		m_sbt_helper.AddMissProgram(L"Miss", {});
+		m_sbt_helper.AddMissProgram(L"Miss", { heap_pointer });
 
 		// Adding the triangle hit shader
-		m_sbt_helper.AddHitGroup(L"HitGroup", {});
+		m_sbt_helper.AddHitGroup(L"HitGroup", { heap_pointer });
 
 		// Compute the size of the SBT given the number of shaders and their
 		// parameters

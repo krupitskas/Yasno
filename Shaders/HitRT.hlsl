@@ -9,7 +9,17 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo
 {
-	float4 color_distance;
+	float4 encoded_normals; // Octahedron encoded
+
+	float3 hit_position;
+	uint material_id;
+
+	float2 uvs;
+
+	bool has_hit() 
+	{
+		return material_id != -1;
+	}
 };
 
 // Attributes output by the raytracing when hitting a surface,
@@ -19,15 +29,35 @@ struct Attributes
 	float2 bary;
 };
 
-inline uint PackInstanceID(uint material_id, uint geometry_id)
+// octahedron encoding of normals
+float2 octWrap(float2 v)
 {
-	return ((geometry_id & 0x3FFF) << 10) | (material_id & 0x3FF);
+	return float2((1.0f - abs(v.y)) * (v.x >= 0.0f ? 1.0f : -1.0f), (1.0f - abs(v.x)) * (v.y >= 0.0f ? 1.0f : -1.0f));
 }
 
-inline void UnpackInstanceID(uint instanceID, out uint material_id, out uint geometry_id) 
+float2 encodeNormalOctahedron(float3 n)
 {
-	material_id = instanceID & 0x3FF;
-	geometry_id = (instanceID >> 10) & 0x3FFF;
+	float2 p = float2(n.x, n.y) * (1.0f / (abs(n.x) + abs(n.y) + abs(n.z)));
+	p = (n.z < 0.0f) ? octWrap(p) : p;
+	return p;
+}
+
+float3 decodeNormalOctahedron(float2 p)
+{
+	float3 n = float3(p.x, p.y, 1.0f - abs(p.x) - abs(p.y));
+	float2 tmp = (n.z < 0.0f) ? octWrap(float2(n.x, n.y)) : float2(n.x, n.y);
+	n.x = tmp.x;
+	n.y = tmp.y;
+	return normalize(n);
+}
+
+float4 EncodeNormals(float3 geometryNormal, float3 shadingNormal) {
+	return float4(encodeNormalOctahedron(geometryNormal), encodeNormalOctahedron(shadingNormal));
+}
+
+void DecodeNormals(float4 encodedNormals, out float3 geometryNormal, out float3 shadingNormal) {
+	geometryNormal = decodeNormalOctahedron(encodedNormals.xy);
+	shadingNormal = decodeNormalOctahedron(encodedNormals.zw);
 }
 
 // Vertex data for usage in Hit shader
@@ -84,10 +114,9 @@ uint3 GetIndices(uint geometry_id, uint triangle_index)
 {
 	PerInstanceData data = PerInstanceBuffer[geometry_id];
 
-	uint base_index = (triangle_index * 3);
-	int address = data.indices_before + base_index;
+	int address = data.indices_before + triangle_index * 3;
 
-	uint i0 = IndexBuffer[address];
+	uint i0 = IndexBuffer[address + 0];
 	uint i1 = IndexBuffer[address + 1];
 	uint i2 = IndexBuffer[address + 2];
 
@@ -101,42 +130,38 @@ VertexData GetVertexData(uint geometry_id, uint triangle_index, float3 barycentr
 
 	VertexData v = (VertexData)0;
 
+	VertexLayout input_vertex[3];
+
 	float3 triangle_vertices[3];
 
+	int address = PerInstanceBuffer[geometry_id].vertices_before;
+
 	// Interpolate the vertex attributes
-	//for (uint i = 0; i < 3; i++)
-	//{
-	//	//int address = (indices[i] * 12) * 4;
-	//	int addess = VertexBuffer[geometry_id].vertices_before;
-	//
-	//	// Load and interpolate position and transform it to world space
-	//	triangle_vertices[i] = mul(ObjectToWorld3x4(), float4(asfloat(VertexBuffer[geometry_id].Load3(address)), 1.0f)).xyz;
-	//	v.position += triangle_vertices[i] * barycentrics[i];
-	//	address += 12;
-	//
-	//	// Load and interpolate normal
-	//	v.normal += asfloat(VertexBuffer[geometry_id].Load3(address)) * barycentrics[i];
-	//	address += 12;
-	//
-	//	// Load and interpolate tangent
-	//	address += 12;
-	//
-	//	// Load bitangent direction
-	//	address += 4;
-	//
-	//	// Load and interpolate texture coordinates
-	//	v.uv += asfloat(vertices[geometry_id].Load2(address)) * barycentrics[i];
-	//}
+	for (uint i = 0; i < 3; i++)
+	{
+		input_vertex[i] = VertexBuffer[address + indices[i]];
 
-	//// Transform normal from local to world space
-	//v.normal = normalize(mul(ObjectToWorld3x4(), float4(v.normal, 0.0f)).xyz);
+		// Load and interpolate position and transform it to world space
+		triangle_vertices[i] = mul(ObjectToWorld3x4(), float4(input_vertex[i].position.xyz, 1.0f)).xyz;
 
-	//// Calculate geometry normal from triangle vertices positions
-	//float3 edge20 = triangle_vertices[2] - triangle_vertices[0];
-	//float3 edge21 = triangle_vertices[2] - triangle_vertices[1];
-	//float3 edge10 = triangle_vertices[1] - triangle_vertices[0];
+		v.position += triangle_vertices[i] * barycentrics[i];
 
-	//v.geometryNormal = normalize(cross(edge20, edge10));
+		// Load and interpolate normal
+		v.shading_normal += input_vertex[i].normal * barycentrics[i];
+
+		// Load and interpolate texture coordinates
+		v.uv += input_vertex[i].texcoord_0 * barycentrics[i];
+	}
+
+	// Transform normal from local to world space
+	v.shading_normal = normalize(mul(ObjectToWorld3x4(), float4(v.shading_normal, 0.0f)).xyz);
+
+	// Calculate geometry normal from triangle vertices positions
+	float3 edge20 = triangle_vertices[2] - triangle_vertices[0];
+	float3 edge21 = triangle_vertices[2] - triangle_vertices[1];
+	float3 edge10 = triangle_vertices[1] - triangle_vertices[0];
+
+	v.geometry_normal = normalize(cross(edge20, edge10));
 
 	return v;
 }
@@ -144,21 +169,12 @@ VertexData GetVertexData(uint geometry_id, uint triangle_index, float3 barycentr
 [shader("closesthit")]
 void ClosestHit(inout HitInfo payload, Attributes attrib)
 {
-	uint primitive_index = PrimitiveIndex();
-	
 	float3 barycentrics = float3(1.f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
 
-	uint material_id;
-	uint geometry_id;
-	UnpackInstanceID(primitive_index, material_id, geometry_id);
-	
-	VertexData vertex_data = GetVertexData(geometry_id, primitive_index, barycentrics);
+	VertexData vertex = GetVertexData(InstanceIndex(), PrimitiveIndex(), barycentrics);
 
-	const float3 A = float3(1, 0, 0);
-	const float3 B = float3(0, 1, 0);
-	const float3 C = float3(0, 0, 1);
-
-	float3 hit_color = A * barycentrics.x + B * barycentrics.y + C * barycentrics.z;
-
-	payload.color_distance = float4(hit_color, RayTCurrent());
+	payload.encoded_normals = EncodeNormals(vertex.geometry_normal, vertex.shading_normal);
+	payload.hit_position = vertex.position;
+	payload.material_id = PerInstanceBuffer[InstanceIndex()].material_id;
+	payload.uvs = vertex.uv;
 }

@@ -183,5 +183,6 @@ float4 main(RS2PS input) : SV_Target
 
 	float3 f = C_ambient + C_diffuse * in_shadow + emissive.xyz; //  + cubeMapSample.xyz + Specular
 
-	return float4(f.xyz, 1.0);
+	return float4(base_color.rgb, 1);
+	//return float4(f.xyz, 1.0);
 }

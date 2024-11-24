@@ -2,9 +2,17 @@
 
 struct HitInfo
 {
-	float4 color_distance;
+	float4 encoded_normals; // Octahedron encoded
 
-	bool has_hit;
+	float3 hit_position;
+	uint material_id;
+
+	float2 uvs;
+
+	bool has_hit() 
+	{
+		return material_id != -1;
+	}
 };
 
 // Attributes output by the raytracing when hitting a surface,
@@ -81,6 +89,38 @@ uint4 Pcg4d(uint4 v)
 	return v;
 }
 
+
+// octahedron encoding of normals
+float2 octWrap(float2 v)
+{
+	return float2((1.0f - abs(v.y)) * (v.x >= 0.0f ? 1.0f : -1.0f), (1.0f - abs(v.x)) * (v.y >= 0.0f ? 1.0f : -1.0f));
+}
+
+float2 encodeNormalOctahedron(float3 n)
+{
+	float2 p = float2(n.x, n.y) * (1.0f / (abs(n.x) + abs(n.y) + abs(n.z)));
+	p = (n.z < 0.0f) ? octWrap(p) : p;
+	return p;
+}
+
+float3 decodeNormalOctahedron(float2 p)
+{
+	float3 n = float3(p.x, p.y, 1.0f - abs(p.x) - abs(p.y));
+	float2 tmp = (n.z < 0.0f) ? octWrap(float2(n.x, n.y)) : float2(n.x, n.y);
+	n.x = tmp.x;
+	n.y = tmp.y;
+	return normalize(n);
+}
+
+float4 EncodeNormals(float3 geometryNormal, float3 shadingNormal) {
+	return float4(encodeNormalOctahedron(geometryNormal), encodeNormalOctahedron(shadingNormal));
+}
+
+void DecodeNormals(float4 encodedNormals, out float3 geometryNormal, out float3 shadingNormal) {
+	geometryNormal = decodeNormalOctahedron(encodedNormals.xy);
+	shadingNormal = decodeNormalOctahedron(encodedNormals.zw);
+}
+
 struct VertexLayout
 {
 	float3 position;
@@ -128,7 +168,6 @@ void RayGen()
 {
 	// Initialize the ray payload
 	HitInfo payload;
-	payload.color_distance = float4(0, 0, 0, 0);
 
 	// Get the location within the dispatched 2D grid of work items
 	// (often maps to pixels, so this could represent a pixel coordinate).
@@ -163,13 +202,23 @@ void RayGen()
 		payload
 	);
 
-	SurfaceShaderParameters mat = MaterialBuffer[0];
+	float2 uvs = float2(0.0f, 0.0f);
+
+	if(!payload.has_hit())
+	{
+		gOutput[pixel_xy] = float4(255, 0, 0, 1.f);
+		return;
+	}
+
+	float3 geometry_normal;
+	float3 shading_normal;
+	DecodeNormals(payload.encoded_normals, geometry_normal, shading_normal);
+
+	SurfaceShaderParameters mat = MaterialBuffer[payload.material_id];
 
 	Texture2D albedo_texture = ResourceDescriptorHeap[mat.albedo_texture_index];
 
-	float2 uvs = float2(0.0f, 0.0f);
+	float3 albedo_color = albedo_texture.SampleLevel(LinearSampler, payload.uvs, 0.0f).rgb;
 
-	float3 albedo_color = albedo_texture.SampleLevel(LinearSampler, uvs, 0.0f).rgb;
-
-	gOutput[pixel_xy] = float4(payload.color_distance.rgb * albedo_color.rgb, 1.f);
+	gOutput[pixel_xy] = float4(albedo_color, 1.f);
 }

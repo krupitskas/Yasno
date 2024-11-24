@@ -167,8 +167,6 @@ void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Gra
 
 				BLASVertexInput blas_input;
 
-				//const Attribute& attribute = primitive.attributes.at("POSITION"); // TODO(task):
-
 				blas_input.vertex_count = primitive.vertex_count;
 				blas_input.index_count = primitive.index_count;
 				blas_input.vertex_buffer_view = primitive.vertex_buffer_view;
@@ -182,7 +180,7 @@ void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<ID3D12Gra
 				TlasInput tlas_input;
 				tlas_input.blas = bottomLevelBuffers.result;
 				tlas_input.transform = transform.transform;
-				tlas_input.instance_id = PackInstanceID(primitive.material_id, primitive.index);
+				tlas_input.instance_id = primitive.index;
 
 				instances.emplace_back(tlas_input);
 

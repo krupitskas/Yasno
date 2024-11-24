@@ -45,18 +45,6 @@ namespace ysn
 		std::vector<D3D12_SAMPLER_DESC> sampler_descs;
 	};
 
-	// TODO: Move to some shared place between C++ and HLSL
-	inline uint32_t PackInstanceID(uint32_t material_id, uint32_t geometry_id)
-	{
-		return ((geometry_id & 0x3FFF) << 10) | (material_id & 0x3FF);
-	}
-
-	inline void UnpackInstanceID(uint32_t instance_id, uint32_t& material_id, uint32_t& geometry_id)
-	{
-		material_id = instance_id & 0x3FF;
-		geometry_id = (instance_id >> 10) & 0x3FFF;
-	}
-
 	// Per instance data for rendering, this can be split into smaller parts
 	YSN_SHADER_STRUCT RenderInstanceData
 	{
