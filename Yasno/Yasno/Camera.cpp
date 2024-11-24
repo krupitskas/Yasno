@@ -48,6 +48,8 @@ namespace ysn
 		m_ProjectionMatrix = XMMatrixPerspectiveFovRH(XMConvertToRadians(fov), m_AspectRatio, m_NearPlane, m_FarPlane);
 
 		XMStoreFloat3(&m_RightVector, RightVector);
+
+		m_is_moved = false;
 	}
 
 	void Camera::SetAspectRatio(const float AspectRatio)
@@ -63,6 +65,8 @@ namespace ysn
 	void Camera::SetPosition(const XMFLOAT3 Position)
 	{
 		m_Position = Position;
+
+		m_is_moved = true;
 	}
 
 	void Camera::Move(const XMFLOAT3 Position)
@@ -70,6 +74,8 @@ namespace ysn
 		m_Position.x += Position.x;
 		m_Position.y += Position.y;
 		m_Position.z += Position.z;
+
+		m_is_moved = true;
 	}
 
 	XMFLOAT3 Camera::GetForwardVector() const
@@ -90,10 +96,19 @@ namespace ysn
 	void Camera::SetYaw(const float Yaw)
 	{
 		m_Yaw = Yaw;
+
+		m_is_moved = true;
 	}
 
 	void Camera::SetPitch(const float Pitch)
 	{
 		m_Pitch = Pitch;
+
+		m_is_moved = true;
+	}
+
+	bool Camera::IsMoved()
+	{
+		return m_is_moved;
 	}
 } // namespace ysn

@@ -208,6 +208,10 @@ namespace ysn
 		XMStoreFloat4x4(&camera_data->projection_inverse, XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix()));
 
 		camera_data->position = m_render_scene.camera->GetPosition();
+		camera_data->frame_number = m_frame_number;
+		camera_data->frames_accumulated = m_rtx_frames_accumulated;
+		camera_data->reset_accumulation = m_reset_rtx_accumulation ? 1 : 0;
+		camera_data->accumulation_enabled = m_is_rtx_accumulation_enabled ? 1 : 0;
 
 		m_camera_gpu_buffer->Unmap(0, nullptr);
 	}
@@ -575,6 +579,7 @@ namespace ysn
 
 		if (!m_ray_tracing_pass.Initialize(Application::Get().GetRenderer(),
 			m_scene_color_buffer,
+			m_scene_color_buffer_1,
 			m_raytracing_context,
 			m_camera_gpu_buffer,
 			m_render_scene.vertices_buffer.resource,
@@ -684,8 +689,18 @@ namespace ysn
 				&optimized_clear_valuie,
 				IID_PPV_ARGS(&m_scene_color_buffer)));
 
+
+			ThrowIfFailed(device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc,
+				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+				&optimized_clear_valuie,
+				IID_PPV_ARGS(&m_scene_color_buffer_1)));
+
 		#ifndef YSN_RELEASE
-			m_scene_color_buffer->SetName(L"Scene Color");
+			m_scene_color_buffer->SetName(L"Scene Color 0");
+			m_scene_color_buffer_1->SetName(L"Scene Color 1");
 		#endif
 
 			D3D12_RENDER_TARGET_VIEW_DESC rtv = {};
@@ -704,6 +719,16 @@ namespace ysn
 
 				device->CreateUnorderedAccessView(m_scene_color_buffer.get(), nullptr, &uavDesc, m_hdr_uav_descriptor_handle.cpu);
 			}
+
+			//{
+			//	auto scene_color_buffer_1_uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			//	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+			//	uavDesc.Format = Application::Get().GetRenderer()->GetHdrFormat();
+			//	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+			//	device->CreateUnorderedAccessView(m_scene_color_buffer_1.get(), nullptr, &uavDesc, scene_color_buffer_1_uav_handle.cpu);
+			//}
 		}
 	}
 
@@ -769,21 +794,20 @@ namespace ysn
 
 	void Yasno::OnUpdate(UpdateEventArgs& e)
 	{
-		static uint64_t frameCount = 0;
 		static double totalTime = 0.0;
 
 		Game::OnUpdate(e);
 
 		totalTime += e.ElapsedTime;
-		frameCount++;
+		m_frame_number += 1;
 
-		if (totalTime > 1.0)
-		{
-			engine_stats::fps = uint32_t(frameCount / totalTime);
+		//if (totalTime > 1.0)
+		//{
+		//	engine_stats::fps = uint32_t(m_frame_number / totalTime);
 
-			frameCount = 0;
-			totalTime = 0.0;
-		}
+		//	frameCount = 0;
+		//	totalTime = 0.0;
+		//}
 
 		auto kb = game_input.keyboard->GetState();
 
@@ -838,6 +862,11 @@ namespace ysn
 			{
 				m_is_raster_pressed = false;
 			}
+		}
+
+		if(m_render_scene.camera_controler.IsMoved())
+		{
+			m_reset_rtx_accumulation = true;
 		}
 
 		m_render_scene.camera->SetAspectRatio(GetClientWidth() / static_cast<float>(GetClientHeight()));
@@ -938,6 +967,7 @@ namespace ysn
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 215, 0, 255));
 					ImGui::Text("Pathtracing");
+					ImGui::Checkbox("Temporal Accumulation", &m_is_rtx_accumulation_enabled);
 					ImGui::PopStyleColor();
 				}
 			}
@@ -1044,6 +1074,16 @@ namespace ysn
 		}
 		else
 		{
+			if(m_is_rtx_accumulation_enabled || !m_reset_rtx_accumulation)
+			{
+				m_rtx_frames_accumulated += 1;
+			}
+			else
+			{
+				m_rtx_frames_accumulated = 0;
+				m_reset_rtx_accumulation = true;
+			}
+
 			wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("RTX Pass");
 
 			// Clear the render targets.
@@ -1051,8 +1091,8 @@ namespace ysn
 				FLOAT clear_color[] = { 255.0f / 255.0f, 58.f / 255.0f, 74.0f / 255.0f, 1.0f };
 
 				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
 				command_list->ResourceBarrier(1, &barrier);
+
 				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
 				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
@@ -1158,6 +1198,7 @@ namespace ysn
 		}
 
 		m_is_first_frame = false;
+		m_reset_rtx_accumulation = false;
 	}
 
 }

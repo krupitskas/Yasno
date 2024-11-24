@@ -78,7 +78,7 @@ namespace ysn
 		wil::com_ptr<ID3D12Resource> m_back_buffer;
 		// Two HDR buffers for history
 		wil::com_ptr<ID3D12Resource> m_scene_color_buffer;
-		//wil::com_ptr<ID3D12Resource> m_scene_color_buffer_1;
+		wil::com_ptr<ID3D12Resource> m_scene_color_buffer_1;
 
 		DescriptorHandle m_hdr_uav_descriptor_handle;
 		DescriptorHandle m_backbuffer_uav_descriptor_handle;
@@ -102,6 +102,8 @@ namespace ysn
 
 		bool m_is_content_loaded = false;
 		bool m_is_first_frame = true;
+		bool m_reset_rtx_accumulation = true;
+		bool m_is_rtx_accumulation_enabled = false;
 
 		// Techniques
 		ForwardPass m_forward_pass;

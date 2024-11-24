@@ -29,12 +29,13 @@ namespace ysn
 
 		rsc.AddHeapRangesParameter(
 			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
-			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
-			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
-			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
-			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
-			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
-			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
+			{1 /*u1*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 1 /*heap slot where the UAV is defined*/},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 7} });
 
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
@@ -47,12 +48,14 @@ namespace ysn
 
 		rsc.AddHeapRangesParameter(
 			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
-			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
-			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
-			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
-			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
-			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
-			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
+			{1 /*u1*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 1 /*heap slot where the UAV is defined*/},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 7} });
+
 
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
@@ -65,18 +68,20 @@ namespace ysn
 
 		rsc.AddHeapRangesParameter(
 			{ {0 /*u0*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 0 /*heap slot where the UAV is defined*/},
-			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1}, // TLAS
-			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // VertexBuffer
-			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // IndexBuffer
-			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // MaterialBuffer
-			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // PerInstanceBuffer
-			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 6} });
+			{1 /*u1*/, 1 /*1 descriptor */, 0 /*use the implicit register space 0*/, D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/, 1 /*heap slot where the UAV is defined*/},
+			{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}, // TLAS
+			{1 /*t1*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3}, // VertexBuffer
+			{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4}, // IndexBuffer
+			{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5}, // MaterialBuffer
+			{4 /*t4*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6}, // PerInstanceBuffer
+			{0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera parameters*/, 7} });
 
 		return rsc.Generate(renderer->GetDevice().get(), true, m_static_samplers);
 	}
 
 	bool RaytracingPass::Initialize(std::shared_ptr<ysn::DxRenderer> renderer,
 									wil::com_ptr<ID3D12Resource> scene_color,
+									wil::com_ptr<ID3D12Resource> accumulation_buffer_color,
 									RaytracingContext& rtx_context,
 									wil::com_ptr<ID3D12Resource> camera_buffer,
 									wil::com_ptr<ID3D12Resource> vertex_buffer,
@@ -100,6 +105,7 @@ namespace ysn
 
 		if (!CreateShaderBindingTable(renderer,
 			scene_color,
+			accumulation_buffer_color,
 			rtx_context,
 			camera_buffer,
 			vertex_buffer,
@@ -268,6 +274,7 @@ namespace ysn
 
 	bool RaytracingPass::CreateShaderBindingTable(std::shared_ptr<ysn::DxRenderer> renderer,
 												  wil::com_ptr<ID3D12Resource> scene_color,
+												  wil::com_ptr<ID3D12Resource> accumulation_buffer_color,
 												  RaytracingContext& rtx_context,
 												  wil::com_ptr<ID3D12Resource> camera_buffer,
 												  wil::com_ptr<ID3D12Resource> vertex_buffer,
@@ -286,7 +293,7 @@ namespace ysn
 		// The pointer to the beginning of the heap is the only parameter required by shaders without root parameters
 		//const auto srvUavHeapHandle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
-		// 1. SRV again scene
+		// 1. UAV again scene color
 		const auto scene_color_uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
@@ -296,10 +303,21 @@ namespace ysn
 			renderer->GetDevice()->CreateUnorderedAccessView(scene_color.get(), nullptr, &uavDesc, scene_color_uav_handle.cpu);
 		}
 
-		// 2. SRV - TLAS
+		// 2. UAV accumulation scene color
+		{
+			const auto accumulation_color_uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+			uavDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: reuse hdr_format
+			uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+			renderer->GetDevice()->CreateUnorderedAccessView(accumulation_buffer_color.get(), nullptr, &uavDesc, accumulation_color_uav_handle.cpu);
+		}
+
+		// 3. SRV - TLAS
 		rtx_context.CreateTlasSrv(renderer);
 
-		// 3. SRV - Vertex Buffer
+		// 4. SRV - Vertex Buffer
 		{
 			// Create SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -314,7 +332,7 @@ namespace ysn
 			renderer->GetDevice()->CreateShaderResourceView(vertex_buffer.get(), &srv_desc, vertices_buffer_srv.cpu);
 		}
 
-		// 4. SRV - Index Buffer
+		// 5. SRV - Index Buffer
 		{
 			// Create SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -329,7 +347,7 @@ namespace ysn
 			renderer->GetDevice()->CreateShaderResourceView(index_buffer.get(), &srv_desc, indices_buffer_srv.cpu);
 		}
 
-		// 5. SRV - Material Buffer
+		// 6. SRV - Material Buffer
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -343,7 +361,7 @@ namespace ysn
 			renderer->GetDevice()->CreateShaderResourceView(material_buffer.get(), &srv_desc, materials_buffer_srv.cpu);
 		}
 
-		// 6. SRV - Per Instance Data buffer
+		// 7. SRV - Per Instance Data buffer
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -357,7 +375,7 @@ namespace ysn
 			renderer->GetDevice()->CreateShaderResourceView(per_instance_buffer.get(), &srv_desc, per_instance_data_buffer_srv.cpu);
 		}
 
-		// 7. SRV - Camera
+		// 8. SRV - Camera
 		{
 			const auto camera_srv_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 

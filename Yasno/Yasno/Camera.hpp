@@ -12,7 +12,11 @@ namespace ysn
         DirectX::XMFLOAT4X4 view_inverse;
         DirectX::XMFLOAT4X4 projection_inverse;
         DirectX::XMFLOAT3	position;
-        uint32_t			pad;
+        uint32_t			frame_number;
+        uint32_t            frames_accumulated;
+        uint32_t            reset_accumulation;
+        uint32_t            accumulation_enabled;
+        uint32_t            pad;
 
         static uint32_t GetGpuSize();
     };
@@ -42,6 +46,9 @@ namespace ysn
         void SetYaw(float Yaw);
         void SetPitch(float Pitch);
 
+        // NOTE: Turns falls after Update() called!
+        bool IsMoved();
+
         float fov = 45.0f;
     private:
         float m_AspectRatio = 1.0f;
@@ -60,5 +67,7 @@ namespace ysn
         DirectX::XMMATRIX m_ProjectionMatrix;
 
         float m_MouseSensitivity = 1.0f;
+
+        bool m_is_moved = false;
     };
 }

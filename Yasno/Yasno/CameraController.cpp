@@ -17,6 +17,11 @@ namespace
 
 namespace ysn
 {
+	bool CameraController::IsMoved()
+	{
+		return pCamera->IsMoved();
+	}
+
 	void CameraController::Enable()
 	{
 		m_IsActive = true;

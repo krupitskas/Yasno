@@ -11,6 +11,8 @@ namespace ysn
 	public:
 		std::shared_ptr<Camera> pCamera;
 
+		bool IsMoved();
+
 		void Enable();
 		void Disable();
 

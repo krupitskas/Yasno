@@ -55,6 +55,8 @@ namespace ysn
 		std::wstring m_Name;
 		int m_Width;
 		int m_Height;
+		int m_frame_number = 0;
+		int m_rtx_frames_accumulated = 0;
 		bool m_vsync;
 	};
 
