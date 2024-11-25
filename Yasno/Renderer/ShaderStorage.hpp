@@ -48,7 +48,8 @@ namespace ysn
 		std::map<std::wstring, std::time_t> m_shaders_modified_time;
 	#endif
 
-		std::wstring m_pdb_path = L"ShaderPDBs";
+		std::wstring m_debug_data_path = L"ShadersDebugData";
+		std::wstring m_binary_data_path = L"ShadersBinaryData";
 
 		bool m_treat_warnings_as_errors = false;
 

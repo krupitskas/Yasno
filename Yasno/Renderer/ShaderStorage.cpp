@@ -23,6 +23,7 @@
 
 namespace ysn
 {
+
 	bool ShaderStorage::Initialize()
 	{
 		if (auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.addressof())); result != S_OK)
@@ -123,7 +124,7 @@ namespace ysn
 		DxcBuffer source_buffer;
 		source_buffer.Ptr = dxc_text_blob->GetBufferPointer();
 		source_buffer.Size = dxc_text_blob->GetBufferSize();
-		source_buffer.Encoding = 0;
+		source_buffer.Encoding = DXC_CP_UTF8;
 
 		IDxcResult* dxc_op_result; // TODO: Make this wil_comptr and result would be corrupted -> investigate
 
@@ -193,7 +194,7 @@ namespace ysn
 			std::wstring pdb_path;
 			pdb_path.append(executable_dir.wstring());
 			pdb_path.append(L"\\");
-			pdb_path.append(m_pdb_path);
+			pdb_path.append(m_debug_data_path);
 
 			if (CreateDirectoryIfNotExists(pdb_path))
 			{
@@ -217,6 +218,21 @@ namespace ysn
 			{
 				LogError << "Can't create pdb storage directory \n";
 			}
+		}
+
+		// Read shader hash
+		wil::com_ptr<IDxcBlob> hash;
+		if (auto result = dxc_op_result->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(hash.addressof()), nullptr); FAILED(result))
+		{
+			LogFatal << "Can't get shader blob DXC_OUT_SHADER_HASH\n";
+			return std::nullopt;
+		}
+
+		DxcShaderHash* hash_buffer = (DxcShaderHash*)hash->GetBufferPointer();
+		std::vector<uint8_t> hash_vec;
+		for (int i = 0; i < _countof(hash_buffer->HashDigest); i++)
+		{
+			hash_vec.push_back(hash_buffer->HashDigest[i]);
 		}
 
 	#ifndef YSN_RELEASE
