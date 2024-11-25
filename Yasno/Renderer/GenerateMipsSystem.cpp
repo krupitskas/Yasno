@@ -35,7 +35,7 @@ namespace ysn
 		generate_mips_shader_parameters.shader_type = ShaderType::Compute;
 		generate_mips_shader_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/GenerateMips.hlsl");
 
-		const auto generate_mips_shader = renderer.GetShaderStorage()->CompileShader(&generate_mips_shader_parameters);
+		const auto generate_mips_shader = renderer.GetShaderStorage()->CompileShader(generate_mips_shader_parameters);
 
 		if (!generate_mips_shader.has_value())
 		{

@@ -15,8 +15,6 @@
 
 namespace ysn
 {
-	static constexpr char SHADER_PROFILE_VERSION[] = "6_6";
-
 	enum class ShaderType
 	{
 		None,
@@ -32,13 +30,13 @@ namespace ysn
 		std::wstring entry_point		= L"main";
 		bool disable_optimizations		= false;
 		ShaderType shader_type			= ShaderType::None;
-		std::vector<DxcDefine>	defines;
+		std::vector<std::wstring>		defines;
 	};
 
 	struct ShaderStorage
 	{
 		bool Initialize();
-		std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters* parameters);
+		std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters& parameters);
 
 	#ifndef YSN_RELEASE
 		void VerifyAnyShaderChanged();
@@ -49,6 +47,13 @@ namespace ysn
 		std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
 		std::map<std::wstring, std::time_t> m_shaders_modified_time;
 	#endif
+
+		std::wstring m_pdb_path = L"ShaderPDBs";
+
+		bool m_treat_warnings_as_errors = false;
+
+		wil::com_ptr<IDxcUtils> m_dxc_utils;
+		wil::com_ptr<IDxcCompiler3> m_dxc_compiler;
 
 		//wil::com_ptr<IDxcBlob> m_include_blob;
 	};

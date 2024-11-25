@@ -159,7 +159,7 @@ namespace ysn
 			vs_parameters.shader_type = ysn::ShaderType::Vertex;
 			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassVS.hlsl");
 
-			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(&vs_parameters);
+			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
 			if (!vs_shader_result.has_value())
 			{
@@ -176,7 +176,7 @@ namespace ysn
 			ps_parameters.shader_type = ysn::ShaderType::Pixel;
 			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/ForwardPassPS.hlsl");
 
-			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(&ps_parameters);
+			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
 			if (!ps_shader_result.has_value())
 			{

@@ -17,108 +17,34 @@
 #endif
 
 #include <System/String.hpp>
+#include <System/Filesystem.hpp>
 
 // https://simoncoenen.com/blog/programming/graphics/DxcCompiling
 
 namespace ysn
 {
-	// IDxcBlob* CompileShaderLibrary(LPCWSTR fileName)
-	//{
-	//	static IDxcCompiler* pCompiler = nullptr;
-	//	static IDxcLibrary* pLibrary = nullptr;
-	//	static IDxcIncludeHandler* dxcIncludeHandler;
-
-	//	HRESULT hr;
-
-	//	// Initialize the DXC compiler and compiler helper
-	//	if (!pCompiler)
-	//	{
-	//		ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler), (void**)&pCompiler));
-	//		ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, __uuidof(IDxcLibrary), (void**)&pLibrary));
-	//		ThrowIfFailed(pLibrary->CreateIncludeHandler(&dxcIncludeHandler));
-	//	}
-	//	// Open and read the file
-	//	std::ifstream shaderFile(fileName);
-	//	if (shaderFile.good() == false)
-	//	{
-	//		throw std::logic_error("Cannot find shader file");
-	//	}
-	//	std::stringstream strStream;
-	//	strStream << shaderFile.rdbuf();
-	//	std::string sShader = strStream.str();
-
-	//	// Create blob from the string
-	//	IDxcBlobEncoding* pTextBlob;
-	//	ThrowIfFailed(pLibrary->CreateBlobWithEncodingFromPinned((LPBYTE)sShader.c_str(), (uint32_t)sShader.size(), 0, &pTextBlob));
-
-	//	// Compile
-	//	IDxcOperationResult* pResult;
-	//	ThrowIfFailed(pCompiler->Compile(pTextBlob, fileName, L"", L"lib_6_3", nullptr, 0, nullptr, 0,
-	//									 dxcIncludeHandler, &pResult));
-
-	//	// Verify the result
-	//	HRESULT resultCode;
-	//	ThrowIfFailed(pResult->GetStatus(&resultCode));
-	//	if (FAILED(resultCode))
-	//	{
-	//		IDxcBlobEncoding* pError;
-	//		hr = pResult->GetErrorBuffer(&pError);
-	//		if (FAILED(hr))
-	//		{
-	//			throw std::logic_error("Failed to get shader compiler error");
-	//		}
-
-	//		// Convert error blob to a string
-	//		std::vector<char> infoLog(pError->GetBufferSize() + 1);
-	//		memcpy(infoLog.data(), pError->GetBufferPointer(), pError->GetBufferSize());
-	//		infoLog[pError->GetBufferSize()] = 0;
-
-	//		std::string errorMsg = "Shader Compiler Error:\n";
-	//		errorMsg.append(infoLog.data());
-
-	//		MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
-	//		throw std::logic_error("Failed compile shader");
-	//	}
-
-	//	IDxcBlob* pBlob;
-	//	ThrowIfFailed(pResult->GetResult(&pBlob));
-	//	return pBlob;
-	//}
-
-	static IDxcCompiler* dxc_compiler = nullptr;
-	static IDxcLibrary* dxc_library = nullptr;
-	static IDxcIncludeHandler* dxc_include_handler = nullptr;
-
 	bool ShaderStorage::Initialize()
 	{
-		if (auto result = DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler), (void**)&dxc_compiler); result != S_OK)
+		if (auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.addressof())); result != S_OK)
 		{
-			LogError << "Can't create dxc compiler\n";
+			LogFatal << "Can't create dxc compiler\n";
 			return false;
 		}
 
-		if (auto result = DxcCreateInstance(CLSID_DxcLibrary, __uuidof(IDxcLibrary), (void**)&dxc_library); result != S_OK)
+		if (auto result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_dxc_utils.addressof())); result != S_OK)
 		{
-			LogError << "Can't create dxc library\n";
+			LogFatal << "Can't create dxc utils\n";
 			return false;
 		}
-
-		if (auto result = dxc_library->CreateIncludeHandler(&dxc_include_handler); result != S_OK)
-		{
-			LogError << "Can't create dxc include handler\n";
-			return false;
-		}
-
-		//dxc_include_handler->LoadSource(L"", m_include_blob.get());
 
 		return true;
 	}
 
-	std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters* parameters)
+	std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters& parameters)
 	{
 		// TODO: search for this cached binary and return it if possible
 
-		std::filesystem::path fullpath(parameters->shader_path);
+		std::filesystem::path fullpath(parameters.shader_path);
 		const std::wstring filename = fullpath.filename();
 
 		LogInfo << "Compiling shader: " << fullpath.string().c_str() << "\n";
@@ -127,7 +53,7 @@ namespace ysn
 
 		std::wstring shader_profile;
 
-		switch (parameters->shader_type)
+		switch (parameters.shader_type)
 		{
 			case ShaderType::None:
 				LogFatal << "... has None as shader type\n";
@@ -146,56 +72,72 @@ namespace ysn
 				break;
 		}
 
-		// Strip reflection data and pdbs (see later)
-		//arguments.push_back(L"-Qstrip_debug");
-		//arguments.push_back(L"-Qstrip_reflect");
-
-		//arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-		if (!parameters->disable_optimizations)
+		if (!parameters.disable_optimizations)
 		{
 			arguments.push_back(DXC_ARG_DEBUG);
 		}
 
-		std::ifstream shader_file(parameters->shader_path);
+		if (m_treat_warnings_as_errors)
+		{
+			arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
+		}
+
+		// Entry point
+		arguments.push_back(L"-E");
+		arguments.push_back(parameters.entry_point.c_str());
+
+		// Profile
+		arguments.push_back(L"-T");
+		arguments.push_back(shader_profile.c_str());
+
+		// Defines
+		for (const std::wstring& define : parameters.defines)
+		{
+			arguments.push_back(L"-D");
+			arguments.push_back(define.c_str());
+		}
+
+		// Strip reflection data and pdbs, store them separately
+		arguments.push_back(L"-Qstrip_debug");
+		arguments.push_back(L"-Qstrip_reflect");
+
+		std::ifstream shader_file(parameters.shader_path);
 		if (shader_file.good() == false)
 		{
-			LogError << "Cannot find shader file :" << WStringToString(parameters->shader_path) << "\n";
+			LogFatal << "Cannot find shader file :" << WStringToString(parameters.shader_path) << "\n";
 			return std::nullopt;
 		}
 
 		std::stringstream str_stream;
 		str_stream << shader_file.rdbuf();
-		std::string shader_cod = str_stream.str();
+		std::string shader_code = str_stream.str();
 
-		IDxcBlobEncoding* dxc_text_blob;
-		if (auto result = dxc_library->CreateBlobWithEncodingFromPinned((LPBYTE)shader_cod.c_str(), (uint32_t)shader_cod.size(), 0, &dxc_text_blob); result != S_OK)
+		wil::com_ptr<IDxcBlobEncoding> dxc_text_blob;
+
+		if (auto result = m_dxc_utils->CreateBlob(shader_code.c_str(), shader_code.size(), CP_UTF8, dxc_text_blob.addressof()); result != S_OK)
 		{
-			LogError << "Can't create shader blob\n";
+			LogFatal << "Can't create shader blob\n";
 			return std::nullopt;
 		}
 
-		IDxcOperationResult* dxc_op_result;
+		DxcBuffer source_buffer;
+		source_buffer.Ptr = dxc_text_blob->GetBufferPointer();
+		source_buffer.Size = dxc_text_blob->GetBufferSize();
+		source_buffer.Encoding = 0;
 
-		if (auto result = dxc_compiler->Compile(dxc_text_blob,
-			filename.c_str(),
-			parameters->entry_point.c_str(),
-			shader_profile.c_str(),
-			arguments.data(),
-			static_cast<uint32_t>(arguments.size()),
-			parameters->defines.data(),
-			static_cast<uint32_t>(parameters->defines.size()),
-			dxc_include_handler,
-			&dxc_op_result);
+		IDxcResult* dxc_op_result; // TODO: Make this wil_comptr and result would be corrupted -> investigate
+
+		if (auto result = m_dxc_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), nullptr, __uuidof(IDxcResult), (void**)&dxc_op_result);
 			result != S_OK)
 		{
-			LogError << "Can't compile shader\n";
+			LogFatal << "Can't compile shader\n";
 			return std::nullopt;
 		}
 
 		HRESULT result_code;
 		if (auto result = dxc_op_result->GetStatus(&result_code); result != S_OK)
 		{
-			LogError << "Can't get status after shader compilation\n";
+			LogFatal << "Can't get status after shader compilation\n";
 			return std::nullopt;
 		}
 
@@ -206,7 +148,7 @@ namespace ysn
 
 			if (FAILED(result))
 			{
-				LogError << "Failed to get shader compiler error\n";
+				LogFatal << "Failed to get shader compiler error\n";
 				return std::nullopt;
 			}
 
@@ -222,35 +164,75 @@ namespace ysn
 			return std::nullopt;
 		}
 
-		// wil::com_ptr<ID3DBlob> result_blob;
-		wil::com_ptr<IDxcBlob> result_blob;
-
-		if (auto result = dxc_op_result->GetResult((IDxcBlob**)&result_blob); FAILED(result))
+		wil::com_ptr<IDxcBlob> shader_data;
+		wil::com_ptr<IDxcBlobUtf16> shader_name;
+		if (auto result = dxc_op_result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(shader_data.addressof()), shader_name.addressof()); FAILED(result))
 		{
-			LogError << "Can't get shader blob result\n";
+			LogFatal << "Can't get shader blob DXC_OUT_OBJECT\n";
 			return std::nullopt;
 		}
 
+		wil::com_ptr<IDxcBlob> shader_debug_data;
+		wil::com_ptr<IDxcBlobUtf16> shader_debug_data_path;
+		if (auto result = dxc_op_result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(shader_debug_data.addressof()), shader_debug_data_path.addressof()); FAILED(result))
+		{
+			LogFatal << "Can't get shader blob DXC_OUT_PDB\n";
+			return std::nullopt;
+		}
+
+		if(shader_debug_data && shader_debug_data_path)
+		{
+			char buffer[MAX_PATH];
+			GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+
+			std::string executable_path(buffer);
+			std::string directory_path = executable_path.substr(0, executable_path.find_last_of("\\/"));
+
+			std::filesystem::path executable_dir(directory_path);
+
+			std::wstring pdb_path;
+			pdb_path.append(executable_dir.wstring());
+			pdb_path.append(L"\\");
+			pdb_path.append(m_pdb_path);
+
+			if (CreateDirectoryIfNotExists(pdb_path))
+			{
+				pdb_path.append(L"\\");
+				pdb_path.append(shader_debug_data_path->GetStringPointer(), shader_debug_data_path->GetStringPointer() + shader_debug_data_path->GetStringLength());
+
+				FILE* file_poiter = nullptr;
+				_wfopen_s(&file_poiter, pdb_path.c_str(), L"wb");
+
+				if (file_poiter)
+				{
+					fwrite(shader_debug_data->GetBufferPointer(), shader_debug_data->GetBufferSize(), 1, file_poiter);
+					fclose(file_poiter);
+				}
+				else
+				{
+					LogError << "Can't store pdb data\n";
+				}
+			}
+			else
+			{
+				LogError << "Can't create pdb storage directory \n";
+			}
+		}
+
 	#ifndef YSN_RELEASE
-		const auto shader_modification_time = GetShaderModificationTime(parameters->shader_path);
+		const auto shader_modification_time = GetShaderModificationTime(parameters.shader_path);
 
 		if (shader_modification_time.has_value())
 		{
-			m_shaders_modified_time.emplace(parameters->shader_path, shader_modification_time.value());
+			m_shaders_modified_time.emplace(parameters.shader_path, shader_modification_time.value());
 		}
 		else
 		{
-			LogError << "Can't get shader modification time: " << WStringToString(parameters->shader_path) << "\n";
+			LogFatal << "Can't get shader modification time: " << WStringToString(parameters.shader_path) << "\n";
 		}
 	#endif
 
-		//m_shaders_modified_time
-
-		return result_blob;
-
-		// ComPtr<IDxcBlob> pDebugData;
-		// ComPtr<IDxcBlobUtf16> pDebugDataPath;
-		// pCompileResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(pDebugData.GetAddressOf()), pDebugDataPath.GetAddressOf());
+		return shader_data;
 
 		// Reflection
 		/*ComPtr<IDxcBlob> pReflectionData;
@@ -271,7 +253,6 @@ namespace ysn
 
 	void ShaderStorage::VerifyAnyShaderChanged()
 	{
-
 		for(const auto& [shader_path, time] : m_shaders_modified_time)
 		{
 			const auto latest_time = GetShaderModificationTime(shader_path);
@@ -289,7 +270,7 @@ namespace ysn
 			}
 			else
 			{
-				LogError << "Can't get shader modification time: " << WStringToString(shader_path) << "\n";
+				LogFatal << "Can't get shader modification time: " << WStringToString(shader_path) << "\n";
 			}
 		}
 	}

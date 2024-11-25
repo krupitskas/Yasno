@@ -76,7 +76,7 @@ namespace ysn
 		tonemap_shader_parameters.shader_type = ShaderType::Compute;
 		tonemap_shader_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/Tonemap.hlsl");
 
-		const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(&tonemap_shader_parameters);
+		const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(tonemap_shader_parameters);
 
 		if (!tonemap_shader.has_value())
 		{
