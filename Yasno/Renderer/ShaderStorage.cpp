@@ -16,6 +16,8 @@
 #endif
 #endif
 
+#include <d3d12shader.h>
+
 #include <System/String.hpp>
 #include <System/Filesystem.hpp>
 
@@ -220,6 +222,22 @@ namespace ysn
 			}
 		}
 
+		// Read reflection data
+		wil::com_ptr<IDxcBlob> reflection_data;
+		if (auto result = dxc_op_result->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(reflection_data.addressof()), nullptr); FAILED(result))
+		{
+			LogFatal << "Can't get shader blob DXC_OUT_REFLECTION\n";
+			return std::nullopt;
+		}
+
+		// Not using it right now but can be handy in the future
+		DxcBuffer reflection_buffer;
+		reflection_buffer.Ptr = reflection_data->GetBufferPointer();
+		reflection_buffer.Size = reflection_data->GetBufferSize();
+		reflection_buffer.Encoding = 0;
+		wil::com_ptr<ID3D12ShaderReflection> shader_reflection;
+		m_dxc_utils->CreateReflection(&reflection_buffer, IID_PPV_ARGS(shader_reflection.addressof()));
+
 		// Read shader hash
 		wil::com_ptr<IDxcBlob> hash;
 		if (auto result = dxc_op_result->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(hash.addressof()), nullptr); FAILED(result))
@@ -249,22 +267,6 @@ namespace ysn
 	#endif
 
 		return shader_data;
-
-		// Reflection
-		/*ComPtr<IDxcBlob> pReflectionData;
-		pCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(pReflectionData.GetAddressOf()), nullptr);
-		DxcBuffer reflectionBuffer;
-		reflectionBuffer.Ptr = pReflectionData->GetBufferPointer();
-		reflectionBuffer.Size = pReflectionData->GetBufferSize();
-		reflectionBuffer.Encoding = 0;
-		ComPtr<ID3D12ShaderReflection> pShaderReflection;
-		pUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(pShaderReflection.GetAddressOf()));*/
-
-		// RefCountPtr<IDxcBlob> pHash;
-		// if (SUCCEEDED(pCompileResult->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(pHash.GetAddressOf()), nullptr)))
-		//{
-		//	DxcShaderHash* pHashBuf = (DxcShaderHash*)pHash->GetBufferPointer();
-		// }
 	}
 
 	void ShaderStorage::VerifyAnyShaderChanged()
@@ -280,7 +282,6 @@ namespace ysn
 					LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
 
 					// TODO: Notify PSO manager to compile the shader here
-
 					m_shaders_modified_time[shader_path] = latest_time.value();
 				}
 			}
