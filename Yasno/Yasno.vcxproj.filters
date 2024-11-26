@@ -191,6 +191,9 @@
     <ClCompile Include="Renderer\GpuBuffer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer\NvAftermath.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Yasno\Camera.hpp">
@@ -385,6 +388,9 @@
     <ClInclude Include="Graphics\AABB.hpp">
       <Filter>Source\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Renderer\NvAftermath.hpp">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\ForwardPassPS.hlsl">
@@ -445,12 +451,6 @@
     <None Include="..\Shaders\ConvertEquirectangularMap_PS.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="..\Docs\Docs.md">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\Docs\Tasks.md">
-      <Filter>Docs</Filter>
-    </None>
     <None Include="..\Shaders\ShadowPassPS.hlsl">
       <Filter>Shaders</Filter>
     </None>
@@ -462,12 +462,6 @@
     </None>
     <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
       <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Docs\Task_Indirect_Draw.md">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\Docs\Task_Reference_PT.md">
-      <Filter>Docs</Filter>
     </None>
     <None Include="..\Shaders\CommonStructures.hlsl">
       <Filter>Shaders</Filter>

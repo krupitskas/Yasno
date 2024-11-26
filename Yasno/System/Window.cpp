@@ -334,6 +334,10 @@ namespace ysn
 	{
 		UINT syncInterval = m_VSync ? 1 : 0;
 		UINT presentFlags = m_IsTearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+
+		//DXGI_ERROR_DEVICE_RESET
+		//DXGI_ERROR_DEVICE_REMOVED
+
 		ThrowIfFailed(m_DxgiSwapChain->Present(syncInterval, presentFlags));
 		m_CurrentBackBufferIndex = m_DxgiSwapChain->GetCurrentBackBufferIndex();
 

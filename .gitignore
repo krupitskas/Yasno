@@ -374,4 +374,3 @@ FodyWeavers.xsd
 *.sln.iml
 
 .idea/
-!Vendor/
