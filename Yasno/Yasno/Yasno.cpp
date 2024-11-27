@@ -443,13 +443,13 @@ namespace ysn
 				uint32_t total_indices = 0;
 				uint32_t total_vertices = 0;
 
-				for (auto& model : m_render_scene.models)
+				for (Model& model : m_render_scene.models)
 				{
 					for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 					{
-						const Mesh& mesh = model.meshes[mesh_id];
+						Mesh& mesh = model.meshes[mesh_id];
 
-						for (auto& primitive : mesh.primitives)
+						for (Primitive& primitive : mesh.primitives)
 						{
 							RenderInstanceData instance_data;
 							if (primitive.material_id == -1)
@@ -466,6 +466,10 @@ namespace ysn
 							instance_data.model_matrix = model.transforms[mesh_id].transform;
 							instance_data.vertices_before = total_vertices;
 							instance_data.indices_before = total_indices;
+
+							// Need for indirect commands filling later
+							primitive.global_vertex_offset = instance_data.vertices_before;
+							primitive.global_index_offset = instance_data.indices_before;
 
 							total_indices += primitive.index_count;
 							total_vertices += primitive.vertex_count;
@@ -556,6 +560,12 @@ namespace ysn
 		if (!CreateGpuSceneParametersBuffer())
 		{
 			LogFatal << "Yasno app can't create GPU scene parameters buffer\n";
+			return false;
+		}
+
+		if (!m_forward_pass.Initialize(m_render_scene, m_camera_gpu_buffer, m_scene_parameters_gpu_buffer, m_render_scene.instance_buffer, command_list))
+		{
+			LogFatal << "Can't initialize forward pass\n";
 			return false;
 		}
 
