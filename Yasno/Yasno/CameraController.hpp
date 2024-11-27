@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Camera.hpp"
+import Camera;
 
-#include <memory>
+import <memory>;
 
 namespace ysn
 {

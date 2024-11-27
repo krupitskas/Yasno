@@ -1,20 +1,3 @@
-// #version 330 core
-// out vec4 FragColor;
-//
-// in vec3 localPos;
-//   
-// uniform samplerCube environmentMap;
-//   
-// void main()
-// {
-//     vec3 envColor = texture(environmentMap, localPos).rgb;
-//     
-//     envColor = envColor / (envColor + vec3(1.0));
-//     envColor = pow(envColor, vec3(1.0/2.2)); 
-//   
-//     FragColor = vec4(envColor, 1.0);
-// }
-
 struct PixelShaderInput
 {
     float2 TexCoord : TEXCOORD;
@@ -37,5 +20,4 @@ float4 main(PixelShaderInput IN) : SV_Target
 {
     float2 uv = SphericalCoords(normalize(IN.OriginalPosition)); 
     return g_texture.Sample(g_linear_sampler, uv);
-    //return float4(255, 0, 0, 0);
 }

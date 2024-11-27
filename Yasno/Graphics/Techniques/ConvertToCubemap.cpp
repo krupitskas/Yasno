@@ -120,8 +120,5 @@ namespace ysn
 		return true;
 	}
 
-	void ConvertToCubemap::EquirectangularToCubemap(std::shared_ptr<ysn::CommandQueue> command_queue, const Texture& equirectangular_map, wil::com_ptr<ID3D12Resource> target_cubemap)
-	{
-		
-	}
+
 }

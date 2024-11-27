@@ -19,14 +19,6 @@ namespace ysn
 		Aces
 	};
 
-	YSN_SHADER_STRUCT TonemapParameters
-	{
-		uint32_t display_width	= 0;
-		uint32_t display_height = 0;
-		uint32_t tonemap_method = 0;
-		float exposure			= 0.0f;
-	};
-
 	struct TonemapPostprocessParameters
 	{
 		std::shared_ptr<CommandQueue> command_queue = nullptr;

@@ -26,11 +26,11 @@ namespace ysn
 
 	struct ShaderCompileParameters
 	{
-		std::wstring shader_path		= L"";
-		std::wstring entry_point		= L"main";
-		bool disable_optimizations		= false;
-		ShaderType shader_type			= ShaderType::None;
-		std::vector<std::wstring>		defines;
+		std::wstring shader_path			= L"";
+		std::wstring entry_point			= L"main";
+		bool disable_optimizations			= false;
+		ShaderType shader_type				= ShaderType::None;
+		std::vector<std::wstring> defines;
 	};
 
 	struct ShaderStorage
@@ -55,7 +55,8 @@ namespace ysn
 
 		wil::com_ptr<IDxcUtils> m_dxc_utils;
 		wil::com_ptr<IDxcCompiler3> m_dxc_compiler;
-
-		//wil::com_ptr<IDxcBlob> m_include_blob;
+		wil::com_ptr<IDxcIncludeHandler> m_dxc_include_handler;
+		std::vector<wil::com_ptr<IDxcBlob>> m_dxc_included_files;
+		
 	};
 }

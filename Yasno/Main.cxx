@@ -1,6 +1,8 @@
 #include <System/Application.hpp>
 #include <Yasno/Yasno.hpp>
 
+import YasnoSettings;
+
 int WINAPI wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
 {
 	ysn::Application::Create(hinstance);

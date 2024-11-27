@@ -1,8 +1,7 @@
 #pragma once
 
-#include <Renderer/PSO.hpp>
-#include <Renderer/GpuResource.hpp>
-#include <Graphics/SurfaceMaterial.hpp>
+#include <d3dx12.h>
+#include <string>
 
 namespace ysn
 {
@@ -14,7 +13,5 @@ namespace ysn
 
 		D3D12_BLEND_DESC blend_desc = {};
 		D3D12_RASTERIZER_DESC rasterizer_desc = {};
-
-		SurfaceShaderParameters shader_parameters;
 	};
 }

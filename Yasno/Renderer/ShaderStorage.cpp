@@ -26,6 +26,38 @@
 namespace ysn
 {
 
+	//class CustomIncludeHandler : public IDxcIncludeHandler
+	//{
+	//public:
+	//	HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+	//	{
+	//		ComPtr<IDxcBlobEncoding> pEncoding;
+	//		std::string path = Paths::Normalize(UNICODE_TO_MULTIBYTE(pFilename));
+	//		if (IncludedFiles.find(path) != IncludedFiles.end())
+	//		{
+	//			// Return empty string blob if this file has been included before
+	//			static const char nullStr[] = " ";
+	//			pUtils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, pEncoding.GetAddressOf());
+	//			*ppIncludeSource = pEncoding.Detach();
+	//			return S_OK;
+	//		}
+
+	//		HRESULT hr = pUtils->LoadFile(pFilename, nullptr, pEncoding.GetAddressOf());
+	//		if (SUCCEEDED(hr))
+	//		{
+	//			IncludedFiles.insert(path);
+	//			*ppIncludeSource = pEncoding.Detach();
+	//		}
+	//		return hr;
+	//	}
+
+	//	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override { return E_NOINTERFACE; }
+	//	ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+	//	ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+	//	std::unordered_set<std::string> IncludedFiles;
+	//};
+
 	bool ShaderStorage::Initialize()
 	{
 		if (auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.addressof())); result != S_OK)
@@ -39,6 +71,31 @@ namespace ysn
 			LogFatal << "Can't create dxc utils\n";
 			return false;
 		}
+
+		// Some common include files
+		{
+			HRESULT hr = m_dxc_utils->CreateDefaultIncludeHandler(m_dxc_include_handler.addressof());
+
+			if (hr != S_OK)
+			{
+				LogFatal << "Can't create include handler\n";
+				return false;
+			}
+
+			wil::com_ptr<IDxcBlob> new_included_file;
+
+			const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"Shaders/Shared.hlsl");
+			hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+			if (hr != S_OK)
+			{
+				LogFatal << "Can't load Shaders/Shared.hlsl\n";
+				return false;
+			}
+
+			m_dxc_included_files.push_back(new_included_file);
+		}
+
 
 		return true;
 	}
@@ -84,10 +141,15 @@ namespace ysn
 		{
 			arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
 		}
+		
+		// /enable-16bit-types
 
 		// Entry point
 		arguments.push_back(L"-E");
 		arguments.push_back(parameters.entry_point.c_str());
+
+		// Shaders include dir
+		arguments.push_back(L"-I Shaders/");
 
 		// Profile
 		arguments.push_back(L"-T");
@@ -117,7 +179,7 @@ namespace ysn
 
 		wil::com_ptr<IDxcBlobEncoding> dxc_text_blob;
 
-		if (auto result = m_dxc_utils->CreateBlob(shader_code.c_str(), shader_code.size(), CP_UTF8, dxc_text_blob.addressof()); result != S_OK)
+		if (auto result = m_dxc_utils->CreateBlob(shader_code.c_str(), static_cast<uint32_t>(shader_code.size()), CP_UTF8, dxc_text_blob.addressof()); result != S_OK)
 		{
 			LogFatal << "Can't create shader blob\n";
 			return std::nullopt;
@@ -130,7 +192,7 @@ namespace ysn
 
 		IDxcResult* dxc_op_result; // TODO: Make this wil_comptr and result would be corrupted -> investigate
 
-		if (auto result = m_dxc_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), nullptr, __uuidof(IDxcResult), (void**)&dxc_op_result);
+		if (auto result = m_dxc_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), m_dxc_include_handler.get(), __uuidof(IDxcResult), (void**)&dxc_op_result);
 			result != S_OK)
 		{
 			LogFatal << "Can't compile shader\n";
@@ -269,6 +331,7 @@ namespace ysn
 		return shader_data;
 	}
 
+#ifndef YSN_RELEASE
 	void ShaderStorage::VerifyAnyShaderChanged()
 	{
 		for(const auto& [shader_path, time] : m_shaders_modified_time)
@@ -292,7 +355,6 @@ namespace ysn
 		}
 	}
 
-#ifndef YSN_RELEASE
 	std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)
 	{
 		struct stat result;

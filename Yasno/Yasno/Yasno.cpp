@@ -19,13 +19,10 @@
 #include <System/Math.hpp>
 #include <Graphics/EngineStats.hpp>
 #include <Renderer/GpuBuffer.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 namespace ysn
 {
-	uint32_t GpuSceneParameters::GetGpuSize()
-	{
-		return static_cast<uint32_t>(ysn::AlignPow2(sizeof(GpuSceneParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
-	}
 
 	std::optional<wil::com_ptr<ID3D12Resource>> CreateCubemapTexture()
 	{
@@ -317,10 +314,10 @@ namespace ysn
 						for (auto& primitive : mesh.primitives)
 						{
 							primitive.index_buffer_view.BufferLocation = m_render_scene.indices_buffer.GetGPUVirtualAddress() + all_indices_buffer.size() * sizeof(uint32_t);
-							primitive.index_buffer_view.SizeInBytes = primitive.indices.size() * sizeof(uint32_t);
+							primitive.index_buffer_view.SizeInBytes = static_cast<uint32_t>(primitive.indices.size()) * sizeof(uint32_t);
 							primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 
-							primitive.index_count = primitive.indices.size();
+							primitive.index_count = static_cast<uint32_t>(primitive.indices.size());
 
 							// Append indices
 							all_indices_buffer.insert(all_indices_buffer.end(), primitive.indices.begin(), primitive.indices.end());
@@ -398,9 +395,9 @@ namespace ysn
 
 				for (auto& model : m_render_scene.models)
 				{
-					for (auto& material : model.materials)
+					for (auto& material : model.shader_parameters)
 					{
-						all_materials_buffer.push_back(material.shader_parameters);
+						all_materials_buffer.push_back(material);
 					}
 				}
 
@@ -443,13 +440,13 @@ namespace ysn
 				uint32_t total_indices = 0;
 				uint32_t total_vertices = 0;
 
-				for (auto& model : m_render_scene.models)
+				for (Model& model : m_render_scene.models)
 				{
 					for(int mesh_id = 0; mesh_id < model.meshes.size(); mesh_id++)
 					{
-						const Mesh& mesh = model.meshes[mesh_id];
+						Mesh& mesh = model.meshes[mesh_id];
 
-						for (auto& primitive : mesh.primitives)
+						for (Primitive& primitive : mesh.primitives)
 						{
 							RenderInstanceData instance_data;
 							if (primitive.material_id == -1)
@@ -466,6 +463,10 @@ namespace ysn
 							instance_data.model_matrix = model.transforms[mesh_id].transform;
 							instance_data.vertices_before = total_vertices;
 							instance_data.indices_before = total_indices;
+
+							// Need for indirect commands filling later
+							primitive.global_vertex_offset = instance_data.vertices_before;
+							primitive.global_index_offset = instance_data.indices_before;
 
 							total_indices += primitive.index_count;
 							total_vertices += primitive.vertex_count;
@@ -556,6 +557,12 @@ namespace ysn
 		if (!CreateGpuSceneParametersBuffer())
 		{
 			LogFatal << "Yasno app can't create GPU scene parameters buffer\n";
+			return false;
+		}
+
+		if (!m_forward_pass.Initialize(m_render_scene, m_camera_gpu_buffer, m_scene_parameters_gpu_buffer, m_render_scene.instance_buffer, command_list))
+		{
+			LogFatal << "Can't initialize forward pass\n";
 			return false;
 		}
 

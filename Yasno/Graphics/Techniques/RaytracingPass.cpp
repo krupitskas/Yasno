@@ -1,5 +1,7 @@
 #include "RaytracingPass.hpp"
 
+import Camera;
+
 #include <cstdint>
 
 #include <Renderer/nv_helpers_dx12/RaytracingPipelineGenerator.h>
@@ -9,7 +11,6 @@
 #include <Renderer/DXRHelper.h>
 #include <Renderer/DescriptorHeap.hpp>
 #include <Renderer/RayTracingContext.hpp>
-#include <Yasno/Camera.hpp>
 
 namespace ysn
 {

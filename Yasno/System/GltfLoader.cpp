@@ -17,8 +17,8 @@
 #include <System/Application.hpp>
 #include <Graphics/RenderScene.hpp>
 #include <Graphics/Primitive.hpp>
-#include <Graphics/SurfaceMaterial.hpp>
 #include <Renderer/GenerateMipsSystem.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 using namespace Microsoft::WRL;
 
@@ -383,7 +383,7 @@ static bool BuildPrimitiveTopology(ysn::Primitive& primitive, int gltf_primitive
 	return true;
 }
 
-static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& model, int indices_index, const tinygltf::Model& gltf_model)
+static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, int indices_index, const tinygltf::Model& gltf_model)
 {
 	if (indices_index >= 0)
 	{
@@ -430,7 +430,7 @@ static uint32_t BuildIndexBuffer(ysn::Primitive& primitive, const ysn::Model& mo
 			memcpy(primitive.indices.data(), base_address, (index_accessor.count * index_stride));
 		}
 
-		return index_accessor.count;
+		return static_cast<uint32_t>(index_accessor.count);
 	}
 	else
 	{
@@ -566,7 +566,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 		primitive.vertices.push_back(v);
 	}
 
-	return position_accessor.count;
+	return static_cast<uint32_t>(position_accessor.count);
 }
 
 static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& gltf_model)
@@ -583,10 +583,8 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 		for (const tinygltf::Primitive& gltf_primitive : gltf_mesh.primitives)
 		{
 			ysn::Primitive primitive;
-
 			result.mesh_vertices_count += BuildVertexBuffer(primitive, gltf_primitive, gltf_model);
-			//BuildAttributesAccessors(primitive, model, gltf_model, gltf_primitive.attributes);
-			result.mesh_indices_count += BuildIndexBuffer(primitive, model, gltf_primitive.indices, gltf_model);
+			result.mesh_indices_count += BuildIndexBuffer(primitive, gltf_primitive.indices, gltf_model);
 			BuildPrimitiveTopology(primitive, gltf_primitive.mode);
 
 			primitive.material_id = gltf_primitive.material;
@@ -597,7 +595,7 @@ static BuildMeshResult BuildMeshes(ysn::Model& model, const tinygltf::Model& glt
 			primitive_index_count++;
 		}
 
-		result.primitives_count += gltf_mesh.primitives.size();
+		result.primitives_count += static_cast<uint32_t>(gltf_mesh.primitives.size());
 
 		model.meshes.push_back(mesh);
 	}
@@ -635,7 +633,7 @@ static void BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 	}
 }
 
-static uint32_t BuildMaterials(ysn::Model& model, LoadGltfContext& build_context, const tinygltf::Model& gltf_model)
+static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_model)
 {
 	auto dx_renderer = ysn::Application::Get().GetRenderer();
 
@@ -686,7 +684,7 @@ static uint32_t BuildMaterials(ysn::Model& model, LoadGltfContext& build_context
 		material.rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
 		const tinygltf::PbrMetallicRoughness& gltf_pbr_material = gltf_material.pbrMetallicRoughness;
-		ysn::SurfaceShaderParameters shader_parameters = {};
+		SurfaceShaderParameters shader_parameters = {};
 
 		DirectX::XMFLOAT4& base_color_factor = shader_parameters.base_color_factor;
 		base_color_factor.x = static_cast<float>(gltf_pbr_material.baseColorFactor[0]);
@@ -781,12 +779,11 @@ static uint32_t BuildMaterials(ysn::Model& model, LoadGltfContext& build_context
 			texture.name = L"Emissive Texture";
 		}
 
-		material.shader_parameters = shader_parameters;
-
 		model.materials.push_back(material);
+		model.shader_parameters.push_back(shader_parameters);
 	}
 
-	return gltf_model.materials.size();
+	return static_cast<uint32_t>(gltf_model.materials.size());
 }
 
 namespace ysn
@@ -806,7 +803,7 @@ namespace ysn
 			return false;
 		}
 
-		render_scene.materials_count += BuildMaterials(model, load_gltf_context, gltf_model);
+		render_scene.materials_count += BuildMaterials(model, gltf_model);
 
 		// Build pipelines
 		// Compute mips 

@@ -18,20 +18,6 @@
 
 namespace ysn
 {
-	YSN_SHADER_STRUCT GpuSceneParameters
-	{
-		DirectX::XMFLOAT4X4 shadow_matrix;
-		DirectX::XMFLOAT4	directional_light_color		= {0.0f, 0.0f, 0.0f, 0.0f};
-		DirectX::XMFLOAT4	directional_light_direction = {0.0f, 0.0f, 0.0f, 0.0f};
-		float				directional_light_intensity = 0.0f;
-		float				ambient_light_intensity		= 0.0f;
-		uint32_t			shadows_enabled				= 0;
-
-		uint32_t pad[1];
-
-		static uint32_t GetGpuSize();
-	};
-
 	class Yasno : public Game
 	{
 	public:

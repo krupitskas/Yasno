@@ -9,7 +9,6 @@
 
 namespace ysn
 {
-
 	struct ForwardPassRenderParameters
 	{
 		std::shared_ptr<CommandQueue> command_queue = nullptr;
@@ -26,18 +25,37 @@ namespace ysn
 		ShadowMapBuffer shadow_map_buffer;
 	};
 
+	// Data structure to match the command signature used for ExecuteIndirect.
+	struct IndirectCommand
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
+		D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
+		D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
+		D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
+	};
+
+	enum class IndirectRootParameters : uint8_t
+	{
+		CameraParametersSrv,
+		SceneParametersSrv,
+		PerInstanceDataSrv,
+		Count
+	};
+
 	struct ForwardPass
 	{
-		//void Initialize();
+		bool Initialize(const RenderScene& render_scene, wil::com_ptr<ID3D12Resource> camera_gpu_buffer, wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer, const GpuBuffer& instance_buffer, wil::com_ptr<ID3D12GraphicsCommandList4> cmd_list);
+		bool InitializeIndirectPipeline(const RenderScene& render_scene, wil::com_ptr<ID3D12Resource> camera_gpu_buffer, wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer, const GpuBuffer& instance_buffer, wil::com_ptr<ID3D12GraphicsCommandList4> cmd_list);
 		bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
 		void Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
 		void RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
 
-		bool m_enable_culling = false;
-
-		// TODO(indirect):
-		// 1. Big buffer of materials
-		// 2. Big buffer of transformations (as for instancing)
-
+		// Indirect data
+		wil::com_ptr<ID3D12RootSignature> m_indirect_root_signature;
+		std::vector<IndirectCommand> m_indirect_commands;
+		wil::com_ptr<ID3D12CommandSignature> m_command_signature;
+		GpuBuffer m_command_buffer;
+		PsoId indirect_pso_id = 0;
+		uint32_t m_command_buffer_size = 0; // PrimitiveCount * sizeof(IndirectCommand)
 	};
 }

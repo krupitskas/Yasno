@@ -81,7 +81,7 @@ namespace ysn
 
 			D3D12_RESOURCE_DESC texture_desc = {};
 			texture_desc.Format = format;
-			texture_desc.MipLevels = num_mips;
+			texture_desc.MipLevels = static_cast<UINT16>(num_mips);
 			texture_desc.Width = width;
 			texture_desc.Height = height;
 			texture_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;

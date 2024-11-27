@@ -15,6 +15,8 @@ namespace ysn
 	{
 		uint32_t index = 0;
 
+		AABB bbox;
+
 		PsoId pso_id = -1;
 		PsoId shadow_pso_id = -1;
 
@@ -30,9 +32,10 @@ namespace ysn
 
 		// Moving to new way of render
 		bool					opaque = true; // for rtx
-		AABB					bbox;
 		std::vector<Vertex>		vertices;
 		std::vector<uint32_t>	indices;
+		uint32_t global_vertex_offset = 0;
+		uint32_t global_index_offset = 0;
 	};
 
 	// TODO: Rename it into some CSG mesh

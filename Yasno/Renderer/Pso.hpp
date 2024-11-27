@@ -67,8 +67,8 @@ namespace ysn
 	struct Pso
 	{
 		PsoId pso_id = -1;
-		wil::com_ptr<ID3D12RootSignature> root_signature = nullptr;
-		wil::com_ptr<ID3D12PipelineState> pso = nullptr;
+		wil::com_ptr<ID3D12RootSignature> root_signature;
+		wil::com_ptr<ID3D12PipelineState> pso;
 	};
 
 	struct PsoStorage

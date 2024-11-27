@@ -15,7 +15,6 @@ struct VS2RS
 	float2 texcoord_1: TEXCOORD_1;
 };
 
-
 cbuffer CameraParameters : register(b0)
 {
 	float4x4 view_projection;
@@ -40,17 +39,24 @@ cbuffer SceneParameters : register(b1)
 	uint		shadows_enabled;
 };
 
+cbuffer PerInstanceData : register(b2)
+{
+	float4x4 model_matrix;
+	int material_id;
+	int vertices_offset;
+	int indices_offset;
+	int pad;
+};
+
 VS2RS main(IA2VS input)
 {
 	VS2RS output;
-	output.position = mul(float4(input.position, 1.0), model_matrix);
 
+	output.position = mul(float4(input.position, 1.0), model_matrix);
 	output.position = mul(view_projection, output.position);
 	output.normal = mul(float4(input.normal, 1.0), model_matrix);
-
 	output.tangent.xyz = mul(float4(input.tangent.xyz, 1.0), model_matrix);
 	output.tangent.w = input.tangent.w;
-
     output.texcoord_0 = input.texcoord_0;
 
 	return output;

@@ -37,9 +37,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Yasno\Camera.cpp">
-      <Filter>Source\Yasno</Filter>
-    </ClCompile>
     <ClCompile Include="Yasno\CameraController.cpp">
       <Filter>Source\Yasno</Filter>
     </ClCompile>
@@ -124,7 +121,7 @@
     <ClCompile Include="Yasno\Yasno.cpp">
       <Filter>Source\Yasno</Filter>
     </ClCompile>
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Main.cxx" />
     <ClCompile Include="System\stdafx.cpp">
       <Filter>Source\System</Filter>
     </ClCompile>
@@ -133,9 +130,6 @@
     </ClCompile>
     <ClCompile Include="System\Math.cpp">
       <Filter>Source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="Yasno\YasnoSettings.cpp">
-      <Filter>Source\Yasno</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\Primitive.cpp">
       <Filter>Source\Graphics</Filter>
@@ -179,23 +173,23 @@
     <ClCompile Include="Renderer\IndexStorage.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Graphics\SurfaceMaterial.cpp">
-      <Filter>Source\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\GpuTextureStorage.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Graphics\RtxMaterial.cpp">
-      <Filter>Source\Graphics</Filter>
+    <ClCompile Include="Renderer\CommandSignature.cpp">
+      <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\GpuBuffer.cpp">
-      <Filter>Source</Filter>
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Yasno\YasnoSettings.ixx">
+      <Filter>Source\Yasno</Filter>
+    </ClCompile>
+    <ClCompile Include="Yasno\Camera.ixx">
+      <Filter>Source\Yasno</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Yasno\Camera.hpp">
-      <Filter>Source\Yasno</Filter>
-    </ClInclude>
     <ClInclude Include="Yasno\CameraController.hpp">
       <Filter>Source\Yasno</Filter>
     </ClInclude>
@@ -316,9 +310,6 @@
     <ClInclude Include="System\Math.hpp">
       <Filter>Source\System</Filter>
     </ClInclude>
-    <ClInclude Include="Yasno\YasnoSettings.hpp">
-      <Filter>Source\Yasno</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics\Primitive.hpp">
       <Filter>Source\Graphics</Filter>
     </ClInclude>
@@ -370,20 +361,20 @@
     <ClInclude Include="Graphics\RenderObjectId.hpp">
       <Filter>Source\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Graphics\SurfaceMaterial.hpp">
-      <Filter>Source\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\GpuTextureStorage.hpp">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\GpuBuffer.hpp">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Graphics\RtxMaterial.hpp">
-      <Filter>Source\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics\AABB.hpp">
       <Filter>Source\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\ShaderSharedStructs.h">
+      <Filter>Source\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\CommandSignature.hpp">
+      <Filter>Source\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -430,9 +421,6 @@
       <Filter>Configs</Filter>
     </None>
     <None Include="..\README.md" />
-    <None Include="..\Shaders\GenerateMipsFast.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl">
       <Filter>Shaders</Filter>
     </None>
@@ -444,12 +432,6 @@
     </None>
     <None Include="..\Shaders\ConvertEquirectangularMap_PS.hlsl">
       <Filter>Shaders</Filter>
-    </None>
-    <None Include="..\Docs\Docs.md">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\Docs\Tasks.md">
-      <Filter>Docs</Filter>
     </None>
     <None Include="..\Shaders\ShadowPassPS.hlsl">
       <Filter>Shaders</Filter>
@@ -463,13 +445,7 @@
     <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="..\Docs\Task_Indirect_Draw.md">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\Docs\Task_Reference_PT.md">
-      <Filter>Docs</Filter>
-    </None>
-    <None Include="..\Shaders\CommonStructures.hlsl">
+    <None Include="..\Shaders\Shared.hlsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

@@ -18,11 +18,6 @@ namespace ysn
 	struct DirectionalLight;
 	class CommandQueue;
 
-	YSN_SHADER_STRUCT ShadowCamera
-	{
-		XMFLOAT4X4 shadow_matrix;
-	};
-
 	struct ShadowMapBuffer
 	{
 		wil::com_ptr<ID3D12Resource> buffer;

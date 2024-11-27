@@ -179,8 +179,6 @@ namespace ysn
 	{
 		const PsoId pso_id = pso_desc.GenerateId();
 
-		ID3D12PipelineState** pso_ref = nullptr;
-
 		bool should_create_new = !m_graphics_pso_pool.contains(pso_id);
 
 		if (should_create_new)

@@ -7,6 +7,7 @@
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/DxRenderer.hpp>
 #include <System/Filesystem.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 namespace ysn
 {
@@ -21,7 +22,7 @@ namespace ysn
 
 		D3D12_RESOURCE_DESC resourceDesc = {};
 		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resourceDesc.Width = AlignPow2(sizeof(TonemapParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		resourceDesc.Width = TonemapParameters::GetGpuSize();
 		resourceDesc.Height = 1;
 		resourceDesc.DepthOrArraySize = 1;
 		resourceDesc.MipLevels = 1;

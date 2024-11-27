@@ -18,7 +18,6 @@ namespace ysn
 		};
 	public:
 		bool Initialize();
-		void EquirectangularToCubemap(std::shared_ptr<ysn::CommandQueue> command_queue, const Texture& equirectangular_map, wil::com_ptr<ID3D12Resource> target_cubemap);
 	private:
 
 		

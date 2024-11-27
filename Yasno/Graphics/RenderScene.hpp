@@ -7,12 +7,11 @@
 
 #include <Graphics/Material.hpp>
 #include <Graphics/Mesh.hpp>
-#include <Graphics/RenderObjectId.hpp>
 #include <Yasno/Lights.hpp>
 #include <Yasno/CameraController.hpp>
-#include <Renderer/GpuResource.hpp>
 #include <Renderer/GpuTexture.hpp>
 #include <Renderer/GpuBuffer.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 namespace ysn
 {
@@ -35,7 +34,9 @@ namespace ysn
 		ModelRenderParameters render_parameters;
 
 		std::vector<Mesh> meshes;
+		// Merge this two below maybe?
 		std::vector<Material> materials;
+		std::vector<SurfaceShaderParameters> shader_parameters;
 		std::vector<NodeTransform> transforms;
 
 		// Not sure about that
@@ -43,16 +44,6 @@ namespace ysn
 
 		// Not sure about that x2
 		std::vector<D3D12_SAMPLER_DESC> sampler_descs;
-	};
-
-	// Per instance data for rendering, this can be split into smaller parts
-	YSN_SHADER_STRUCT RenderInstanceData
-	{
-		DirectX::XMMATRIX model_matrix;
-		int32_t material_id;
-		int32_t vertices_before;
-		int32_t indices_before; // offset
-		int32_t pad; 
 	};
 
 	struct RenderScene

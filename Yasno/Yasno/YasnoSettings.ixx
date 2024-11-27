@@ -1,15 +1,15 @@
-#pragma once
+export module YasnoSettings;
 
 namespace ysn
 {
-	struct GraphicsSettings
+	export struct GraphicsSettings
 	{
 		bool is_vsync_enabled = false;
 		bool is_full_screen = false;
 		bool is_raster_mode = true;
 	};
 
-	class YasnoSettings
+	export class YasnoSettings
 	{
 		GraphicsSettings graphics;
 	public:

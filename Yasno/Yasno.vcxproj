@@ -103,14 +103,17 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\Intermediate\$(Platform)\$(Configuration)\</IntDir>
+    <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
@@ -187,10 +190,15 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -209,12 +217,16 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <LanguageStandard_C>Default</LanguageStandard_C>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -235,10 +247,15 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -249,7 +266,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\Shaders\CommonStructures.hlsl" />
     <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl" />
     <None Include="..\Shaders\Skybox_PS.hlsl" />
     <None Include="..\Shaders\Skybox_VS.hlsl" />
@@ -257,16 +273,15 @@
     <ClCompile Include="Graphics\Mesh.cpp" />
     <ClCompile Include="Graphics\Primitive.cpp" />
     <ClCompile Include="Graphics\RenderScene.cpp" />
-    <ClCompile Include="Graphics\RtxMaterial.cpp" />
-    <ClCompile Include="Graphics\SurfaceMaterial.cpp" />
     <ClCompile Include="Graphics\Techniques\ShadowMapPass.cpp" />
     <ClCompile Include="Graphics\Techniques\ConvertToCubemap.cpp" />
     <ClCompile Include="Graphics\Techniques\ForwardPass.cpp" />
     <ClCompile Include="Graphics\Techniques\RaytracingPass.cpp" />
     <ClCompile Include="Graphics\Techniques\SkyboxPass.cpp" />
     <ClCompile Include="Graphics\Techniques\TonemapPostprocess.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Main.cxx" />
     <ClCompile Include="Renderer\CommandQueue.cpp" />
+    <ClCompile Include="Renderer\CommandSignature.cpp" />
     <ClCompile Include="Renderer\DxRenderer.cpp" />
     <ClCompile Include="Renderer\DepthBuffer.cpp" />
     <ClCompile Include="Renderer\DescriptorHeap.cpp" />
@@ -304,11 +319,9 @@
     </ClCompile>
     <ClCompile Include="System\String.cpp" />
     <ClCompile Include="System\Window.cpp" />
-    <ClCompile Include="Yasno\Camera.cpp" />
     <ClCompile Include="Yasno\CameraController.cpp" />
     <ClCompile Include="Yasno\CubemapGenerator.cpp" />
     <ClCompile Include="Yasno\Yasno.cpp" />
-    <ClCompile Include="Yasno\YasnoSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Graphics\AABB.hpp" />
@@ -318,8 +331,7 @@
     <ClInclude Include="Graphics\RenderObjectId.hpp" />
     <ClInclude Include="Graphics\RenderScene.hpp" />
     <ClInclude Include="Graphics\EngineStats.hpp" />
-    <ClInclude Include="Graphics\RtxMaterial.hpp" />
-    <ClInclude Include="Graphics\SurfaceMaterial.hpp" />
+    <ClInclude Include="Graphics\ShaderSharedStructs.h" />
     <ClInclude Include="Graphics\Techniques\ShadowMapPass.hpp" />
     <ClInclude Include="Graphics\Techniques\ConvertToCubemap.hpp" />
     <ClInclude Include="Graphics\Techniques\ForwardPass.hpp" />
@@ -327,6 +339,7 @@
     <ClInclude Include="Graphics\Techniques\SkyboxPass.hpp" />
     <ClInclude Include="Graphics\Techniques\TonemapPostprocess.hpp" />
     <ClInclude Include="Renderer\CommandQueue.hpp" />
+    <ClInclude Include="Renderer\CommandSignature.hpp" />
     <ClInclude Include="Renderer\DxRenderer.hpp" />
     <ClInclude Include="Renderer\DepthBuffer.hpp" />
     <ClInclude Include="Renderer\DescriptorHeap.hpp" />
@@ -370,11 +383,15 @@
     <ClInclude Include="System\stdafx.h" />
     <ClInclude Include="System\String.hpp" />
     <ClInclude Include="System\Window.hpp" />
-    <ClInclude Include="Yasno\Camera.hpp" />
+    <ClCompile Include="Yasno\Camera.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClInclude Include="Yasno\CameraController.hpp" />
     <ClInclude Include="Yasno\CubemapGenerator.hpp" />
     <ClInclude Include="Yasno\Yasno.hpp" />
-    <ClInclude Include="Yasno\YasnoSettings.hpp" />
+    <ClCompile Include="Yasno\YasnoSettings.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitattributes" />
@@ -417,11 +434,6 @@
     <Image Include="..\Assets\icon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\GenerateMipsFast.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\Shaders\ShadowPassPS.hlsl">
       <FileType>Document</FileType>
     </None>
@@ -432,10 +444,15 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
+    <None Include="..\Shaders\IndirectForwardPass_ps.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\IndirectForwardPass_VS.hlsl">
+    <None Include="..\Shaders\IndirectForwardPass_vs.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\Shared.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

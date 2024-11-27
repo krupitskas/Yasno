@@ -4,6 +4,7 @@
 
 #include <Renderer/GpuTexture.hpp>
 #include <System/Filesystem.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 namespace ysn
 {

@@ -1,18 +1,65 @@
-﻿#include "Camera.hpp"
+﻿module;
 
+#include <DirectXMath.h>
 #include <d3d12.h>
-
 #include <SimpleMath.h>
 
-namespace ysn
+export module Camera;
+
+export namespace ysn
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
-	uint32_t GpuCamera::GetGpuSize()
+	struct Camera
 	{
-		return static_cast<uint32_t>(ysn::AlignPow2(sizeof(GpuCamera), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
-	}
+		Camera();
+
+		DirectX::XMMATRIX GetViewMatrix() const;
+		DirectX::XMMATRIX GetProjectionMatrix() const;
+
+		void Update();
+		void SetAspectRatio(float AspectRatio);
+
+		float GetFov() const;
+		void SetFov(float Fov);
+
+		DirectX::XMFLOAT3 GetPosition() const;
+		void SetPosition(DirectX::XMFLOAT3 Position);
+		void Move(DirectX::XMFLOAT3 Position);
+
+		// Right handed coodrinate space
+		DirectX::XMFLOAT3 GetForwardVector() const; // Z forward
+		DirectX::XMFLOAT3 GetRightVector() const; // -X left
+		DirectX::XMFLOAT3 GetUpVector() const; // Y up
+
+		void SetYaw(float Yaw);
+		void SetPitch(float Pitch);
+
+		// NOTE: Turns falls after Update() called!
+		bool IsMoved();
+
+		float fov = 45.0f;
+	private:
+		float m_AspectRatio = 1.0f;
+		float m_NearPlane = 0.1f;
+		float m_FarPlane = 10000.f;
+
+		float m_Pitch = 0.0f; // Vertical rotation
+		float m_Yaw = 0.0f; // Horizontal rotation
+
+		DirectX::XMFLOAT3 m_Position;
+
+		DirectX::XMFLOAT3 m_ForwardVector;
+		DirectX::XMFLOAT3 m_RightVector;
+
+		DirectX::XMMATRIX m_ViewMatrix;
+		DirectX::XMMATRIX m_ProjectionMatrix;
+
+		float m_MouseSensitivity = 1.0f;
+
+		bool m_is_moved = false;
+	};
 
 	Camera::Camera()
 	{

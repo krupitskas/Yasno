@@ -352,8 +352,6 @@ namespace ysn
 
 					if(pso.has_value())
 					{
-						const Material& material = model.materials[primitive.material_id];
-
 						command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
 						command_list->SetPipelineState(pso.value().pso.get());
 

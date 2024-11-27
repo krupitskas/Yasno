@@ -52,12 +52,12 @@ namespace ysn
             4, 3, 7
         };
 
-        const uint32_t vertex_buffer_size = vertices.size() * sizeof(VertexPosTexCoord);
-        const uint32_t index_buffer_size = indices.size() * sizeof(uint16_t);
+        const uint32_t vertex_buffer_size = static_cast<uint32_t>(vertices.size()) * sizeof(VertexPosTexCoord);
+        const uint32_t index_buffer_size = static_cast<uint32_t>(indices.size()) * sizeof(uint16_t);
         
         MeshPrimitive new_box;
-        new_box.index_count = indices.size();
-        new_box.vertex_count = vertices.size();
+        new_box.index_count = static_cast<uint32_t>(indices.size());
+        new_box.vertex_count = static_cast<uint32_t>(vertices.size());
         new_box.input_layout_desc = VertexPosTexCoord::GetVertexLayoutDesc();
         
         const auto renderer = Application::Get().GetRenderer();
