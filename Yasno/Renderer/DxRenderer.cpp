@@ -1,13 +1,15 @@
 ﻿#include "DxRenderer.hpp"
 
+import system.string_helpers;
+
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/GenerateMipsSystem.hpp>
 #include <System/Helpers.hpp>
-#include <System/Result.hpp>
+
 
 namespace
 {
-	ysn::Result<wil::com_ptr<IDXGIAdapter4>, ysn::ErrorType> CreateDXGIAdapter()
+	std::optional<wil::com_ptr<IDXGIAdapter4>> CreateDXGIAdapter()
 	{
 		wil::com_ptr<IDXGIFactory4> dxgi_factory;
 
@@ -20,7 +22,7 @@ namespace
 		if (HRESULT err = CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory)); FAILED(err))
 		{
 			LogFatal << "Can't create DXGIFactory2 with flags " << create_factory_flags << ", error is: " << ysn::ConvertHrToString(err) << " aborting!\n";
-			return ysn::Err(ysn::ErrorType::DxgiFactoryCreationFailed);
+			return std::nullopt;
 		}
 
 		wil::com_ptr<IDXGIAdapter1> dxgi_adapter;
@@ -54,12 +56,12 @@ namespace
 
 		dxgi_factory->EnumAdapters1(best_adapter_index, dxgi_adapter.addressof());
 
-		return ysn::Ok(dxgi_adapter.query<IDXGIAdapter4>());
+		return dxgi_adapter.query<IDXGIAdapter4>();
 	}
 
-	wil::com_ptr<ID3D12Device5> CreateDevice(wil::com_ptr<IDXGIAdapter4> adapter)
+	wil::com_ptr<DxDevice> CreateDevice(wil::com_ptr<IDXGIAdapter4> adapter)
 	{
-		wil::com_ptr<ID3D12Device5> d3d12Device2;
+		wil::com_ptr<DxDevice> d3d12Device2;
 		ThrowIfFailed(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&d3d12Device2)));
 
 	#if defined(_DEBUG)
@@ -125,21 +127,21 @@ namespace
 			.Format = DXGI_FORMAT_R32G32B32_FLOAT,
 			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
-		});
+						 });
 
 		result.push_back({
 			.SemanticName = "NORMAL",
 			.Format = DXGI_FORMAT_R32G32B32_FLOAT,
 			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
-		});
+						 });
 
 		result.push_back({
 			.SemanticName = "TANGENT",
 			.Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
 			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
-		});
+						 });
 
 		result.push_back({
 			.SemanticName = "TEXCOORD_",
@@ -147,7 +149,7 @@ namespace
 			.Format = DXGI_FORMAT_R32G32_FLOAT,
 			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA
-		});
+						 });
 
 		return result;
 	}
@@ -158,9 +160,9 @@ namespace ysn
 	bool DxRenderer::Initialize()
 	{
 	#if defined(_DEBUG)
-			// Always enable the debug layer before doing anything DX12 related
-			// so all possible errors generated while creating DX12 objects
-			// are caught by the debug layer.
+		// Always enable the debug layer before doing anything DX12 related
+		// so all possible errors generated while creating DX12 objects
+		// are caught by the debug layer.
 		wil::com_ptr<ID3D12Debug> debugInterface;
 		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
 		debugInterface->EnableDebugLayer();
@@ -168,13 +170,12 @@ namespace ysn
 
 		const auto dxgi_adapter = CreateDXGIAdapter();
 
-		if (dxgi_adapter.is_err())
+		if (!dxgi_adapter.has_value())
 		{
 			return false;
 		}
 
-		m_dxgi_adapter = dxgi_adapter.ok_value();
-		;
+		m_dxgi_adapter = dxgi_adapter.value();
 
 		m_device = CreateDevice(m_dxgi_adapter);
 
@@ -292,7 +293,7 @@ namespace ysn
 		return true;
 	}
 
-	wil::com_ptr<ID3D12Device5> DxRenderer::GetDevice() const
+	wil::com_ptr<DxDevice> DxRenderer::GetDevice() const
 	{
 		return m_device;
 	}

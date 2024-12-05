@@ -1,8 +1,10 @@
-#pragma once
+module;
 
 #include <intrin.h>
 
-namespace ysn
+export module system.math;
+
+export namespace ysn
 {
 	constexpr bool IsPow2(uint64_t value)
 	{

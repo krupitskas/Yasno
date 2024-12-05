@@ -1,8 +1,9 @@
 #pragma once
 
-#include <optional>
+import <optional>;
 
-#include <Renderer/GpuResource.hpp>
+import renderer.gpu_resource;
+
 #include <System/Application.hpp>
 #include <Renderer/DxRenderer.hpp>
 

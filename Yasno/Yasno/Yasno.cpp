@@ -1,6 +1,9 @@
 ﻿#include "Yasno.hpp"
 
-#include <algorithm>
+import system.math;
+import system.filesystem;
+
+import <algorithm>;
 
 #include <d3dcompiler.h>
 #include <d3dx12.h>
@@ -13,10 +16,7 @@
 #include <System/GltfLoader.hpp>
 #include <System/Gui.hpp>
 #include <Renderer/DxRenderer.hpp>
-#include <System/Filesystem.hpp>
 #include <System/Assert.hpp>
-#include <System/Filesystem.hpp>
-#include <System/Math.hpp>
 #include <Graphics/EngineStats.hpp>
 #include <Renderer/GpuBuffer.hpp>
 #include <Graphics/ShaderSharedStructs.h>

@@ -1,5 +1,7 @@
 #pragma once
 
+import system.math;
+
 #include <cstdint>
 
 #include <SimpleMath.h>

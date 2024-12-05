@@ -3,6 +3,8 @@
 #include <DirectXMath.h>
 #include <d3d12.h>
 
+import system.math;
+
 #define YSN_SHADER_STRUCT struct alignas(16)
 
 //#define matrix DirectX::XMMATRIX

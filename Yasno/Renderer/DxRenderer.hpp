@@ -1,6 +1,9 @@
 ﻿#pragma once
 
-#include <memory>
+import renderer.vertex_storage;
+import renderer.dxtypes;
+
+import <memory>;
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -10,7 +13,6 @@
 #include <Renderer/DescriptorHeap.hpp>
 #include <Renderer/ShaderStorage.hpp>
 #include <Renderer/IndexStorage.hpp>
-#include <Renderer/VertexStorage.hpp>
 #include <Renderer/Pso.hpp>
 
 namespace ysn
@@ -28,8 +30,7 @@ namespace ysn
 		std::optional<PsoId> CreatePso(const GraphicsPsoDesc& pso_desc);
 		std::optional<Pso> GetPso(PsoId pso_id);
 
-		wil::com_ptr<ID3D12Device5> GetDevice() const;
-
+		wil::com_ptr<DxDevice> GetDevice() const;
 
 		std::shared_ptr<CommandQueue> GetDirectQueue() const;
 		std::shared_ptr<CommandQueue> GetComputeQueue() const;
@@ -61,7 +62,7 @@ namespace ysn
 		static constexpr uint32_t SWAP_CHAIN_BUFFER_COUNT = 3;
 
 		// Low level objects
-		wil::com_ptr<ID3D12Device5> m_device;
+		wil::com_ptr<DxDevice> m_device;
 		wil::com_ptr<IDXGIAdapter4> m_dxgi_adapter;
 		wil::com_ptr<IDXGISwapChain4> m_swap_chain;
 

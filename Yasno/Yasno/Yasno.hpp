@@ -16,6 +16,8 @@
 #include <Graphics/Techniques/SkyboxPass.hpp>
 #include <Graphics/Techniques/ForwardPass.hpp>
 
+import yasno.camera_controller;
+
 namespace ysn
 {
 	class Yasno : public Game

@@ -1,8 +1,10 @@
-#pragma once
+module;
 
 #include <DirectXMath.h>
 
-namespace ysn
+export module graphics.aabb;
+
+export namespace ysn
 {
 	struct AABB
 	{

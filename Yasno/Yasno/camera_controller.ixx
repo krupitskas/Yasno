@@ -1,19 +1,63 @@
-#include "CameraController.hpp"
+module;
 
 #include <DirectXMath.h>
-#include <print>
 
-namespace
+export module yasno.camera_controller;
+
+import <memory>;
+import <print>;
+
+import yasno.camera;
+
+export namespace ysn
 {
-	DirectX::XMFLOAT3 MoveWithDirection(const float Distance, DirectX::XMFLOAT3 Direction)
+	class CameraController
 	{
-		Direction.x *= Distance;
-		Direction.y *= Distance;
-		Direction.z *= Distance;
+	public:
+		std::shared_ptr<Camera> pCamera;
 
-		return Direction;
-	}
-} // namespace
+		bool IsMoved();
+
+		void Enable();
+		void Disable();
+
+	protected:
+		bool m_IsActive = true;
+	};
+
+	class FpsCameraController : public CameraController
+	{
+	public:
+		void MoveLeft(float Distance) const;
+		void MoveRight(float Distance) const;
+		void MoveForward(float Distance) const;
+		void MoveBackwards(float Distance) const;
+		void MoveUp(float Distance) const;
+		void MoveDown(float Distance) const;
+
+		void MoveMouse(int MousePositionX, int MousePositionY);
+
+		bool m_IsMovementBoostActive = false;
+
+		float mouse_speed = 5.0f;
+	private:
+		float m_Yaw = 0.0f;
+		float m_Pitch = 0.0f;
+		float m_MovementBoost = 5.0;
+		float m_MouseSensitivity = 0.1f;
+	};
+}
+
+module :private;
+
+DirectX::XMFLOAT3 MoveWithDirection(const float Distance, DirectX::XMFLOAT3 Direction)
+{
+	Direction.x *= Distance;
+	Direction.y *= Distance;
+	Direction.z *= Distance;
+
+	return Direction;
+}
 
 namespace ysn
 {
@@ -149,3 +193,4 @@ namespace ysn
 		pCamera->SetPitch(m_Pitch);
 	}
 } // namespace ysn
+

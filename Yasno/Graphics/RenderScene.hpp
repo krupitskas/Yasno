@@ -8,10 +8,12 @@
 #include <Graphics/Material.hpp>
 #include <Graphics/Mesh.hpp>
 #include <Yasno/Lights.hpp>
-#include <Yasno/CameraController.hpp>
 #include <Renderer/GpuTexture.hpp>
 #include <Renderer/GpuBuffer.hpp>
 #include <Graphics/ShaderSharedStructs.h>
+
+import yasno.camera_controller;
+import yasno.camera;
 
 namespace ysn
 {

@@ -3,7 +3,6 @@
 #include <d3dx12.h>
 #include <DirectXMath.h>
 
-#include <Renderer/GpuResource.hpp>
 
 namespace ysn
 {

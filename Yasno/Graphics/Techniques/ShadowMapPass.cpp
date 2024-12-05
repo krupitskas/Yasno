@@ -1,66 +1,13 @@
 #include "ShadowMapPass.hpp"
 
+import system.filesystem;
+
 #include <Renderer/DxRenderer.hpp>
-#include <System/Math.hpp>
 #include <Yasno/Lights.hpp>
 #include <System/Application.hpp>
-#include <System/Filesystem.hpp>
 
 namespace ysn
 {
-	//static std::vector<D3D12_INPUT_ELEMENT_DESC> BuildInputElementDescs(const std::unordered_map<std::string, Attribute>& render_attributes)
-	//{
-	//	std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc_arr;
-
-	//	for (const auto& [name, attribute] : render_attributes)
-	//	{
-	//		D3D12_INPUT_ELEMENT_DESC input_element_desc = {};
-
-	//		input_element_desc.SemanticName = &attribute.name[0];
-	//		input_element_desc.Format = attribute.format;
-
-	//		// TODO: Need to parse semantic name and index from attribute name to reduce number of ifdefs
-	//		if (attribute.name == "TEXCOORD_0")
-	//		{
-	//			input_element_desc.SemanticName = "TEXCOORD_";
-	//			input_element_desc.SemanticIndex = 0;
-	//		}
-
-	//		if (attribute.name == "TEXCOORD_1")
-	//		{
-	//			input_element_desc.SemanticName = "TEXCOORD_";
-	//			input_element_desc.SemanticIndex = 1;
-	//		}
-
-	//		if (attribute.name == "TEXCOORD_2")
-	//		{
-	//			input_element_desc.SemanticName = "TEXCOORD_";
-	//			input_element_desc.SemanticIndex = 2;
-	//		}
-
-	//		if (attribute.name == "COLOR_0")
-	//		{
-	//			input_element_desc.SemanticName = "COLOR_";
-	//			input_element_desc.SemanticIndex = 0;
-	//		}
-
-	//		if (attribute.name == "COLOR_1")
-	//		{
-	//			input_element_desc.SemanticName = "COLOR_";
-	//			input_element_desc.SemanticIndex = 1;
-	//		}
-
-	//		input_element_desc.InputSlot = static_cast<UINT>(input_element_desc_arr.size());
-	//		input_element_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-	//		input_element_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-
-	//		input_element_desc_arr.push_back(input_element_desc);
-	//	}
-
-	//	return input_element_desc_arr;
-	//}
-
-
 	bool ShadowMapPass::InitializeCamera(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		D3D12_HEAP_PROPERTIES heapProperties = {};
@@ -92,7 +39,6 @@ namespace ysn
 	void ShadowMapPass::Initialize(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		InitializeShadowMapBuffer(p_renderer);
-		//InitializeOrthProjection();
 		InitializeCamera(p_renderer);
 	}
 

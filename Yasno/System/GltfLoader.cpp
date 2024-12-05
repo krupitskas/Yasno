@@ -1,5 +1,8 @@
 #include "GltfLoader.hpp"
 
+import system.string_helpers;
+import system.math;
+
 #include <memory>
 #include <unordered_set>
 #include <algorithm>
@@ -12,8 +15,6 @@
 #include <tiny_gltf.h>
 
 #include <Renderer/DxRenderer.hpp>
-#include <System/String.hpp>
-#include <System/Math.hpp>
 #include <System/Application.hpp>
 #include <Graphics/RenderScene.hpp>
 #include <Graphics/Primitive.hpp>

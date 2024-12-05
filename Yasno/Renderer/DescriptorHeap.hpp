@@ -4,8 +4,6 @@
 #include <d3d12.h>
 #include <d3dx12.h>
 
-#include <System/Result.hpp>
-
 namespace ysn
 {
 	// TODO: make it typesafe and check if it's the same heap

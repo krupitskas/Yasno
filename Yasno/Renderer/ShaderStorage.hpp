@@ -1,17 +1,14 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <optional>
-#include <unordered_map>
-#include <optional>
-#include <string>
-
 #include <wil/com.h>
 #include <dxcapi.h>
 #include <d3d12.h>
 
-#include <System/Result.hpp>
+import <string>;
+import <vector>;
+import <optional>;
+import <unordered_map>;
+import <optional>;
 
 namespace ysn
 {

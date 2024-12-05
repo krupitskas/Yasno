@@ -1,13 +1,15 @@
 #pragma once
 
-#include <unordered_map>
+import graphics.aabb;
+import renderer.vertex_storage;
+
+import <unordered_map>;
+import <vector>;
 
 #include <d3dx12.h>
 #include <wil/com.h>
 
 #include <Renderer/Pso.hpp>
-#include <Renderer/VertexStorage.hpp>
-#include <Graphics/AABB.hpp>
 
 namespace ysn
 {

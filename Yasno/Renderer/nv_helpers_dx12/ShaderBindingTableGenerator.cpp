@@ -34,11 +34,11 @@ dispatch rays description.
 
 */
 
+import system.string_helpers;
+
 #include <stdexcept>
 
 #include "ShaderBindingTableGenerator.h"
-#include <System/String.hpp>
-
 
 // Helper to compute aligned buffer sizes
 #ifndef ROUND_UP

@@ -1,13 +1,13 @@
 #include "RaytracingPass.hpp"
 
-import Camera;
+import yasno.camera;
+import system.filesystem;
 
-#include <cstdint>
+import <cstdint>;
 
 #include <Renderer/nv_helpers_dx12/RaytracingPipelineGenerator.h>
 #include <Renderer/nv_helpers_dx12/RootSignatureGenerator.h>
 #include <Renderer/DxRenderer.hpp>
-#include <System/Filesystem.hpp>
 #include <Renderer/DXRHelper.h>
 #include <Renderer/DescriptorHeap.hpp>
 #include <Renderer/RayTracingContext.hpp>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <System/Math.hpp>
+import system.math;
 
 // This requires SSE4.2 which is present on Intel Nehalem (Nov. 2008)
 // and AMD Bulldozer (Oct. 2011) processors.  I could put a runtime

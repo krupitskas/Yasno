@@ -1,12 +1,7 @@
 #include "Primitive.hpp"
 
-#include <vector>
-
-#include <Renderer/VertexStorage.hpp>
-
 #include <System/Application.hpp>
-
-#include "Renderer/DxRenderer.hpp"
+#include <Renderer/DxRenderer.hpp>
 
 namespace ysn
 {

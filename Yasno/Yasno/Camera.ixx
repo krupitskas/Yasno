@@ -4,7 +4,7 @@
 #include <d3d12.h>
 #include <SimpleMath.h>
 
-export module Camera;
+export module yasno.camera;
 
 export namespace ysn
 {
@@ -61,6 +61,12 @@ export namespace ysn
 		bool m_is_moved = false;
 	};
 
+}
+
+module :private;
+
+namespace ysn
+{
 	Camera::Camera()
 	{
 		m_ProjectionMatrix = XMMatrixIdentity();

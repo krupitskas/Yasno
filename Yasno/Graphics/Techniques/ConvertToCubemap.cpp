@@ -1,9 +1,11 @@
 #include "ConvertToCubemap.hpp"
 
+import system.string_helpers;
+import system.filesystem;
+
 #include <Renderer/CommandQueue.hpp>
 #include <Renderer/DxRenderer.hpp>
 #include <System/Application.hpp>
-#include <System/Filesystem.hpp>
 
 namespace ysn
 {
@@ -92,6 +94,7 @@ namespace ysn
 		pipeline_state_desc.NumRenderTargets = 1;
 		pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Get it from rendertarget
 		pipeline_state_desc.SampleDesc = { 1, 0 };
+		pipeline_state_desc.SampleMask = 1;
 
 		if (auto hr_result = Application::Get().GetDevice()->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&m_pipeline_state)); hr_result != S_OK)
 		{

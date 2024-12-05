@@ -1,5 +1,8 @@
 #include "ShaderStorage.hpp"
 
+import system.string_helpers;
+import system.filesystem;
+
 #include <fstream>
 #include <filesystem>
 #include <string>
@@ -17,9 +20,6 @@
 #endif
 
 #include <d3d12shader.h>
-
-#include <System/String.hpp>
-#include <System/Filesystem.hpp>
 
 // https://simoncoenen.com/blog/programming/graphics/DxcCompiling
 

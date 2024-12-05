@@ -1,9 +1,10 @@
 #include "GenerateMipsSystem.hpp"
 
+import system.filesystem;
+
 #include <d3dx12.h>
 
 #include <Renderer/GpuTexture.hpp>
-#include <System/Filesystem.hpp>
 #include <Graphics/ShaderSharedStructs.h>
 
 namespace ysn
