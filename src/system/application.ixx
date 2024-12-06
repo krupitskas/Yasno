@@ -404,6 +404,5 @@ namespace ysn
 
 		return 0;
 	}
-
-} // namespace ysn
+}
 

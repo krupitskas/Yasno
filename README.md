@@ -7,8 +7,8 @@
 </div>
 
 <p align="center">
-    <img src="Docs/Images/Raster.png" style="width: 49%; height: 49%">
-    <img src="Docs/Images/Pathtracing.png" style="width: 49%; height: 49%">
+    <img src="docs/images/raster.png" style="width: 49%; height: 49%">
+    <img src="docs/images/pathtracing.png" style="width: 49%; height: 49%">
 </p>
 
 ## Current research goal idea

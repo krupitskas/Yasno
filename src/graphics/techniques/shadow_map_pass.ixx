@@ -167,7 +167,7 @@ namespace ysn
 		{
 			ysn::ShaderCompileParameters vs_parameters;
 			vs_parameters.shader_type = ysn::ShaderType::Vertex;
-			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/forward_pass.vs.hlsl");
+			vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/forward_pass.vs.hlsl");
 			vs_parameters.defines.emplace_back(L"SHADOW_PASS");
 
 			const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
@@ -185,7 +185,7 @@ namespace ysn
 		{
 			ysn::ShaderCompileParameters ps_parameters;
 			ps_parameters.shader_type = ysn::ShaderType::Pixel;
-			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/shadow_pass.ps.hlsl");
+			ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/shadow_pass.ps.hlsl");
 
 			const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 

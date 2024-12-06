@@ -143,12 +143,12 @@ namespace ysn
 
 			wil::com_ptr<IDxcBlob> new_included_file;
 
-			const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"Shaders/shared.hlsl");
+			const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/shared.hlsl");
 			hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
 
 			if (hr != S_OK)
 			{
-				std::cerr << "Can't load Shaders/shared.hlsl\n";
+				std::cerr << "Can't load shaders/shared.hlsl\n";
 				return false;
 			}
 
@@ -208,7 +208,7 @@ namespace ysn
 		arguments.push_back(parameters.entry_point.c_str());
 
 		// Shaders include dir
-		arguments.push_back(L"-I Shaders/");
+		arguments.push_back(L"-I shaders/");
 
 		// Profile
 		arguments.push_back(L"-T");

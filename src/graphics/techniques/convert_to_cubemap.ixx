@@ -78,7 +78,7 @@ namespace ysn
 
 		ysn::ShaderCompileParameters vs_parameters;
 		vs_parameters.shader_type = ysn::ShaderType::Vertex;
-		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/convert_equirectangular_map.vs.hlsl");
+		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/convert_equirectangular_map.vs.hlsl");
 
 		const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
 
@@ -90,7 +90,7 @@ namespace ysn
 
 		ysn::ShaderCompileParameters ps_parameters;
 		ps_parameters.shader_type = ysn::ShaderType::Pixel;
-		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/convert_equirectangular_map.ps.hlsl");
+		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/convert_equirectangular_map.ps.hlsl");
 
 		const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
 

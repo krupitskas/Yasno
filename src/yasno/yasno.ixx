@@ -364,23 +364,23 @@ namespace ysn
 		{
 			LoadingParameters loading_parameters;
 			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza/Sponza.gltf"), loading_parameters);
+			load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		//{
 		//	LoadingParameters loading_parameters;
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		//}
 
 		//{
 		//	LoadingParameters loading_parameters;
 		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Bistro/Bistro.gltf"), loading_parameters);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
 		//}
 
 		//{
 		//	LoadingParameters loading_parameters;
-		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"Assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
+		//	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
 		//}
 
 		// Finish index buffer
@@ -631,7 +631,7 @@ namespace ysn
 
 		{
 			LoadTextureParameters parameter;
-			parameter.filename = "Assets/HDRI/drackenstein_quarry_puresky_4k.hdr";
+			parameter.filename = "assets/HDRI/drackenstein_quarry_puresky_4k.hdr";
 			parameter.command_list = command_list;
 			parameter.generate_mips = false;
 			parameter.is_srgb = false;

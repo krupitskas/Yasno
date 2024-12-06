@@ -220,7 +220,7 @@ namespace ysn
 
 		ShaderCompileParameters ray_gen_parameters;
 		ray_gen_parameters.shader_type = ShaderType::Library;
-		ray_gen_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/ray_gen.rt.hlsl");
+		ray_gen_parameters.shader_path = GetVirtualFilesystemPath(L"shaders/ray_gen.rt.hlsl");
 
 		const auto ray_gen_result = renderer->GetShaderStorage()->CompileShader(ray_gen_parameters);
 
@@ -232,7 +232,7 @@ namespace ysn
 
 		ShaderCompileParameters miss_parameters;
 		miss_parameters.shader_type = ShaderType::Library;
-		miss_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/miss.rt.hlsl");
+		miss_parameters.shader_path = GetVirtualFilesystemPath(L"shaders/miss.rt.hlsl");
 
 		const auto miss_result = renderer->GetShaderStorage()->CompileShader(miss_parameters);
 
@@ -244,7 +244,7 @@ namespace ysn
 
 		ShaderCompileParameters hit_parameters;
 		hit_parameters.shader_type = ShaderType::Library;
-		hit_parameters.shader_path = GetVirtualFilesystemPath(L"Shaders/hit.rt.hlsl");
+		hit_parameters.shader_path = GetVirtualFilesystemPath(L"shaders/hit.rt.hlsl");
 
 		const auto hit_result = renderer->GetShaderStorage()->CompileShader(hit_parameters);
 

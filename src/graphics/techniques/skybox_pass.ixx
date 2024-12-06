@@ -82,7 +82,7 @@ namespace ysn
 
 		ysn::ShaderCompileParameters vs_parameters;
 		vs_parameters.shader_type = ysn::ShaderType::Vertex;
-		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/Skybox_VS.hlsl");
+		vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/Skybox_VS.hlsl");
 
 		const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
 
@@ -94,7 +94,7 @@ namespace ysn
 
 		ysn::ShaderCompileParameters ps_parameters;
 		ps_parameters.shader_type = ysn::ShaderType::Pixel;
-		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"Shaders/Skybox_PS.hlsl");
+		ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/Skybox_PS.hlsl");
 
 		const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
 
