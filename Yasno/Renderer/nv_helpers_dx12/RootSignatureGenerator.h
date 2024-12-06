@@ -52,10 +52,11 @@ return rsc.Generate(m_device.Get(), true);
 
 #pragma once
 
-#include "d3d12.h"
+#include <d3d12.h>
 
-#include <tuple>
-#include <vector>
+import std;
+
+import system.logger;
 
 namespace nv_helpers_dx12
 {

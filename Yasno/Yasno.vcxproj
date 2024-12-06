@@ -190,15 +190,13 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+      <TranslateIncludes>true</TranslateIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -218,15 +216,13 @@
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+      <TranslateIncludes>true</TranslateIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -247,15 +243,13 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles>$(ProjectDir)System\stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <PrecompiledHeaderFile>$(ProjectDir)System\stdafx.h</PrecompiledHeaderFile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+      <TranslateIncludes>true</TranslateIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -266,132 +260,149 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl" />
-    <None Include="..\Shaders\Skybox_PS.hlsl" />
-    <None Include="..\Shaders\Skybox_VS.hlsl" />
-    <ClCompile Include="Graphics\Material.cpp" />
-    <ClCompile Include="Graphics\Mesh.cpp" />
-    <ClCompile Include="Graphics\Primitive.cpp" />
-    <ClCompile Include="Graphics\RenderScene.cpp" />
-    <ClCompile Include="Graphics\Techniques\ShadowMapPass.cpp" />
-    <ClCompile Include="Graphics\Techniques\ConvertToCubemap.cpp" />
-    <ClCompile Include="Graphics\Techniques\ForwardPass.cpp" />
-    <ClCompile Include="Graphics\Techniques\RaytracingPass.cpp" />
-    <ClCompile Include="Graphics\Techniques\SkyboxPass.cpp" />
-    <ClCompile Include="Graphics\Techniques\TonemapPostprocess.cpp" />
+    <None Include="..\Shaders\convert_equirectangular_map.vs.hlsl" />
+    <None Include="..\Shaders\skybox.ps.hlsl" />
+    <None Include="..\Shaders\skybox.vs.hlsl" />
+    <ClCompile Include="external\directx.ixx" />
+    <ClCompile Include="external\directx_math.ixx" />
+    <ClCompile Include="external\implementation.ixx" />
+    <ClCompile Include="external\windows.ixx" />
+    <ClCompile Include="Graphics\lights.ixx" />
     <ClCompile Include="main.cxx" />
-    <ClCompile Include="Renderer\CommandQueue.cpp" />
-    <ClCompile Include="Renderer\CommandSignature.cpp" />
-    <ClCompile Include="Renderer\DxRenderer.cpp" />
-    <ClCompile Include="Renderer\DepthBuffer.cpp" />
-    <ClCompile Include="Renderer\DescriptorHeap.cpp" />
-    <ClCompile Include="Renderer\dxtypes.ixx" />
-    <ClCompile Include="Renderer\GenerateMipsSystem.cpp" />
-    <ClCompile Include="Renderer\GpuBuffer.cpp" />
-    <ClCompile Include="Renderer\IndexStorage.cpp" />
+    <ClCompile Include="Renderer\dx_types.ixx" />
     <ClCompile Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\RaytracingPipelineGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\RootSignatureGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.cpp" />
     <ClCompile Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.cpp" />
-    <ClCompile Include="Renderer\Pso.cpp" />
-    <ClCompile Include="Renderer\RaytracingContext.cpp" />
-    <ClCompile Include="Renderer\RootSignature.cpp" />
-    <ClCompile Include="Renderer\ShaderStorage.cpp" />
-    <ClCompile Include="Renderer\GpuTexture.cpp" />
-    <ClCompile Include="System\Application.cpp" />
     <ClCompile Include="System\Assert.cpp" />
-    <ClCompile Include="System\Game.cpp" />
-    <ClCompile Include="System\GameInput.cpp" />
-    <ClCompile Include="System\GltfLoader.cpp" />
-    <ClCompile Include="System\Gui.cpp" />
-    <ClCompile Include="System\HighResolutionClock.cpp" />
-    <ClCompile Include="System\Logger.cpp" />
-    <ClCompile Include="System\stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="System\Window.cpp" />
-    <ClCompile Include="Yasno\Yasno.cpp" />
+    <ClCompile Include="System\clock.ixx" />
+    <ClCompile Include="System\cvars.ixx" />
+    <ClCompile Include="System\filesystem.ixx" />
+    <ClCompile Include="System\math.ixx" />
+    <ClCompile Include="System\string_helpers.ixx" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Graphics\aabb.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="Graphics\Material.hpp" />
-    <ClInclude Include="Graphics\Mesh.hpp" />
-    <ClInclude Include="Graphics\Primitive.hpp" />
-    <ClInclude Include="Graphics\RenderObjectId.hpp" />
-    <ClInclude Include="Graphics\RenderScene.hpp" />
-    <ClInclude Include="Graphics\EngineStats.hpp" />
+    <ClCompile Include="Graphics\material.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\mesh.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\primitive.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\render_object_id.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\render_scene.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClInclude Include="Graphics\engine_stats.ixx" />
     <ClInclude Include="Graphics\ShaderSharedStructs.h" />
-    <ClInclude Include="Graphics\Techniques\ShadowMapPass.hpp" />
-    <ClInclude Include="Graphics\Techniques\ConvertToCubemap.hpp" />
-    <ClInclude Include="Graphics\Techniques\ForwardPass.hpp" />
-    <ClInclude Include="Graphics\Techniques\RaytracingPass.hpp" />
-    <ClInclude Include="Graphics\Techniques\SkyboxPass.hpp" />
-    <ClInclude Include="Graphics\Techniques\TonemapPostprocess.hpp" />
-    <ClInclude Include="Renderer\CommandQueue.hpp" />
-    <ClInclude Include="Renderer\CommandSignature.hpp" />
-    <ClInclude Include="Renderer\DxRenderer.hpp" />
-    <ClInclude Include="Renderer\DepthBuffer.hpp" />
-    <ClInclude Include="Renderer\DescriptorHeap.hpp" />
+    <ClCompile Include="Graphics\Techniques\shadow_map_pass.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\convert_to_cubemap.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\forward_pass.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\raytracing_pass.ixx" />
+    <ClCompile Include="Graphics\Techniques\skybox_pass.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\tonemap_pass.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\command_queue.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\command_signature.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\dxrenderer.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\depth_buffer.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\descriptor_heap.ixx" />
     <ClInclude Include="Renderer\DXRHelper.h" />
-    <ClInclude Include="Renderer\GenerateMipsSystem.hpp" />
-    <ClInclude Include="Renderer\GpuBuffer.hpp" />
+    <ClCompile Include="Renderer\generate_mips_system.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClInclude Include="Renderer\gpu_buffer.ixx" />
     <ClCompile Include="Renderer\gpu_resource.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="Renderer\IndexStorage.hpp" />
+    <ClCompile Include="Renderer\index_storage.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClInclude Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\RaytracingPipelineGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\RootSignatureGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\ShaderBindingTableGenerator.h" />
     <ClInclude Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.h" />
-    <ClInclude Include="Renderer\Pso.hpp" />
-    <ClInclude Include="Renderer\RaytracingContext.hpp" />
-    <ClInclude Include="Renderer\RootSignature.hpp" />
-    <ClInclude Include="Renderer\ShaderStorage.hpp" />
-    <ClInclude Include="Renderer\GpuTexture.hpp" />
+    <ClCompile Include="Renderer\pso.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\raytracing_context.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\root_signature.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\shader_storage.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Renderer\gpu_texture.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClInclude Include="resource.h" />
     <ClCompile Include="Renderer\vertex_storage.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="System\Application.hpp" />
-    <ClInclude Include="System\Assert.hpp" />
-    <ClCompile Include="System\cvars.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClInclude Include="System\Events.hpp" />
-    <ClCompile Include="System\filesystem.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClInclude Include="System\GlobalDefines.hpp" />
-    <ClInclude Include="System\Game.hpp" />
-    <ClInclude Include="System\GameInput.hpp" />
-    <ClInclude Include="System\GltfLoader.hpp" />
-    <ClInclude Include="System\Gui.hpp" />
-    <ClInclude Include="System\Hash.hpp" />
-    <ClInclude Include="System\Helpers.hpp" />
-    <ClInclude Include="System\HighResolutionClock.hpp" />
-    <ClInclude Include="System\KeyCodes.hpp" />
-    <ClInclude Include="System\Logger.hpp" />
-    <ClCompile Include="System\math.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClInclude Include="System\stdafx.h" />
-    <ClCompile Include="System\string_helpers.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClInclude Include="System\Window.hpp" />
     <ClCompile Include="Yasno\camera.ixx">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="Yasno\camera_controller.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="Yasno\Yasno.hpp" />
+    <ClCompile Include="System\application.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClInclude Include="System\Assert.hpp" />
+    <ClCompile Include="System\events.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="System\game.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="System\game_input.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="System\gltf_loader.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="System\gui.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClInclude Include="System\Hash.hpp" />
+    <ClInclude Include="System\Helpers.hpp" />
+    <ClCompile Include="System\logger.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="System\window.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Yasno\yasno.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClCompile Include="Yasno\settings.ixx">
       <FileType>Document</FileType>
     </ClCompile>
@@ -402,25 +413,25 @@
     <None Include="..\.gitignore" />
     <None Include="..\nuget.config" />
     <None Include="..\README.md" />
-    <None Include="..\Shaders\ForwardPassPS.hlsl">
+    <None Include="..\Shaders\forward_pass.ps.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\ForwardPassVS.hlsl">
+    <None Include="..\Shaders\forward_pass.vs.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\ConvertEquirectangularMap_PS.hlsl">
+    <None Include="..\Shaders\convert_equirectangular_map.ps.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\GenerateMips.hlsl">
+    <None Include="..\Shaders\generate_mips.cs.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\HitRT.hlsl">
+    <None Include="..\Shaders\hit.rt.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\MissRT.hlsl">
+    <None Include="..\Shaders\miss.rt.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\RayGenRT.hlsl">
+    <None Include="..\Shaders\ray_gen.rt.hlsl">
       <FileType>Document</FileType>
     </None>
     <None Include="..\Shaders\tonemap.cs.hlsl">
@@ -437,25 +448,25 @@
     <Image Include="..\Assets\icon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\ShadowPassPS.hlsl">
+    <None Include="..\Shaders\shadow_pass.ps.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\FrustumCulling_CS.hlsl">
+    <None Include="..\Shaders\frustum_culling.cs.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\IndirectForwardPass_ps.hlsl">
+    <None Include="..\Shaders\indirect_forward_pass.ps..hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\Shaders\IndirectForwardPass_vs.hlsl">
+    <None Include="..\Shaders\indirect_forward_pass.vs.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\Shared.hlsl">
+    <None Include="..\Shaders\shared.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

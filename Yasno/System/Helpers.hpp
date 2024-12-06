@@ -4,9 +4,9 @@
 
 #include <exception>
 
-inline void ThrowIfFailed(HRESULT hr)
+void ThrowIfFailed(HRESULT hr)
 {
-	if (FAILED(hr))
+	if (hr != S_OK)
 	{
 		throw std::exception();
 	}

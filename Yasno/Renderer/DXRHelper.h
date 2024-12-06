@@ -1,18 +1,11 @@
-/******************************************************************************
- * Copyright 1998-2018 NVIDIA Corp. All Rights Reserved.
- *****************************************************************************/
-
 #pragma once
-
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
 
 #include <dxcapi.h>
 #include <d3d12.h>
 
 #include <System/Helpers.hpp>
+
+import std;
 
 namespace nv_helpers_dx12
 {

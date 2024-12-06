@@ -35,8 +35,6 @@ pointers will be bound.
 
 */
 
-#include <stdexcept>
-
 #include "RootSignatureGenerator.h"
 
 namespace nv_helpers_dx12
@@ -201,7 +199,7 @@ namespace nv_helpers_dx12
         if (FAILED(hr))
         {
             const auto error = static_cast<char*>(pErrorBlob->GetBufferPointer());
-            LogError << "Can't create root signature: " << error << "\n";
+            std::cerr << "Can't create root signature: " << error << "\n";
             throw std::logic_error("Cannot serialize root signature");
         }
         ID3D12RootSignature* pRootSig;

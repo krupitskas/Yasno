@@ -72,7 +72,8 @@ return buffers;
 
 #include <DirectXMath.h>
 
-#include <vector>
+import <vector>;
+import <stdexcept>;
 
 namespace nv_helpers_dx12
 {

@@ -38,7 +38,7 @@ return buffers;
 
 #include "d3d12.h"
 
-#include <vector>
+import <vector>;
 
 namespace nv_helpers_dx12
 {

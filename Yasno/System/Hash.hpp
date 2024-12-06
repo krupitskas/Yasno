@@ -1,7 +1,5 @@
 #pragma once
 
-import system.math;
-
 // This requires SSE4.2 which is present on Intel Nehalem (Nov. 2008)
 // and AMD Bulldozer (Oct. 2011) processors.  I could put a runtime
 // check for this, but I'm just going to assume people playing with
@@ -16,6 +14,8 @@ import system.math;
 #pragma intrinsic(_mm_crc32_u32)
 #pragma intrinsic(_mm_crc32_u64)
 #endif
+
+import system.math;
 
 namespace ysn
 {

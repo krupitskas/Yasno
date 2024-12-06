@@ -1,6 +1,10 @@
+module;
+
+#include <Windows.h>
+
 export module system.filesystem;
 
-import <string>;
+import std;
 
 export namespace ysn
 {

@@ -4,9 +4,7 @@ module;
 
 export module yasno.camera_controller;
 
-import <memory>;
-import <print>;
-
+import std;
 import yasno.camera;
 
 export namespace ysn

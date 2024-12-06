@@ -1,8 +1,6 @@
-module;
+#pragma once
 
 #include <DirectXMath.h>
-
-export module graphics.lights;
 
 // TODO: Use LUXes here instead of "intensities"
 

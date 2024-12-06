@@ -4,7 +4,7 @@ module;
 
 export module system.string_helpers;
 
-import <string>;
+import std;
 
 export namespace ysn
 {

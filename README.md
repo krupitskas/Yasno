@@ -21,7 +21,7 @@ Reference pathtracing use RTX for tracing rays from the camera to the world. Ras
 
 ### Current features
 
-* Forward raster renderer mode
+* as raster renderer mode
 * RTX pathtracing renderer mode (materials WIP)
 * GLTF format loading
 * HDR Tonemapping (naive one, would be added more modes in the future like ACES and filmic)

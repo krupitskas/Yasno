@@ -13,7 +13,7 @@ export namespace ysn
 	{
 		GraphicsSettings graphics;
 	public:
-		bool LoadFromDisk();
-		bool SaveToDisk();
+		//bool LoadFromDisk();
+		//bool SaveToDisk();
 	};
 }

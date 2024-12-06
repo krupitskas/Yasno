@@ -20,9 +20,6 @@
     <Filter Include="source\System">
       <UniqueIdentifier>{344df281-b5a7-4b28-84f7-f0aba365e691}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\graphics\techniques">
-      <UniqueIdentifier>{fe98256b-dcb1-4cf1-ab72-cb9590f95251}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{c4d1345a-7e97-42c8-84b9-89c796cadc98}</UniqueIdentifier>
     </Filter>
@@ -35,35 +32,14 @@
     <Filter Include="assets">
       <UniqueIdentifier>{0a91010e-fcfe-4fa8-8684-97fae5f3b101}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\graphics\techniques">
+      <UniqueIdentifier>{fe98256b-dcb1-4cf1-ab72-cb9590f95251}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\external">
+      <UniqueIdentifier>{a00f83e5-7a94-48a9-9863-027c40aba83f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="System\Application.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\Assert.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\Game.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\GameInput.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\GltfLoader.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\Gui.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\HighResolutionClock.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\Logger.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="System\Window.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp">
       <Filter>source\Renderer\nv_helpers</Filter>
     </ClCompile>
@@ -79,82 +55,7 @@
     <ClCompile Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.cpp">
       <Filter>source\Renderer\nv_helpers</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\CommandQueue.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\DxRenderer.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\DescriptorHeap.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\RaytracingContext.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\ShaderStorage.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\GpuTexture.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Mesh.cpp">
-      <Filter>source\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\RenderScene.cpp">
-      <Filter>source\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="Yasno\Yasno.cpp">
-      <Filter>source\yasno</Filter>
-    </ClCompile>
     <ClCompile Include="main.cxx" />
-    <ClCompile Include="System\stdafx.cpp">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Primitive.cpp">
-      <Filter>source\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Material.cpp">
-      <Filter>source\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\Pso.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\DepthBuffer.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\RootSignature.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\GenerateMipsSystem.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\ShadowMapPass.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\ForwardPass.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\RaytracingPass.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\TonemapPostprocess.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\ConvertToCubemap.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\Techniques\SkyboxPass.cpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\IndexStorage.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\CommandSignature.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\GpuBuffer.cpp">
-      <Filter>source\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="Yasno\settings.ixx">
       <Filter>source\yasno</Filter>
     </ClCompile>
@@ -164,16 +65,37 @@
     <ClCompile Include="Yasno\camera_controller.ixx">
       <Filter>source\yasno</Filter>
     </ClCompile>
-    <ClCompile Include="System\string_helpers.ixx">
-      <Filter>source\System</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\dxtypes.ixx">
+    <ClCompile Include="Renderer\dx_types.ixx">
       <Filter>source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\aabb.ixx">
       <Filter>source\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="System\math.ixx">
+    <ClCompile Include="Renderer\vertex_storage.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\gpu_resource.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\convert_to_cubemap.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="external\implementation.ixx">
+      <Filter>source\external</Filter>
+    </ClCompile>
+    <ClCompile Include="external\directx.ixx">
+      <Filter>source\external</Filter>
+    </ClCompile>
+    <ClCompile Include="external\directx_math.ixx">
+      <Filter>source\external</Filter>
+    </ClCompile>
+    <ClCompile Include="external\windows.ixx">
+      <Filter>source\external</Filter>
+    </ClCompile>
+    <ClCompile Include="System\Assert.cpp">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="System\clock.ixx">
       <Filter>source\System</Filter>
     </ClCompile>
     <ClCompile Include="System\cvars.ixx">
@@ -182,50 +104,110 @@
     <ClCompile Include="System\filesystem.ixx">
       <Filter>source\System</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\vertex_storage.ixx">
+    <ClCompile Include="System\math.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="System\string_helpers.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Yasno\yasno.ixx">
+      <Filter>source\yasno</Filter>
+    </ClCompile>
+    <ClCompile Include="System\window.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="System\application.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\shader_storage.ixx">
       <Filter>source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\gpu_resource.ixx">
+    <ClCompile Include="System\gui.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\render_scene.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="System\gltf_loader.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\root_signature.ixx">
       <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\generate_mips_system.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\depth_buffer.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="System\logger.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\dxrenderer.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\render_object_id.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\primitive.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\material.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\mesh.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="System\events.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="System\game.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\pso.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\gpu_texture.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\descriptor_heap.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\command_signature.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\command_queue.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="System\game_input.ixx">
+      <Filter>source\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\index_storage.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\raytracing_context.ixx">
+      <Filter>source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\skybox_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\tonemap_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\shadow_map_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\forward_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\Techniques\raytracing_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\lights.ixx">
+      <Filter>source\graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="System\Application.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Assert.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Events.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Game.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\GameInput.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\GltfLoader.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Gui.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Helpers.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\HighResolutionClock.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\KeyCodes.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Logger.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Window.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\nv_helpers_dx12\BottomLevelASGenerator.h">
       <Filter>source\Renderer\nv_helpers</Filter>
     </ClInclude>
@@ -241,120 +223,48 @@
     <ClInclude Include="Renderer\nv_helpers_dx12\TopLevelASGenerator.h">
       <Filter>source\Renderer\nv_helpers</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\CommandQueue.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\DxRenderer.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\DescriptorHeap.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\DXRHelper.h">
       <Filter>source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\RaytracingContext.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\ShaderStorage.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\GpuTexture.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Mesh.hpp">
+    <ClInclude Include="Graphics\engine_stats.ixx">
       <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\RenderScene.hpp">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\EngineStats.hpp">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Yasno\Yasno.hpp">
-      <Filter>source\yasno</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>assets</Filter>
     </ClInclude>
-    <ClInclude Include="System\stdafx.h">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="System\GlobalDefines.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Primitive.hpp">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Material.hpp">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Pso.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\DepthBuffer.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="System\Hash.hpp">
-      <Filter>source\System</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\RootSignature.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\GenerateMipsSystem.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\ShadowMapPass.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\ForwardPass.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\RaytracingPass.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\TonemapPostprocess.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\ConvertToCubemap.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\Techniques\SkyboxPass.hpp">
-      <Filter>source\graphics\techniques</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\IndexStorage.hpp">
-      <Filter>source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\RenderObjectId.hpp">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\GpuBuffer.hpp">
+    <ClInclude Include="Renderer\gpu_buffer.ixx">
       <Filter>source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\ShaderSharedStructs.h">
       <Filter>source\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\CommandSignature.hpp">
-      <Filter>source\Renderer</Filter>
+    <ClInclude Include="System\Assert.hpp">
+      <Filter>source\System</Filter>
+    </ClInclude>
+    <ClInclude Include="System\Hash.hpp">
+      <Filter>source\System</Filter>
+    </ClInclude>
+    <ClInclude Include="System\Helpers.hpp">
+      <Filter>source\System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\ForwardPassPS.hlsl">
+    <None Include="..\Shaders\forward_pass.ps.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\ForwardPassVS.hlsl">
+    <None Include="..\Shaders\forward_pass.vs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\GenerateMips.hlsl">
+    <None Include="..\Shaders\generate_mips.cs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\HitRT.hlsl">
+    <None Include="..\Shaders\hit.rt.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\MissRT.hlsl">
+    <None Include="..\Shaders\miss.rt.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\RayGenRT.hlsl">
+    <None Include="..\Shaders\ray_gen.rt.hlsl">
       <Filter>shaders</Filter>
     </None>
     <None Include="..\Shaders\tonemap.cs.hlsl">
@@ -382,31 +292,31 @@
       <Filter>configs</Filter>
     </None>
     <None Include="..\README.md" />
-    <None Include="..\Shaders\ConvertEquirectangularMap_VS.hlsl">
+    <None Include="..\Shaders\convert_equirectangular_map.vs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\Skybox_VS.hlsl">
+    <None Include="..\Shaders\skybox.vs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\Skybox_PS.hlsl">
+    <None Include="..\Shaders\skybox.ps.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\ConvertEquirectangularMap_PS.hlsl">
+    <None Include="..\Shaders\convert_equirectangular_map.ps.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\ShadowPassPS.hlsl">
+    <None Include="..\Shaders\shadow_pass.ps.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\FrustumCulling_CS.hlsl">
+    <None Include="..\Shaders\frustum_culling.cs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\IndirectForwardPass_VS.hlsl">
+    <None Include="..\Shaders\indirect_forward_pass.vs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\IndirectForwardPass_PS.hlsl">
+    <None Include="..\Shaders\indirect_forward_pass.ps..hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\Shaders\Shared.hlsl">
+    <None Include="..\Shaders\shared.hlsl">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

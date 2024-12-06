@@ -1,7 +1,5 @@
 #include "Assert.hpp"
 
-#include <format>
-
 #include <intrin.h>
 
 namespace ysn
@@ -14,15 +12,15 @@ namespace ysn
         //}
         //else
         //{
-        LogFatal << std::format("Debug Assert:\nFile: {}\nLine: {}\nMessage: {}\n", pFile, line, pMessage);
-        if (IsDebuggerPresent())
-        {
-            return true;
-        }
-        else
-        {
-            //debug::halt( "ASSERT: %s\n", pExpr );
-        }
+        //std::cerr << std::format("Debug Assert:\nFile: {}\nLine: {}\nMessage: {}\n", pFile, line, pMessage);
+        //if (IsDebuggerPresent())
+        //{
+        //    return true;
+        //}
+        //else
+        //{
+        //    //debug::halt( "ASSERT: %s\n", pExpr );
+        //}
         //}
 
         return false;

@@ -1,5 +1,8 @@
 #pragma once
 
+import std;
+import system.logger;
+
 namespace ysn
 {
 	bool TriggerAssert(const char* pExpr, const char* pMessage, const char* pFile, size_t line);

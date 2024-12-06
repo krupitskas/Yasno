@@ -2,17 +2,21 @@ module;
 
 #include <intrin.h>
 
+#include <System/Assert.hpp>
+
 export module system.math;
+
+import std;
 
 export namespace ysn
 {
-	constexpr bool IsPow2(uint64_t value)
+	constexpr bool IsPow2(std::uint64_t value)
 	{
 		return (value == 0) ? false : ((value & (value - 1)) == 0);
 	}
 
 	template<typename T>
-	constexpr T AlignPow2(T value, uint64_t alignment)
+	constexpr T AlignPow2(T value, std::uint64_t alignment)
 	{
 		YSN_ASSERT(IsPow2(alignment));
 		return ((value + static_cast<T>(alignment) - 1) & ~(static_cast<T>(alignment) - 1));

@@ -1,8 +1,5 @@
-module;
-
-#include <DirectXMath.h>
-
 export module graphics.aabb;
+export import <DirectXMath.h>;
 
 export namespace ysn
 {
