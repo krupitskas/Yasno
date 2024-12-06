@@ -7,10 +7,6 @@ module;
 #include <dxcapi.h>
 #include <DirectXMath.h>
 
-#include <Renderer/nv_helpers_dx12/RaytracingPipelineGenerator.h>
-#include <Renderer/nv_helpers_dx12/RootSignatureGenerator.h>
-#include <Renderer/nv_helpers_dx12/ShaderBindingTableGenerator.h>
-#include <Renderer/DXRHelper.h>
 #include <System/Assert.hpp>
 #include <Graphics/ShaderSharedStructs.h>
 
@@ -21,6 +17,10 @@ import yasno.camera;
 import renderer.dxrenderer;
 import renderer.raytracing_context;
 import renderer.descriptor_heap;
+import renderer.nv.rt_pipeline_generator;
+import renderer.nv.rs_generator;
+import renderer.nv.sbt_generator;
+import renderer.dxr_helper;
 import system.filesystem;
 import system.logger;
 
@@ -351,7 +351,8 @@ namespace ysn
 		bufDesc.Width = size;
 
 		ID3D12Resource* pBuffer;
-		ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufDesc, initState, nullptr, IID_PPV_ARGS(&pBuffer)));
+		// todo(module): check for result
+		m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufDesc, initState, nullptr, IID_PPV_ARGS(&pBuffer));
 		return pBuffer;
 	}
 

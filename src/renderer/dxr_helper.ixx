@@ -1,13 +1,13 @@
-#pragma once
+module;
 
-#include <dxcapi.h>
 #include <d3d12.h>
 
-import std;
+export module renderer.dxr_helper;
 
+import std;
 import system.helpers;
 
-namespace nv_helpers_dx12
+export namespace nv_helpers_dx12
 {
 
 #ifndef ROUND_UP
@@ -16,7 +16,7 @@ namespace nv_helpers_dx12
 
 	// Specifies a heap used for uploading. This heap type has CPU access optimized
 	// for uploading to the GPU.
-	static const D3D12_HEAP_PROPERTIES kUploadHeapProps = {
+	const D3D12_HEAP_PROPERTIES kUploadHeapProps = {
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
@@ -26,7 +26,7 @@ namespace nv_helpers_dx12
 
 	// Specifies the default heap. This heap type experiences the most bandwidth for
 	// the GPU, but cannot provide CPU access.
-	static const D3D12_HEAP_PROPERTIES kDefaultHeapProps = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+	const D3D12_HEAP_PROPERTIES kDefaultHeapProps = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 
 	//ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, uint32_t count, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible)
 	//{

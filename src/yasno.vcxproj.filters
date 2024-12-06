@@ -32,26 +32,11 @@
     <Filter Include="source\renderer">
       <UniqueIdentifier>{4e2f953f-626b-4341-ad4c-10508fab96da}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\renderer\nv_helpers">
+    <Filter Include="source\renderer\nv">
       <UniqueIdentifier>{cbc70c3f-d7f8-4f68-9d91-d679b7110775}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv_helpers_dx12\RaytracingPipelineGenerator.cpp">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv_helpers_dx12\RootSignatureGenerator.cpp">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv_helpers_dx12\ShaderBindingTableGenerator.cpp">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv_helpers_dx12\TopLevelASGenerator.cpp">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClCompile>
     <ClCompile Include="main.cxx" />
     <ClCompile Include="yasno\settings.ixx">
       <Filter>source\yasno</Filter>
@@ -212,26 +197,29 @@
     <ClCompile Include="system\helpers.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
+    <ClCompile Include="renderer\nv\tlas_generator.ixx">
+      <Filter>source\renderer\nv</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\stb_generator.ixx">
+      <Filter>source\renderer\nv</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\rs_generator.ixx">
+      <Filter>source\renderer\nv</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\rt_pipeline_generator.ixx">
+      <Filter>source\renderer\nv</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\blas_generator.ixx">
+      <Filter>source\renderer\nv</Filter>
+    </ClCompile>
+    <ClCompile Include="system\hash.ixx">
+      <Filter>source\system</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\dxr_helper.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="renderer\nv_helpers_dx12\BottomLevelASGenerator.h">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\nv_helpers_dx12\RaytracingPipelineGenerator.h">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\nv_helpers_dx12\RootSignatureGenerator.h">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\nv_helpers_dx12\ShaderBindingTableGenerator.h">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\nv_helpers_dx12\TopLevelASGenerator.h">
-      <Filter>source\renderer\nv_helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\DXRHelper.h">
-      <Filter>source\renderer</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>assets</Filter>
     </ClInclude>
@@ -239,9 +227,6 @@
       <Filter>source\graphics</Filter>
     </ClInclude>
     <ClInclude Include="system\Assert.hpp">
-      <Filter>source\system</Filter>
-    </ClInclude>
-    <ClInclude Include="system\Hash.hpp">
       <Filter>source\system</Filter>
     </ClInclude>
   </ItemGroup>

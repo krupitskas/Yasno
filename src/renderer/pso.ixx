@@ -3,13 +3,13 @@ module;
 #include <d3dx12.h>
 #include <wil/com.h>
 
-#include <System/Hash.hpp>
 #include <System/Assert.hpp>
 
 export module renderer.pso;
 
 import std;
 import system.logger;
+import system.hash;
 
 export namespace ysn
 {

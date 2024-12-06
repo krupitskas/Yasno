@@ -194,8 +194,8 @@
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
-      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -265,11 +265,6 @@
     <ClCompile Include="graphics\lights.ixx" />
     <ClCompile Include="main.cxx" />
     <ClCompile Include="renderer\dx_types.ixx" />
-    <ClCompile Include="renderer\nv_helpers_dx12\BottomLevelASGenerator.cpp" />
-    <ClCompile Include="renderer\nv_helpers_dx12\RaytracingPipelineGenerator.cpp" />
-    <ClCompile Include="renderer\nv_helpers_dx12\RootSignatureGenerator.cpp" />
-    <ClCompile Include="renderer\nv_helpers_dx12\ShaderBindingTableGenerator.cpp" />
-    <ClCompile Include="renderer\nv_helpers_dx12\TopLevelASGenerator.cpp" />
     <ClCompile Include="system\Assert.cpp" />
     <ClCompile Include="system\clock.ixx" />
     <ClCompile Include="system\cvars.ixx" />
@@ -329,7 +324,9 @@
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\descriptor_heap.ixx" />
-    <ClInclude Include="renderer\DXRHelper.h" />
+    <ClCompile Include="renderer\dxr_helper.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClCompile Include="renderer\generate_mips_system.ixx">
       <FileType>Document</FileType>
     </ClCompile>
@@ -342,11 +339,21 @@
     <ClCompile Include="renderer\index_storage.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="renderer\nv_helpers_dx12\BottomLevelASGenerator.h" />
-    <ClInclude Include="renderer\nv_helpers_dx12\RaytracingPipelineGenerator.h" />
-    <ClInclude Include="renderer\nv_helpers_dx12\RootSignatureGenerator.h" />
-    <ClInclude Include="renderer\nv_helpers_dx12\ShaderBindingTableGenerator.h" />
-    <ClInclude Include="renderer\nv_helpers_dx12\TopLevelASGenerator.h" />
+    <ClCompile Include="renderer\nv\blas_generator.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\rt_pipeline_generator.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\rs_generator.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\stb_generator.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="renderer\nv\tlas_generator.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClCompile Include="renderer\pso.ixx">
       <FileType>Document</FileType>
     </ClCompile>
@@ -391,7 +398,9 @@
     <ClCompile Include="system\gui.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClInclude Include="system\Hash.hpp" />
+    <ClCompile Include="system\hash.ixx">
+      <FileType>Document</FileType>
+    </ClCompile>
     <ClCompile Include="system\helpers.ixx">
       <FileType>Document</FileType>
     </ClCompile>

@@ -4,7 +4,7 @@
 
 namespace ysn
 {
-    bool TriggerAssert(const char* , const char* pMessage, const char* pFile, size_t line)
+    bool TriggerAssert(const char* , const char* , const char* , size_t )
     {
         //if( debug::hasBreakHandler() )
         //{

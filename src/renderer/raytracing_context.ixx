@@ -2,11 +2,7 @@ module;
 
 #include <wil/com.h>
 #include <d3d12.h>
-
-#include <Renderer/nv_helpers_dx12/TopLevelASGenerator.h>
-#include <Renderer/nv_helpers_dx12/BottomLevelASGenerator.h>
-#include <Renderer/nv_helpers_dx12/TopLevelASGenerator.h>
-#include <Renderer/DXRHelper.h>
+#include <DirectXMath.h>
 
 export module renderer.raytracing_context;
 
@@ -16,6 +12,12 @@ import system.gltf_loader;
 import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
+import renderer.nv.rt_pipeline_generator;
+import renderer.nv.rs_generator;
+import renderer.nv.sbt_generator;
+import renderer.nv.tlas_generator;
+import renderer.nv.blas_generator;
+import renderer.dxr_helper;
 
 export namespace ysn
 {
@@ -89,7 +91,8 @@ ID3D12Resource* CreateBuffer(ID3D12Device* m_device, uint64_t size, D3D12_RESOUR
 	bufDesc.Width = size;
 
 	ID3D12Resource* pBuffer;
-	ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufDesc, initState, nullptr, IID_PPV_ARGS(&pBuffer)));
+	// todo(module): check for result
+	m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufDesc, initState, nullptr, IID_PPV_ARGS(&pBuffer));
 	return pBuffer;
 }
 
