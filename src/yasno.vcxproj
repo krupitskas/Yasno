@@ -192,7 +192,6 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
-      <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
@@ -218,7 +217,6 @@
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
@@ -244,7 +242,6 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
-      <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
