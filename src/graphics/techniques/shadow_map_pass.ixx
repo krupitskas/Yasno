@@ -5,8 +5,8 @@ module;
 #include <d3dx12.h>
 #include <wil/com.h>
 
-//#include <Yasno/Lights.hpp>
 #include <System/Assert.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 export module graphics.techniques.shadow_map_pass;
 
@@ -14,6 +14,9 @@ import std;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.command_queue;
+import graphics.primitive;
+import graphics.material;
+import graphics.lights;
 import graphics.render_scene;
 import system.math;
 import system.filesystem;
@@ -39,8 +42,8 @@ export namespace ysn
 
 	struct ShadowMapPass
 	{
-		void Initialize(std::shared_ptr<ysn::DxRenderer> p_renderer);
-		bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
+		void Initialize(std::shared_ptr<DxRenderer> p_renderer);
+		bool CompilePrimitivePso(Primitive& primitive, std::vector<Material> materials);
 		void UpdateLight(const DirectionalLight& Light);
 		void Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters);
 

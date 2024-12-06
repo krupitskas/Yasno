@@ -3,7 +3,7 @@ export module graphics.mesh;
 import std;
 import graphics.primitive;
 
-namespace ysn
+export namespace ysn
 {
 	struct Mesh
 	{

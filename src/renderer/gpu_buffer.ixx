@@ -1,3 +1,8 @@
+module;
+
+#include <d3dx12.h>
+#include <wil/com.h>
+
 export module renderer.gpu_buffer;
 
 import std;
@@ -6,7 +11,7 @@ import renderer.dxrenderer;
 import system.application;
 import system.logger;
 
-namespace ysn
+export namespace ysn
 {
 	struct GpuBuffer : public GpuResource
 	{};
@@ -26,7 +31,6 @@ namespace ysn
 }
 
 module :private;
-
 
 namespace ysn
 {

@@ -9,6 +9,7 @@ import std;
 import graphics.aabb;
 import renderer.vertex_storage;
 import renderer.dxrenderer;
+import renderer.pso;
 import system.application;
 
 export namespace ysn

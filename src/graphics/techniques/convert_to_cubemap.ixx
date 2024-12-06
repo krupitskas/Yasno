@@ -1,6 +1,7 @@
 module;
 
 #include <d3d12.h>
+#include <d3dx12.h>
 //#include <wil/com.h>
 
 export module graphics.techniques.convert_to_cubemap;

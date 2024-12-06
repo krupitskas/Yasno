@@ -2,6 +2,7 @@ module;
 
 #include <DirectXMath.h>
 #include <d3dx12.h>
+#include <wil/com.h>
 
 #include <Graphics/ShaderSharedStructs.h>
 #include <System/Assert.hpp>
@@ -13,6 +14,7 @@ import system.filesystem;
 import system.logger;
 import renderer.dxrenderer;
 import renderer.gpu_texture;
+import renderer.dx_types;
 
 export namespace ysn
 {
@@ -31,7 +33,7 @@ export namespace ysn
 	{
 	public:
 		bool Initialize(const DxRenderer& renderer);
-		bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const GpuTexture& gpu_texture);
+		bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture);
 	private:
 		wil::com_ptr<ID3D12RootSignature> m_root_signature;
 		wil::com_ptr<ID3D12PipelineState> m_pipeline_state;
@@ -113,7 +115,7 @@ namespace ysn
 		return true;
 	}
 
-	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<ID3D12GraphicsCommandList> command_list, const GpuTexture& gpu_texture)
+	bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture)
 	{
 		auto compute_queue = renderer->GetComputeQueue();
 
@@ -122,7 +124,7 @@ namespace ysn
 
 		if (resource_desc.MipLevels == 1)
 		{
-			LogWarning << "Texture requested only single mip, can't generate mips\n";
+			std::cout << "Texture requested only single mip, can't generate mips\n";
 			return false;
 		}
 

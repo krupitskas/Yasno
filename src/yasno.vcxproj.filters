@@ -203,6 +203,15 @@
     <ClCompile Include="graphics\lights.ixx">
       <Filter>source\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="renderer\gpu_buffer.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\engine_stats.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="system\helpers.ixx">
+      <Filter>source\system</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="renderer\nv_helpers_dx12\BottomLevelASGenerator.h">
@@ -223,14 +232,8 @@
     <ClInclude Include="renderer\DXRHelper.h">
       <Filter>source\renderer</Filter>
     </ClInclude>
-    <ClInclude Include="graphics\engine_stats.ixx">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>assets</Filter>
-    </ClInclude>
-    <ClInclude Include="renderer\gpu_buffer.ixx">
-      <Filter>source\renderer</Filter>
     </ClInclude>
     <ClInclude Include="graphics\ShaderSharedStructs.h">
       <Filter>source\graphics</Filter>
@@ -239,9 +242,6 @@
       <Filter>source\system</Filter>
     </ClInclude>
     <ClInclude Include="system\Hash.hpp">
-      <Filter>source\system</Filter>
-    </ClInclude>
-    <ClInclude Include="system\Helpers.hpp">
       <Filter>source\system</Filter>
     </ClInclude>
   </ItemGroup>

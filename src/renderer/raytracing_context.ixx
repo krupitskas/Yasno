@@ -15,6 +15,7 @@ import system.application;
 import system.gltf_loader;
 import graphics.render_scene;
 import renderer.dxrenderer;
+import renderer.descriptor_heap;
 
 export namespace ysn
 {

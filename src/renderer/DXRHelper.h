@@ -3,9 +3,9 @@
 #include <dxcapi.h>
 #include <d3d12.h>
 
-#include <System/Helpers.hpp>
-
 import std;
+
+import system.helpers;
 
 namespace nv_helpers_dx12
 {

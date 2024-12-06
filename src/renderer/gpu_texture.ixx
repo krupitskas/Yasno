@@ -5,18 +5,17 @@
 #include <d3dx12.h>
 #include <stb_image.h>
 
-#include <System/Helpers.hpp>
-
 export module renderer.gpu_texture;
 
 import std;
 import system.application;
 import system.logger;
-import renderer.generate_mips_system;
+//import renderer.generate_mips_system; // todo(modules):
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
+import system.helpers;
 
-namespace ysn
+export namespace ysn
 {
 	struct GpuTexture
 	{
@@ -99,7 +98,7 @@ namespace ysn
 			{
 				if(parameters.is_srgb)
 				{
-					LogWarning << "Trying to use HDR texture " << parameters.filename << " as SRGB\n";
+					std::cout << "Trying to use HDR texture " << parameters.filename << " as SRGB\n";
 				}
 
 				format = DXGI_FORMAT_R32G32B32A32_FLOAT;

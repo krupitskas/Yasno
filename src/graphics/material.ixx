@@ -6,7 +6,7 @@ export module graphics.material;
 
 import std;
 
-namespace ysn
+export namespace ysn
 {
 	struct Material
 	{

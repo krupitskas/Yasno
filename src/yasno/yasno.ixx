@@ -6,9 +6,15 @@
 #include <d3dx12.h>
 #include <pix3.h>
 
-#include <System/Helpers.hpp>
 #include <System/Assert.hpp>
 #include <Graphics/ShaderSharedStructs.h>
+
+// TODO(modules): remove this includes
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <ImGuizmo.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
 
 export module yasno;
 
@@ -16,11 +22,12 @@ import std;
 import yasno.camera_controller;
 import graphics.techniques.convert_to_cubemap;
 import graphics.engine_stats;
-import graphics.techniques.shadow_map_paass;
+import graphics.techniques.shadow_map_pass;
 import graphics.techniques.tonemap_pass;
 import graphics.techniques.raytracing_pass;
 import graphics.techniques.skybox_pass;
 import graphics.techniques.forward_pass;
+import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.gpu_buffer;
 import renderer.command_queue;
@@ -34,6 +41,7 @@ import system.gltf_loader;
 import system.gui;
 import system.game;
 import system.game_input;
+import system.helpers;
 
 export namespace ysn
 {
@@ -117,11 +125,11 @@ export namespace ysn
 		RaytracingPass m_ray_tracing_pass;
 		ConvertToCubemap m_convert_to_cubemap_pass;
 		SkyboxPass m_skybox_pass;
-		GenerateMipsPass m_generate_mips_pass; // TODO(modules) : implement mips calculation
+		//GenerateMipsPass m_generate_mips_pass; // TODO(modules) : implement mips calculation
 	};
 }
 
-module :private
+module :private;
 
 namespace ysn
 {
@@ -180,7 +188,7 @@ namespace ysn
 	void Yasno::Destroy()
 	{
 		Game::Destroy();
-		ShutdownImgui();
+		//ShutdownImgui(); // TODO(modules):
 	}
 
 	void Yasno::UpdateBufferResource(
@@ -552,7 +560,7 @@ namespace ysn
 							RenderInstanceData instance_data;
 							if (primitive.material_id == -1)
 							{
-								LogWarning << "Material ID is negative when filling instance data buffer - investigate";
+								std::cout << "Material ID is negative when filling instance data buffer - investigate";
 								// TODO: Assign "broken" material
 								instance_data.material_id = 0;
 							}
@@ -625,7 +633,8 @@ namespace ysn
 			return false;
 		}
 
-		InitializeImgui(m_pWindow, renderer);
+		// TODO(modules); restore
+		//InitializeImgui(m_pWindow, renderer);
 
 		const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
@@ -980,9 +989,10 @@ namespace ysn
 		m_render_scene.camera->SetAspectRatio(GetClientWidth() / static_cast<float>(GetClientHeight()));
 		m_render_scene.camera->Update();
 
+		// todo(modules):
 	#ifndef YSN_RELEASE
 		// Track shader updates
-		Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
+		//Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
 	#endif
 
 		// Clear stage GPU resources
@@ -1005,7 +1015,7 @@ namespace ysn
 		}
 
 		{
-			ImGui::Begin(CONTROLS_NAME);
+			ImGui::Begin(CONTROLS_NAME.c_str());
 
 			ImGui::Checkbox("Indirect", &m_is_indirect);
 
@@ -1059,9 +1069,9 @@ namespace ysn
 		}
 
 		{
-			ImGui::Begin(STATS_NAME);
+			ImGui::Begin(STATS_NAME.c_str());
 
-			ImGui::Text(std::format("FPS: {}", engine_stats::fps).c_str());
+			//ImGui::Text(std::format("FPS: {}", engine_stats::fps).c_str()); // todo(modules);
 
 			if (ImGui::CollapsingHeader("Mode"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
@@ -1096,7 +1106,7 @@ namespace ysn
 
 		// Render GUI
 		{
-			ImguiPrepareNewFrame();
+			//ImguiPrepareNewFrame(); // todo(modules):
 			ImGuizmo::BeginFrame();
 
 			RenderUi();
@@ -1286,7 +1296,7 @@ namespace ysn
 			command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 			command_list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
 
-			ImguiRenderFrame(command_list);
+			//ImguiRenderFrame(command_list); todo(modules):
 
 			command_queue->ExecuteCommandList(command_list);
 		}

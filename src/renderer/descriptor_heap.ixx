@@ -4,9 +4,10 @@ module;
 #include <d3d12.h>
 #include <d3dx12.h>
 
-#include <System/Helpers.hpp>
-
 export module renderer.descriptor_heap;
+
+import renderer.dx_types;
+import system.helpers;
 
 export namespace ysn
 {
@@ -21,7 +22,7 @@ export namespace ysn
 	class DescriptorHeap
 	{
 	public:
-		DescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shader_visible = false);
+		DescriptorHeap(wil::com_ptr<DxDevice> d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shader_visible = false);
 
 		DescriptorHandle GetNewHandle();
 		CD3DX12_CPU_DESCRIPTOR_HANDLE GetCpuHandle(DescriptorHandle handle);
@@ -40,7 +41,7 @@ export namespace ysn
 	protected:
 		virtual uint32_t GetDescriptorHandleIncrementSize() const;
 
-		wil::com_ptr<ID3D12Device5> m_pd3d12device;
+		wil::com_ptr<DxDevice> m_pd3d12device;
 		wil::com_ptr<ID3D12DescriptorHeap> m_descriptor_heap;
 
 		uint32_t m_num_descriptors = 0;
@@ -54,7 +55,7 @@ export namespace ysn
 	class CbvSrvUavDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		CbvSrvUavDescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, uint32_t count, bool shader_visible = false) :
+		CbvSrvUavDescriptorHeap(wil::com_ptr<DxDevice> d3d12device, uint32_t count, bool shader_visible = false) :
 			DescriptorHeap(d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, count, shader_visible)
 		{}
 	};
@@ -62,7 +63,7 @@ export namespace ysn
 	class SamplerDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		SamplerDescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, uint32_t count, bool shader_visible = false) :
+		SamplerDescriptorHeap(wil::com_ptr<DxDevice> d3d12device, uint32_t count, bool shader_visible = false) :
 			DescriptorHeap(d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, count, shader_visible)
 		{}
 	};
@@ -70,7 +71,7 @@ export namespace ysn
 	class RtvDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		RtvDescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, uint32_t count, bool shader_visible = false) :
+		RtvDescriptorHeap(wil::com_ptr<DxDevice> d3d12device, uint32_t count, bool shader_visible = false) :
 			DescriptorHeap(d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, count, shader_visible)
 		{}
 	};
@@ -78,7 +79,7 @@ export namespace ysn
 	class DsvDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		DsvDescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, uint32_t count, bool shader_visible = false) :
+		DsvDescriptorHeap(wil::com_ptr<DxDevice> d3d12device, uint32_t count, bool shader_visible = false) :
 			DescriptorHeap(d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, count, shader_visible)
 		{}
 	};
@@ -88,7 +89,7 @@ module :private;
 
 namespace ysn
 {
-	DescriptorHeap::DescriptorHeap(wil::com_ptr<ID3D12Device5> d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shader_visible)
+	DescriptorHeap::DescriptorHeap(wil::com_ptr<DxDevice> d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shader_visible)
 	{
 		m_type = type;
 		m_max_num_descriptors = count;

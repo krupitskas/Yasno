@@ -1,5 +1,11 @@
+module;
+
+#include <wil/com.h>
+#include <d3dx12.h>
+
 export module graphics.techniques.skybox_pass;
 
+import std;
 import graphics.primitive;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;

@@ -17,6 +17,7 @@ import graphics.render_scene;
 import graphics.primitive;
 import renderer.generate_mips_system;
 import renderer.dxrenderer;
+import renderer.gpu_texture;
 import system.string_helpers;
 import system.math;
 import system.application;
@@ -331,10 +332,10 @@ static void BuildSamplerDescs(ysn::Model& model, const tinygltf::Model& gltf_mod
 				}
 				break;
 			default:
-				{
+			{
 				sampler_desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
 			}
-				break;
+			break;
 		}
 
 		auto to_texture_address_wrap = [](int wrap)
@@ -342,20 +343,20 @@ static void BuildSamplerDescs(ysn::Model& model, const tinygltf::Model& gltf_mod
 			switch (wrap)
 			{
 				case TINYGLTF_TEXTURE_WRAP_REPEAT:
-			{
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 				}
 				case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-			{
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 				}
 				case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-			{
+				{
 					return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
 				}
 				default:
-			{
-					LogWarning << "GLTF sampler desc found incorrect wrap mode\n";
+				{
+					std::cout << "GLTF sampler desc found incorrect wrap mode\n";
 					return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 				}
 			}
@@ -811,7 +812,7 @@ namespace ysn
 		load_gltf_context.staging_resources.reserve(256);
 		load_gltf_context.copy_cmd_list = command_queue->GetCommandList("GLTF upload");
 
-		if(!BuildImages(model, load_gltf_context, gltf_model))
+		if (!BuildImages(model, load_gltf_context, gltf_model))
 		{
 			std::cerr << "GLTF loader can't build materials\n";
 			return false;
@@ -819,12 +820,13 @@ namespace ysn
 
 		render_scene.materials_count += BuildMaterials(model, gltf_model);
 
+		// TODO(modules): restore mips
 		// Build pipelines
 		// Compute mips 
-		for(const GpuTexture& texture : model.textures)
-		{
-			dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
-		}
+		//for (const GpuTexture& texture : model.textures)
+		//{
+		//	dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
+		//}
 
 		BuildSamplerDescs(model, gltf_model);
 		const BuildMeshResult mesh_result = BuildMeshes(model, gltf_model);
@@ -855,7 +857,7 @@ namespace ysn
 
 		if (!warning_str.empty())
 		{
-			LogWarning << "GLTF loading: " << warning_str.c_str() << "\n";
+			std::cout << "GLTF loading: " << warning_str.c_str() << "\n";
 		}
 
 		if (!error_str.empty())
@@ -871,7 +873,7 @@ namespace ysn
 
 		Model model;
 
-		if(!ReadModel(render_scene, model, gltf_model, loading_parameters))
+		if (!ReadModel(render_scene, model, gltf_model, loading_parameters))
 		{
 			std::cout << "GLTF can't load model\n";
 			return false;

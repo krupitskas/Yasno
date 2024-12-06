@@ -4,11 +4,11 @@
 #include <d3d12.h>
 #include <pix3.h>
 
-#include <System/Helpers.hpp>
-
 export module renderer.command_queue;
 
 import std;
+
+import system.helpers;
 
 export namespace ysn
 {

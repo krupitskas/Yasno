@@ -1,17 +1,24 @@
 module;
 
+#include <d3d12.h>
+#include <d3dx12.h>
+#include <wil/com.h>
+
 #include <System/Assert.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 export module graphics.techniques.forward_pass;
 
 import graphics.primitive;
 import graphics.render_scene;
+import graphics.material;
 import graphics.techniques.shadow_map_pass;
 import renderer.pso;
 import renderer.command_queue;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.gpu_texture;
+import renderer.gpu_buffer;
 import system.filesystem;
 import system.application;
 import system.logger;
@@ -315,7 +322,7 @@ namespace ysn
 					}
 					else
 					{
-						LogWarning << "Can't render primitive because it haven't any PSO\n";
+						std::cout << "Can't render primitive because it haven't any PSO\n";
 					}
 
 					instance_id++;

@@ -1,10 +1,12 @@
-#pragma once
+module;
 
 #include <DirectXMath.h>
 
+export module graphics.lights;
+
 // TODO: Use LUXes here instead of "intensities"
 
-namespace ysn
+export namespace ysn
 {
 	struct EnvironmentLight
 	{

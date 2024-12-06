@@ -39,8 +39,9 @@ export namespace ysn
 		bool Initialize();
 		std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters& parameters);
 
+		// todo(modules)
 	#ifndef YSN_RELEASE
-		void VerifyAnyShaderChanged();
+		//void VerifyAnyShaderChanged();
 	#endif
 
 	private:

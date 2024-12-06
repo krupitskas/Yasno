@@ -1,9 +1,9 @@
 module;
 
 #include <d3dx12.h>
+#include <DirectXMath.h>
 
 export module renderer.vertex_storage;
-export import <DirectXMath.h>;
 
 import <vector>;
 

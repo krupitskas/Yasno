@@ -5,7 +5,6 @@
 #include <wil/com.h>
 #include <Windows.h>
 
-#include <System/Helpers.hpp>
 #include <System/Assert.hpp>
 
 export module renderer.dxrenderer;
@@ -13,6 +12,7 @@ export module renderer.dxrenderer;
 import std;
 import system.string_helpers;
 import system.logger;
+import system.helpers;
 import renderer.vertex_storage;
 import renderer.index_storage;
 import renderer.command_queue;

@@ -1,8 +1,8 @@
 #include <Windows.h>
 
-import system.application;
 import yasno;
 import yasno.settings;
+import system.application;
 
 int WINAPI wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
 {

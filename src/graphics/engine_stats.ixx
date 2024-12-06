@@ -1,8 +1,8 @@
-export module engine_stats;
+export module graphics.engine_stats;
 
 import std;
 
-namespace engine_stats
+export namespace engine_stats
 {
 	//static uint32_t fps;
 	//static uint32_t cpu_frame_ms;

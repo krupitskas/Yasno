@@ -9,11 +9,12 @@ export module graphics.render_scene;
 import std;
 import yasno.camera_controller;
 import yasno.camera;
-import graphics.material
+import graphics.material;
 import graphics.mesh;
 import graphics.lights;
 import renderer.gpu_texture;
 import renderer.gpu_buffer;
+import renderer.descriptor_heap;
 
 export namespace ysn
 {

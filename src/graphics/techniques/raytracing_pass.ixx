@@ -3,13 +3,16 @@ module;
 
 #include <wil/com.h>
 #include <d3d12.h>
+#include <d3dx12.h>
 #include <dxcapi.h>
+#include <DirectXMath.h>
 
 #include <Renderer/nv_helpers_dx12/RaytracingPipelineGenerator.h>
 #include <Renderer/nv_helpers_dx12/RootSignatureGenerator.h>
 #include <Renderer/nv_helpers_dx12/ShaderBindingTableGenerator.h>
 #include <Renderer/DXRHelper.h>
 #include <System/Assert.hpp>
+#include <Graphics/ShaderSharedStructs.h>
 
 export module graphics.techniques.raytracing_pass;
 
@@ -90,7 +93,6 @@ export namespace ysn
 }
 
 module :private;
-
 
 namespace ysn
 {
