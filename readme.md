@@ -38,7 +38,7 @@ Reference pathtracing use RTX for tracing rays from the camera to the world. Ras
 * Utilize physical light units
 * V Buffer
 * Yasno architecture refactoring (right now it *very* messy)
-* hare hot reloading (tracking for filesystem changes is there, but I want to make it right with include support)
+* hare hot reloading (tracking for filewi changes is there, but I want to make it right with include support)
 * Finish naive techniques like
     * CSM
         * PCF

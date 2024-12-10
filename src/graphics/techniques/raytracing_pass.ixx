@@ -7,8 +7,7 @@ module;
 #include <dxcapi.h>
 #include <DirectXMath.h>
 
-#include <System/Assert.hpp>
-#include <Graphics/ShaderSharedStructs.h>
+#include <shader_structs.h>
 
 export module graphics.techniques.raytracing_pass;
 
@@ -23,6 +22,7 @@ import renderer.nv.sbt_generator;
 import renderer.dxr_helper;
 import system.filesystem;
 import system.logger;
+import system.asserts;
 
 export namespace ysn
 {
@@ -495,7 +495,7 @@ bool RaytracingPass::CreateShaderBindingTable(
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
         cbv_desc.BufferLocation = camera_buffer->GetGPUVirtualAddress();
-        cbv_desc.SizeInBytes = GpuCamera::GetGpuSize();
+        cbv_desc.SizeInBytes = GetGpuSize<GpuCamera>();
 
         renderer->GetDevice()->CreateConstantBufferView(&cbv_desc, camera_srv_handle.cpu);
     }

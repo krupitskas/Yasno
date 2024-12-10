@@ -3,7 +3,7 @@ module;
 #include <wil/com.h>
 #include <d3dx12.h>
 
-#include <Graphics/ShaderSharedStructs.h>
+#include <shader_structs.h>
 
 export module graphics.techniques.tonemap_pass;
 
@@ -67,7 +67,7 @@ static bool CreateParameters(wil::com_ptr<ID3D12Resource>& parameters_buffer)
 
     D3D12_RESOURCE_DESC resourceDesc = {};
     resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resourceDesc.Width = TonemapParameters::GetGpuSize();
+    resourceDesc.Width = GetGpuSize<TonemapParameters>();
     resourceDesc.Height = 1;
     resourceDesc.DepthOrArraySize = 1;
     resourceDesc.MipLevels = 1;

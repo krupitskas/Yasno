@@ -7,21 +7,20 @@ module;
 #include <wil/com.h>
 #include <tiny_gltf.h>
 
-#include <Graphics/ShaderSharedStructs.h>
-#include <System/Assert.hpp>
+#include <shader_structs.h>
 
 export module system.gltf_loader;
 
 import std;
 import graphics.render_scene;
 import graphics.primitive;
-import renderer.generate_mips_system;
 import renderer.dxrenderer;
 import renderer.gpu_texture;
 import system.string_helpers;
 import system.math;
 import system.application;
 import system.logger;
+import system.asserts;
 
 export namespace ysn
 {
@@ -504,7 +503,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
     const UINT8* position_buffer_address = position_buffer.data.data();
     const int position_stride = tinygltf::GetComponentSizeInBytes(position_accessor.componentType) *
                                 tinygltf::GetNumComponentsInType(position_accessor.type);
-    YSN_ASSERT_MSG(position_stride == 12, "GLTF model vertex position stride not equals 12");
+    ysn::AssertMsg(position_stride == 12, "GLTF model vertex position stride not equals 12");
 
     // Vertex normals
     tinygltf::Accessor normal_accessor;
@@ -519,7 +518,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
         normal_buffer_address = normal_buffer.data.data();
         normal_stride = tinygltf::GetComponentSizeInBytes(normal_accessor.componentType) *
                         tinygltf::GetNumComponentsInType(normal_accessor.type);
-        YSN_ASSERT_MSG(normal_stride == 12, "GLTF model vertex normal stride not equals 12");
+        ysn::AssertMsg(normal_stride == 12, "GLTF model vertex normal stride not equals 12");
     }
 
     // Vertex tangents
@@ -535,7 +534,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
         tangent_buffer_address = tangent_buffer.data.data();
         tangent_stride = tinygltf::GetComponentSizeInBytes(tangent_accessor.componentType) *
                          tinygltf::GetNumComponentsInType(tangent_accessor.type);
-        YSN_ASSERT_MSG(tangent_stride == 16, "GLTF model vertex tangent stride not equals 16");
+        ysn::AssertMsg(tangent_stride == 16, "GLTF model vertex tangent stride not equals 16");
     }
 
     // Vertex texture coordinates
@@ -551,7 +550,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
         uv0_buffer_address = uv0Buffer.data.data();
         uv0_stride =
             tinygltf::GetComponentSizeInBytes(uv0_accessor.componentType) * tinygltf::GetNumComponentsInType(uv0_accessor.type);
-        YSN_ASSERT_MSG(uv0_stride == 8, "GLTF model vertex uv0 stride not equals 12");
+        ysn::AssertMsg(uv0_stride == 8, "GLTF model vertex uv0 stride not equals 12");
     }
 
     primitive.vertices.reserve(position_accessor.count);
@@ -838,14 +837,6 @@ bool ReadModel(RenderScene& render_scene, Model& model, const tinygltf::Model& g
     }
 
     render_scene.materials_count += BuildMaterials(model, gltf_model);
-
-    // TODO(modules): restore mips
-    // Build pipelines
-    // Compute mips
-    // for (const GpuTexture& texture : model.textures)
-    //{
-    //	dx_renderer->GetMipGenerator()->GenerateMips(dx_renderer, load_gltf_context.copy_cmd_list, texture);
-    //}
 
     BuildSamplerDescs(model, gltf_model);
     const BuildMeshResult mesh_result = BuildMeshes(model, gltf_model);

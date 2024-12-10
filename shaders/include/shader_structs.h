@@ -1,11 +1,14 @@
 #if __cplusplus
+
 #pragma once
 #include <DirectXMath.h>
 #include <d3d12.h>
 
 import system.math;
 
-#define YSN_SHADER_STRUCT struct alignas(16)
+#define SHADER_ALIGN 16
+#define CHECK_STRUCT_ALIGNMENT(struct_name) \
+    static_assert(sizeof(struct_name) % SHADER_ALIGN == 0, #struct_name " is not 16 bytes aligned, don't forget add the padding")
 
 // #define matrix DirectX::XMMATRIX
 // #define float4 DirectX::XMFLOAT4
@@ -17,6 +20,15 @@ import system.math;
 // #define int int32_t
 // #define float float
 #define OUT_PARAMETER(X) X&
+
+template <typename ShaderStruct>
+constexpr uint32_t GetGpuSize()
+{
+    return static_cast<uint32_t>(ysn::AlignPow2(sizeof(ShaderStruct), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
+}
+
+#else
+#define CHECK_STRUCT_ALIGNMENT(struct_name)
 #endif
 
 #define ALBEDO_ENABLED_BIT 0
@@ -26,7 +38,7 @@ import system.math;
 #define EMISSIVE_ENABLED_BIT 4
 
 // Default PBR material
-YSN_SHADER_STRUCT SurfaceShaderParameters
+struct SurfaceShaderParameters
 {
     DirectX::XMFLOAT4 base_color_factor;
     float metallic_factor = 0.0f;
@@ -41,9 +53,10 @@ YSN_SHADER_STRUCT SurfaceShaderParameters
     int32_t occlusion_texture_index = 0;
     int32_t emissive_texture_index = 0;
 };
+CHECK_STRUCT_ALIGNMENT(SurfaceShaderParameters);
 
 // Per instance data for rendering, this can be split into smaller parts
-YSN_SHADER_STRUCT RenderInstanceData
+struct RenderInstanceData
 {
     DirectX::XMMATRIX model_matrix;
     int32_t material_id;
@@ -51,8 +64,9 @@ YSN_SHADER_STRUCT RenderInstanceData
     int32_t indices_before; // offset
     int32_t pad;
 };
+CHECK_STRUCT_ALIGNMENT(RenderInstanceData);
 
-YSN_SHADER_STRUCT GpuSceneParameters
+struct GpuSceneParameters
 {
     DirectX::XMFLOAT4X4 shadow_matrix;
     DirectX::XMFLOAT4 directional_light_color = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -62,32 +76,25 @@ YSN_SHADER_STRUCT GpuSceneParameters
     uint32_t shadows_enabled = 0;
 
     uint32_t pad[1];
-
-    static uint32_t GetGpuSize()
-    {
-        return static_cast<uint32_t>(ysn::AlignPow2(sizeof(GpuSceneParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
-    }
 };
+CHECK_STRUCT_ALIGNMENT(GpuSceneParameters);
 
-YSN_SHADER_STRUCT ShadowCamera
+struct ShadowCamera
 {
     DirectX::XMFLOAT4X4 shadow_matrix;
 };
+CHECK_STRUCT_ALIGNMENT(ShadowCamera);
 
-YSN_SHADER_STRUCT TonemapParameters
+struct TonemapParameters
 {
     uint32_t display_width = 0;
     uint32_t display_height = 0;
     uint32_t tonemap_method = 0;
     float exposure = 0.0f;
-
-    static uint32_t GetGpuSize()
-    {
-        return static_cast<uint32_t>(ysn::AlignPow2(sizeof(TonemapParameters), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
-    }
 };
+CHECK_STRUCT_ALIGNMENT(TonemapParameters);
 
-YSN_SHADER_STRUCT GenerateMipsConstantBuffer
+struct GenerateMipsConstantBuffer
 {
     uint32_t src_mip_level;       // Texture level of source mip
     uint32_t num_mip_levels;      // Number of OutMips to write: [1-4]
@@ -97,8 +104,9 @@ YSN_SHADER_STRUCT GenerateMipsConstantBuffer
 
     uint32_t pad[2];
 };
+CHECK_STRUCT_ALIGNMENT(GenerateMipsConstantBuffer);
 
-YSN_SHADER_STRUCT GpuCamera
+struct GpuCamera
 {
     DirectX::XMFLOAT4X4 view_projection;
     DirectX::XMFLOAT4X4 view;
@@ -111,12 +119,8 @@ YSN_SHADER_STRUCT GpuCamera
     uint32_t reset_accumulation;
     uint32_t accumulation_enabled;
     uint32_t pad;
-
-    static uint32_t GetGpuSize()
-    {
-        return static_cast<uint32_t>(ysn::AlignPow2(sizeof(GpuCamera), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
-    }
 };
+CHECK_STRUCT_ALIGNMENT(GpuCamera);
 
 #if __cplusplus
 #undef matrix

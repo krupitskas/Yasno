@@ -2,11 +2,10 @@ module;
 
 #include <intrin.h>
 
-#include <System/Assert.hpp>
-
 export module system.math;
 
 import std;
+import system.asserts;
 
 export namespace ysn
 {
@@ -18,7 +17,7 @@ constexpr bool IsPow2(std::uint64_t value)
 template <typename T>
 constexpr T AlignPow2(T value, std::uint64_t alignment)
 {
-    YSN_ASSERT(IsPow2(alignment));
+    AssertMsg(IsPow2(alignment), "Alignment not power of two");
     return ((value + static_cast<T>(alignment) - 1) & ~(static_cast<T>(alignment) - 1));
 }
 

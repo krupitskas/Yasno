@@ -5,13 +5,12 @@
 #include <wil/com.h>
 #include <Windows.h>
 
-#include <System/Assert.hpp>
-
 export module renderer.dxrenderer;
 
 import std;
 import system.string_helpers;
 import system.logger;
+import system.asserts;
 import system.helpers;
 import renderer.vertex_storage;
 import renderer.index_storage;
@@ -253,9 +252,6 @@ namespace ysn
 bool DxRenderer::Initialize()
 {
 #if defined(_DEBUG)
-    // Always enable the debug layer before doing anything DX12 related
-    // so all possible errors generated while creating DX12 objects
-    // are caught by the debug layer.
     wil::com_ptr<ID3D12Debug> debugInterface;
     ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
     debugInterface->EnableDebugLayer();
@@ -300,15 +296,6 @@ bool DxRenderer::Initialize()
         LogError << "Can't create shader manager\n";
         return false;
     }
-
-    // TODO(modules): Restore
-    // m_generate_mips_system = std::make_shared<GenerateMipsSystem>();
-
-    // if (!m_generate_mips_system->Initialize(*this))
-    //{
-    //	LogError << "Can't initialize generate mips system\n";
-    //	return false;
-    // }
 
     m_default_input_elements_desc = CreateDefaultInputElementDescArray();
 

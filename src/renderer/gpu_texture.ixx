@@ -10,7 +10,6 @@ export module renderer.gpu_texture;
 import std;
 import system.application;
 import system.logger;
-// import renderer.generate_mips_system; // todo(modules):
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import system.helpers;

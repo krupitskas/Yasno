@@ -23,9 +23,20 @@ constexpr CompilationMode g_compilation_mode =
 
 export namespace ysn
 {
-// constexpr bool IsDebugActive();
-// constexpr bool IsProfileActive();
-// constexpr bool IsReleaseActive();
+constexpr bool IsDebugActive()
+{
+    return g_compilation_mode == CompilationMode::Debug;
+}
+
+constexpr bool IsProfileActive()
+{
+    return g_compilation_mode == CompilationMode::Profile;
+}
+
+constexpr bool IsReleaseActive()
+{
+    return g_compilation_mode == CompilationMode::Release;
+}
 }
 
 module :private;

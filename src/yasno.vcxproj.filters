@@ -77,9 +77,6 @@
     <ClCompile Include="external\windows.ixx">
       <Filter>source\external</Filter>
     </ClCompile>
-    <ClCompile Include="system\Assert.cpp">
-      <Filter>source\system</Filter>
-    </ClCompile>
     <ClCompile Include="system\clock.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
@@ -98,9 +95,6 @@
     <ClCompile Include="yasno\yasno.ixx">
       <Filter>source\yasno</Filter>
     </ClCompile>
-    <ClCompile Include="system\window.ixx">
-      <Filter>source\system</Filter>
-    </ClCompile>
     <ClCompile Include="system\application.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
@@ -117,9 +111,6 @@
       <Filter>source\system</Filter>
     </ClCompile>
     <ClCompile Include="renderer\root_signature.ixx">
-      <Filter>source\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\generate_mips_system.ixx">
       <Filter>source\renderer</Filter>
     </ClCompile>
     <ClCompile Include="renderer\depth_buffer.ixx">
@@ -144,9 +135,6 @@
       <Filter>source\graphics</Filter>
     </ClCompile>
     <ClCompile Include="system\events.ixx">
-      <Filter>source\system</Filter>
-    </ClCompile>
-    <ClCompile Include="system\game.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
     <ClCompile Include="renderer\pso.ixx">
@@ -224,18 +212,18 @@
     <ClCompile Include="system\compilation.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
+    <ClCompile Include="system\asserts.ixx">
+      <Filter>source\system</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\techniques\generate_mips_pass.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>assets</Filter>
     </ClInclude>
-    <ClInclude Include="graphics\ShaderSharedStructs.h">
-      <Filter>source\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="system\Assert.hpp">
-      <Filter>source\system</Filter>
-    </ClInclude>
-    <ClInclude Include="..\shaders\include\shader_shared_structs.h">
+    <ClInclude Include="..\shaders\include\shader_structs.h">
       <Filter>shaders\include</Filter>
     </ClInclude>
   </ItemGroup>

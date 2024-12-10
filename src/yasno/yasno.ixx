@@ -6,15 +6,10 @@
 #include <d3dx12.h>
 #include <pix3.h>
 
-#include <System/Assert.hpp>
-#include <Graphics/ShaderSharedStructs.h>
+#include <shader_structs.h>
 
-// TODO(modules): remove this includes
 #include <imgui.h>
-#include <imgui_internal.h>
 #include <ImGuizmo.h>
-#include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
 
 export module yasno;
 
@@ -27,6 +22,7 @@ import graphics.techniques.tonemap_pass;
 import graphics.techniques.raytracing_pass;
 import graphics.techniques.skybox_pass;
 import graphics.techniques.forward_pass;
+import graphics.techniques.generate_mips_pass;
 import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.gpu_buffer;
@@ -35,13 +31,13 @@ import renderer.gpu_texture;
 import renderer.raytracing_context;
 import system.math;
 import system.filesystem;
-import system.window;
 import system.application;
 import system.gltf_loader;
 import system.gui;
-import system.game;
 import system.game_input;
 import system.helpers;
+import system.logger;
+import system.asserts;
 
 export namespace ysn
 {
@@ -126,7 +122,7 @@ private:
     RaytracingPass m_ray_tracing_pass;
     ConvertToCubemap m_convert_to_cubemap_pass;
     SkyboxPass m_skybox_pass;
-    // GenerateMipsPass m_generate_mips_pass; // TODO(modules) : implement mips calculation
+    GenerateMipsPass m_generate_mips_pass;
 };
 } // namespace ysn
 
@@ -186,7 +182,7 @@ void Yasno::UnloadContent()
 void Yasno::Destroy()
 {
     Game::Destroy();
-    // ShutdownImgui(); // TODO(modules):
+    ShutdownImgui();
 }
 
 void Yasno::UpdateBufferResource(
@@ -244,7 +240,7 @@ bool Yasno::CreateGpuCameraBuffer()
 
     D3D12_RESOURCE_DESC resource_desc = {};
     resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resource_desc.Width = GpuCamera::GetGpuSize();
+    resource_desc.Width = GetGpuSize<GpuCamera>();
     resource_desc.Height = 1;
     resource_desc.DepthOrArraySize = 1;
     resource_desc.MipLevels = 1;
@@ -275,7 +271,7 @@ bool Yasno::CreateGpuSceneParametersBuffer()
 
     D3D12_RESOURCE_DESC resource_desc = {};
     resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resource_desc.Width = GpuSceneParameters::GetGpuSize();
+    resource_desc.Width = GetGpuSize<GpuSceneParameters>();
     resource_desc.Height = 1;
     resource_desc.DepthOrArraySize = 1;
     resource_desc.MipLevels = 1;
@@ -363,10 +359,16 @@ bool Yasno::LoadContent()
         PIXCaptureParameters pix_capture_parameters;
         pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
         PIXSetTargetWindow(m_pWindow->GetWindowHandle());
-        YSN_ASSERT(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK);
+        AssertMsg(PIXBeginCapture(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK, "PIX capture failed!");
     }
 
     wil::com_ptr<ID3D12GraphicsCommandList4> command_list = command_queue->GetCommandList("Load Content");
+
+    if (!m_generate_mips_pass.Initialize(renderer))
+    {
+        LogError << "Can't initialize generate mips pass\n";
+        return false;
+    }
 
     bool load_result = false;
 
@@ -392,7 +394,15 @@ bool Yasno::LoadContent()
     //	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
     //}
 
-    // Finish index buffer
+    // Build mips
+    for (auto& model : m_render_scene.models)
+    {
+        for (const GpuTexture& texture : model.textures)
+        {
+            m_generate_mips_pass.GenerateMips(renderer, command_list, texture);
+        }
+    }
+
     {
         // Index buffer
         {
@@ -634,8 +644,7 @@ bool Yasno::LoadContent()
         return false;
     }
 
-    // TODO(modules); restore
-    // InitializeImgui(m_pWindow, renderer);
+    InitializeImgui(m_pWindow, renderer);
 
     const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
@@ -683,7 +692,7 @@ bool Yasno::LoadContent()
 
     if (capture_loading_pix)
     {
-        YSN_ASSERT(PIXEndCapture(false) != S_OK);
+        AssertMsg(PIXEndCapture(false) != S_OK, "PIXEndCapture failed");
     }
 
     m_is_content_loaded = true;
@@ -1091,7 +1100,7 @@ void Yasno::RenderUi()
     {
         ImGui::Begin(STATS_NAME.c_str());
 
-        // ImGui::Text(std::format("FPS: {}", engine_stats::fps).c_str()); // todo(modules);
+        // ImGui::Text(std::format("FPS: {}", engine_stats::fps).c_str());
 
         if (ImGui::CollapsingHeader("Mode"), ImGuiTreeNodeFlags_DefaultOpen)
         {
@@ -1126,7 +1135,7 @@ void Yasno::OnRender(RenderEventArgs& e)
 
     // Render GUI
     {
-        // ImguiPrepareNewFrame(); // todo(modules):
+        ImguiPrepareNewFrame();
         ImGuizmo::BeginFrame();
 
         RenderUi();
@@ -1318,7 +1327,7 @@ void Yasno::OnRender(RenderEventArgs& e)
         command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
         command_list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
 
-        // ImguiRenderFrame(command_list); todo(modules):
+        ImguiRenderFrame(command_list);
 
         command_queue->ExecuteCommandList(command_list);
     }

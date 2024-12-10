@@ -4,8 +4,7 @@ module;
 #include <d3dx12.h>
 #include <wil/com.h>
 
-#include <System/Assert.hpp>
-#include <Graphics/ShaderSharedStructs.h>
+#include <shader_structs.h>
 
 export module graphics.techniques.forward_pass;
 
@@ -22,6 +21,7 @@ import renderer.gpu_buffer;
 import system.filesystem;
 import system.application;
 import system.logger;
+import system.asserts;
 
 export namespace ysn
 {
@@ -251,7 +251,7 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
         new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
         break;
     default:
-        YSN_ASSERT(false);
+        AssertMsg(false, "Unsupported primitive topology");
     }
 
     new_pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);

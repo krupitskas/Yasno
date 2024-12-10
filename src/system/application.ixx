@@ -4,8 +4,6 @@ module;
 #include <dxgi1_6.h>
 #include <wil/com.h>
 #include <imgui.h>
-#include <imgui_impl_win32.h>
-#include <imgui_impl_dx12.h>
 #include <Keyboard.h>
 #include <Mouse.h>
 #include <dxcore.h>
@@ -14,6 +12,11 @@ module;
 
 #include <resource.h>
 
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx12.h>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 export module system.application;
 
 import std;
@@ -21,12 +24,11 @@ import renderer.dx_types;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.command_queue;
-import system.window;
 import system.logger;
-import system.game;
 import system.events;
 import system.clock;
 import system.helpers;
+import system.asserts;
 
 export namespace ysn
 {
@@ -237,8 +239,6 @@ private:
 
 module :private;
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 namespace ysn
 {
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"yasno";
@@ -265,8 +265,6 @@ struct MakeWindow : public Window
 Application::Application(HINSTANCE hInst) : m_hInstance(hInst)
 {
     ysn::InitializeLogger();
-
-    // LOG(INFO) << "Starting application\n";
 
     LogInfo << "Starting application\n";
 
@@ -500,10 +498,10 @@ extern LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 
     if (pWindow)
     {
-        // TODO(imgui)
-        // TODO(modules):
-        // if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
-        //	return true;
+        if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
+        {
+            return true;
+        }
 
         switch (message)
         {

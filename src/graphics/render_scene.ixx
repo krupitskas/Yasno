@@ -2,7 +2,7 @@ module;
 
 #include <DirectXMath.h>
 
-#include <Graphics/ShaderSharedStructs.h>
+#include <shader_structs.h>
 
 export module graphics.render_scene;
 

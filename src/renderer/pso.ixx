@@ -3,13 +3,12 @@ module;
 #include <d3dx12.h>
 #include <wil/com.h>
 
-#include <System/Assert.hpp>
-
 export module renderer.pso;
 
 import std;
 import system.logger;
 import system.hash;
+import system.asserts;
 
 export namespace ysn
 {
@@ -139,7 +138,7 @@ ID3D12RootSignature* GraphicsPsoDesc::GetRootSignature() const
 void GraphicsPsoDesc::SetRootSignature(ID3D12RootSignature* root_signature)
 {
     m_pso_desc.pRootSignature = root_signature;
-    YSN_ASSERT(m_pso_desc.pRootSignature != nullptr);
+    AssertMsg(m_pso_desc.pRootSignature != nullptr, "Root signature can't be nullptr");
 }
 
 void GraphicsPsoDesc::SetBlendState(const D3D12_BLEND_DESC& blend_desc)
@@ -164,7 +163,7 @@ void GraphicsPsoDesc::SetSampleMask(UINT sample_mask)
 
 void GraphicsPsoDesc::SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type)
 {
-    YSN_ASSERT_MSG(topology_type != D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED, "Can't draw with undefined topology");
+    AssertMsg(topology_type != D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED, "Can't draw with undefined topology");
     m_pso_desc.PrimitiveTopologyType = topology_type;
 }
 
@@ -185,10 +184,10 @@ void GraphicsPsoDesc::SetRenderTargetFormat(DXGI_FORMAT RTVFormat, DXGI_FORMAT D
 
 void GraphicsPsoDesc::SetRenderTargetFormats(UINT NumRTVs, const DXGI_FORMAT* RTVFormats, DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
 {
-    YSN_ASSERT_MSG(NumRTVs == 0 || RTVFormats != nullptr, "Null format array conflicts with non-zero length");
+    AssertMsg(NumRTVs == 0 || RTVFormats != nullptr, "Null format array conflicts with non-zero length");
     for (UINT i = 0; i < NumRTVs; ++i)
     {
-        YSN_ASSERT(RTVFormats[i] != DXGI_FORMAT_UNKNOWN);
+        AssertMsg(RTVFormats[i] != DXGI_FORMAT_UNKNOWN, "RTV Format can't be unknown!");
         m_pso_desc.RTVFormats[i] = RTVFormats[i];
     }
     // for (UINT i = NumRTVs; i < m_pso_desc.NumRenderTargets; ++i)

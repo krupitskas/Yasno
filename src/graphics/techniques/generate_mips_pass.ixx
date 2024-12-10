@@ -4,14 +4,14 @@ module;
 #include <d3dx12.h>
 #include <wil/com.h>
 
-#include <Graphics/ShaderSharedStructs.h>
-#include <System/Assert.hpp>
+#include <shader_structs.h>
 
-export module renderer.generate_mips_system;
+export module graphics.techniques.generate_mips_pass;
 
 import std;
 import system.filesystem;
 import system.logger;
+import system.asserts;
 import renderer.dxrenderer;
 import renderer.gpu_texture;
 import renderer.dx_types;
@@ -29,10 +29,10 @@ namespace RootSignatureIndex
     };
 }
 
-class GenerateMipsSystem
+class GenerateMipsPass
 {
 public:
-    bool Initialize(const DxRenderer& renderer);
+    bool Initialize(std::shared_ptr<DxRenderer> renderer);
     bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture);
 
 private:
@@ -45,7 +45,7 @@ module :private;
 
 namespace ysn
 {
-bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
+bool GenerateMipsPass::Initialize(std::shared_ptr<DxRenderer> renderer)
 {
     CD3DX12_DESCRIPTOR_RANGE src_mip(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
     CD3DX12_DESCRIPTOR_RANGE out_mip(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0, 0, 0);
@@ -64,7 +64,7 @@ bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
     root_signature_desc.NumStaticSamplers = 1;
     root_signature_desc.pStaticSamplers = &linear_clamp_sampler;
 
-    if (!renderer.CreateRootSignature(&root_signature_desc, &m_root_signature))
+    if (!renderer->CreateRootSignature(&root_signature_desc, &m_root_signature))
     {
         LogError << "Generate mip pass can't create root signature\n";
         return false;
@@ -74,7 +74,7 @@ bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
     generate_mips_shader_parameters.shader_type = ShaderType::Compute;
     generate_mips_shader_parameters.shader_path = GetVirtualFilesystemPath(L"shaders/generate_mips.cs.hlsl");
 
-    const auto generate_mips_shader = renderer.GetShaderStorage()->CompileShader(generate_mips_shader_parameters);
+    const auto generate_mips_shader = renderer->GetShaderStorage()->CompileShader(generate_mips_shader_parameters);
 
     if (!generate_mips_shader.has_value())
     {
@@ -94,7 +94,7 @@ bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
 
     D3D12_PIPELINE_STATE_STREAM_DESC pipeline_state_stream_desc = {sizeof(PipelineStateStream), &pipeline_state_stream};
 
-    if (auto result = renderer.GetDevice()->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&m_pipeline_state));
+    if (auto result = renderer->GetDevice()->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&m_pipeline_state));
         result != S_OK)
     {
         LogError << "Can't create generate mips pipeline state\n";
@@ -118,7 +118,7 @@ bool GenerateMipsSystem::Initialize(const DxRenderer& renderer)
     return true;
 }
 
-bool GenerateMipsSystem::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture)
+bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture)
 {
     auto compute_queue = renderer->GetComputeQueue();
 

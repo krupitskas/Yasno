@@ -5,14 +5,13 @@ module;
 #include <d3d12.h>
 #include <d3d12shader.h>
 
-#include <System/Assert.hpp>
-
 export module renderer.shader_storage;
 
 import std;
 import system.string_helpers;
 import system.filesystem;
 import system.logger;
+import system.asserts;
 
 export namespace ysn
 {
