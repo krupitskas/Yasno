@@ -295,9 +295,6 @@
     <None Include="..\shaders\indirect_forward_pass.ps.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\shaders\shared.hlsl">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="..\shaders\include\brdf.hlsl">
       <Filter>shaders\include</Filter>
     </None>

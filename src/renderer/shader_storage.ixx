@@ -139,12 +139,12 @@ bool ShaderStorage::Initialize()
 
         wil::com_ptr<IDxcBlob> new_included_file;
 
-        const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/shared.hlsl");
+        const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/include/shared.hlsl");
         hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
 
         if (hr != S_OK)
         {
-            LogError << "Can't load shaders/shared.hlsl\n";
+            LogError << "Can't load shaders/include/shared.hlsl\n";
             return false;
         }
 
@@ -203,7 +203,7 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
     arguments.push_back(parameters.entry_point.c_str());
 
     // Shaders include dir
-    arguments.push_back(L"-I shaders/");
+    arguments.push_back(L"-I shaders/include");
 
     // Profile
     arguments.push_back(L"-T");

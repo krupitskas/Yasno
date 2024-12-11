@@ -139,6 +139,8 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
 
         result_dxgi_adapter->GetDesc3(&dxgiAdapterDesc);
 
+        ysn::LogInfo << "Found adapter " << ysn::WStringToString(dxgiAdapterDesc.Description) << "\n";
+
         // Check to see if the adapter can create a D3D12 device without actually
         // creating it. The adapter with the largest dedicated video memory
         // is favored.

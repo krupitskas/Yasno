@@ -469,11 +469,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\shaders\shared.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\shaders\include\brdf.hlsl">
       <FileType>Document</FileType>
     </None>
