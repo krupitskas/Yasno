@@ -151,21 +151,21 @@ bool SkyboxPass::Initialize()
 
 void SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
 {
-    auto command_list = parameters->command_queue->GetCommandList("Skybox");
+    GraphicsCommandList command_list = parameters->command_queue->GetCommandList("Skybox");
 
     ID3D12DescriptorHeap* ppHeaps[] = {parameters->cbv_srv_uav_heap->GetHeapPtr()};
-    command_list->RSSetViewports(1, &parameters->viewport);
-    command_list->RSSetScissorRects(1, &parameters->scissors_rect);
-    command_list->OMSetRenderTargets(1, &parameters->hdr_rtv_descriptor_handle.cpu, FALSE, &parameters->dsv_descriptor_handle.cpu);
-    command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    command_list->SetPipelineState(m_pipeline_state.get());
-    command_list->SetGraphicsRootSignature(m_root_signature.get());
-    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    command_list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
-    command_list->SetGraphicsRootConstantBufferView(0, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
-    command_list->SetGraphicsRootDescriptorTable(1, parameters->equirectangular_texture->descriptor_handle.gpu);
-    command_list->IASetIndexBuffer(&cube.index_buffer_view);
-    command_list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
+    command_list.list->RSSetViewports(1, &parameters->viewport);
+    command_list.list->RSSetScissorRects(1, &parameters->scissors_rect);
+    command_list.list->OMSetRenderTargets(1, &parameters->hdr_rtv_descriptor_handle.cpu, FALSE, &parameters->dsv_descriptor_handle.cpu);
+    command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    command_list.list->SetPipelineState(m_pipeline_state.get());
+    command_list.list->SetGraphicsRootSignature(m_root_signature.get());
+    command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
+    command_list.list->SetGraphicsRootConstantBufferView(0, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
+    command_list.list->SetGraphicsRootDescriptorTable(1, parameters->equirectangular_texture->descriptor_handle.gpu);
+    command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
+    command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 
     parameters->command_queue->ExecuteCommandList(command_list);
 }

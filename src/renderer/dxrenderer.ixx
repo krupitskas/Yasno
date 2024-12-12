@@ -141,9 +141,7 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
 
         ysn::LogInfo << "Found adapter " << ysn::WStringToString(dxgiAdapterDesc.Description) << "\n";
 
-        // Check to see if the adapter can create a D3D12 device without actually
-        // creating it. The adapter with the largest dedicated video memory
-        // is favored.
+        //The adapter with the largest dedicated video memory is favored.
         if (result_dxgi_adapter && (dxgiAdapterDesc.Flags & static_cast<int>(DXGI_ADAPTER_FLAG_SOFTWARE)) == 0 &&
             SUCCEEDED(D3D12CreateDevice(dxgi_adapter.get(), D3D_FEATURE_LEVEL_12_2, __uuidof(ID3D12Device), nullptr)) &&
             dxgiAdapterDesc.DedicatedVideoMemory > max_dedicated_video_memory)
@@ -158,19 +156,43 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
     return dxgi_adapter.query<DxAdapter>();
 }
 
+void DebugMessageCallback(D3D12_MESSAGE_CATEGORY , D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID , LPCSTR description, void* )
+{
+    // Handle the debug message
+    std::string dx_scope = "[Dx Debug Layer] ";
+    switch (severity)
+    {
+    case D3D12_MESSAGE_SEVERITY_CORRUPTION:
+        ysn::LogFatal << dx_scope << description << "\n";
+        break;
+    case D3D12_MESSAGE_SEVERITY_ERROR:
+        ysn::LogError << dx_scope << description << "\n";
+        break;
+    case D3D12_MESSAGE_SEVERITY_WARNING:
+        ysn::LogWarning << dx_scope << description << "\n";
+        break;
+    case D3D12_MESSAGE_SEVERITY_INFO:
+        ysn::LogInfo << dx_scope << description << "\n";
+        break;
+    default:
+        ysn::LogInfo << dx_scope << " >unknown< " << description << "\n";
+        break;
+    }
+}
+
 wil::com_ptr<DxDevice> CreateDevice(wil::com_ptr<DxAdapter> adapter)
 {
-    wil::com_ptr<DxDevice> d3d12Device2;
-    ThrowIfFailed(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&d3d12Device2)));
+    wil::com_ptr<DxDevice> device;
+    ThrowIfFailed(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&device)));
 
 #if defined(_DEBUG)
-    wil::com_ptr<ID3D12InfoQueue> info_queue;
+    wil::com_ptr<ID3D12InfoQueue1> info_queue;
 
-    if (info_queue = d3d12Device2.try_query<ID3D12InfoQueue>(); info_queue)
+    if (info_queue = device.try_query<ID3D12InfoQueue1>(); info_queue)
     {
         info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-        info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+        info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
 
         // Suppress whole categories of messages
         // D3D12_MESSAGE_CATEGORY Categories[] = {};
@@ -181,27 +203,29 @@ wil::com_ptr<DxDevice> CreateDevice(wil::com_ptr<DxAdapter> adapter)
         // Suppress individual messages by their ID
         D3D12_MESSAGE_ID DenyIds[] = {
             D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-            // I'm really not sure how to avoid this message.
-            D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-            D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED, // TODO: REMOVE THIS LINE
-            // This warning occurs when using capture frame while graphics debugging.
-            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-            // This warning occurs when using capture frame while graphics debugging.
+            D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED, 
         };
 
         D3D12_INFO_QUEUE_FILTER NewFilter = {};
-        // NewFilter.DenyList.NumCategories = _countof(Categories);
-        // NewFilter.DenyList.pCategoryList = Categories;
+        //NewFilter.DenyList.NumCategories = _countof(Categories);
+        //NewFilter.DenyList.pCategoryList = Categories;
         NewFilter.DenyList.NumSeverities = _countof(Severities);
         NewFilter.DenyList.pSeverityList = Severities;
-        NewFilter.DenyList.NumIDs = _countof(DenyIds);
-        NewFilter.DenyList.pIDList = DenyIds;
+        //NewFilter.DenyList.NumIDs = _countof(DenyIds);
+        //NewFilter.DenyList.pIDList = DenyIds;
+
+        DWORD cookie = 0;
+        info_queue->RegisterMessageCallback(&DebugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &cookie);
 
         ThrowIfFailed(info_queue->PushStorageFilter(&NewFilter));
     }
+    else
+    {
+        ysn::LogError << "Dx Device created without Info Queue 1\n";
+    }
 #endif
 
-    return d3d12Device2;
+    return device;
 }
 
 bool CheckTearingSupport()

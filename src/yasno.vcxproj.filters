@@ -68,15 +68,6 @@
     <ClCompile Include="external\implementation.ixx">
       <Filter>source\external</Filter>
     </ClCompile>
-    <ClCompile Include="external\directx.ixx">
-      <Filter>source\external</Filter>
-    </ClCompile>
-    <ClCompile Include="external\directx_math.ixx">
-      <Filter>source\external</Filter>
-    </ClCompile>
-    <ClCompile Include="external\windows.ixx">
-      <Filter>source\external</Filter>
-    </ClCompile>
     <ClCompile Include="system\clock.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
@@ -191,23 +182,11 @@
     <ClCompile Include="renderer\nv\tlas_generator.ixx">
       <Filter>source\renderer\nv</Filter>
     </ClCompile>
-    <ClCompile Include="renderer\nv\stb_generator.ixx">
-      <Filter>source\renderer\nv</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\rs_generator.ixx">
-      <Filter>source\renderer\nv</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\rt_pipeline_generator.ixx">
-      <Filter>source\renderer\nv</Filter>
-    </ClCompile>
     <ClCompile Include="renderer\nv\blas_generator.ixx">
       <Filter>source\renderer\nv</Filter>
     </ClCompile>
     <ClCompile Include="system\hash.ixx">
       <Filter>source\system</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\dxr_helper.ixx">
-      <Filter>source\renderer</Filter>
     </ClCompile>
     <ClCompile Include="system\compilation.ixx">
       <Filter>source\system</Filter>
@@ -237,13 +216,7 @@
     <None Include="..\shaders\generate_mips.cs.hlsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\shaders\hit.rt.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\miss.rt.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\ray_gen.rt.hlsl">
+    <None Include="..\shaders\pathtracing.rt.hlsl">
       <Filter>shaders</Filter>
     </None>
     <None Include="..\shaders\tonemap.cs.hlsl">

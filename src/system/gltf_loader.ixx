@@ -16,6 +16,7 @@ import graphics.render_scene;
 import graphics.primitive;
 import renderer.dxrenderer;
 import renderer.gpu_texture;
+import renderer.command_queue;
 import system.string_helpers;
 import system.math;
 import system.application;
@@ -38,7 +39,7 @@ using namespace Microsoft::WRL;
 
 struct LoadGltfContext
 {
-    wil::com_ptr<ID3D12GraphicsCommandList4> copy_cmd_list;
+    ysn::GraphicsCommandList copy_cmd_list;
     std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
 };
 
@@ -259,7 +260,7 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
         src_copy_location.PlacedFootprint = footprint;
 
         // Copy texture to GPU
-        build_context.copy_cmd_list->CopyTextureRegion(&dst_copy_location, 0, 0, 0, &src_copy_location, nullptr);
+        build_context.copy_cmd_list.list->CopyTextureRegion(&dst_copy_location, 0, 0, 0, &src_copy_location, nullptr);
     }
 
     return true;

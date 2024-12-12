@@ -164,23 +164,23 @@ void TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
 {
     UpdateParameters(parameters_buffer, parameters->backbuffer_width, parameters->backbuffer_height, exposure, tonemap_method);
 
-    auto command_list = parameters->command_queue->GetCommandList("Tonemap");
+    GraphicsCommandList command_list = parameters->command_queue->GetCommandList("Tonemap");
 
-    command_list->SetPipelineState(pipeline_state.get());
-    command_list->SetComputeRootSignature(root_signature.get());
+    command_list.list->SetPipelineState(pipeline_state.get());
+    command_list.list->SetComputeRootSignature(root_signature.get());
 
     ID3D12DescriptorHeap* ppHeaps[] = {parameters->cbv_srv_uav_heap->GetHeapPtr()};
-    command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
     CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
         parameters->scene_color_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    command_list->ResourceBarrier(1, &barrier);
+    command_list.list->ResourceBarrier(1, &barrier);
 
-    command_list->SetComputeRootDescriptorTable(0, parameters->hdr_uav_descriptor_handle.gpu);
-    command_list->SetComputeRootDescriptorTable(1, parameters->backbuffer_uav_descriptor_handle.gpu);
-    command_list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
+    command_list.list->SetComputeRootDescriptorTable(0, parameters->hdr_uav_descriptor_handle.gpu);
+    command_list.list->SetComputeRootDescriptorTable(1, parameters->backbuffer_uav_descriptor_handle.gpu);
+    command_list.list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
 
-    command_list->Dispatch(
+    command_list.list->Dispatch(
         UINT(std::ceil(parameters->backbuffer_width / (float)8)), UINT(std::ceil(parameters->backbuffer_height / (float)8)), 1);
 
     parameters->command_queue->ExecuteCommandList(command_list);

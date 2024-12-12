@@ -12,12 +12,8 @@ module;
 
 #include <resource.h>
 
-#include <imgui_impl_win32.h>
-#include <imgui_impl_dx12.h>
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 export module system.application;
+
 
 import std;
 import renderer.dx_types;
@@ -29,6 +25,7 @@ import system.events;
 import system.clock;
 import system.helpers;
 import system.asserts;
+import external.implementaion;
 
 export namespace ysn
 {
@@ -498,7 +495,7 @@ extern LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 
     if (pWindow)
     {
-        if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
+        if (ImGui_ImplWin32_WndProcHandler_Custom(hwnd, message, wParam, lParam))
         {
             return true;
         }

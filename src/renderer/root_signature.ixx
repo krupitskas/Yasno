@@ -6,6 +6,9 @@ export module root_signature;
 
 export namespace ysn
 {
+
+	//bool 
+
 class RootSignature
 {
 public:

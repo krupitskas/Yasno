@@ -272,21 +272,21 @@ void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRende
 {
     auto renderer = Application::Get().GetRenderer();
 
-    wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList("Forward Pass");
+    GraphicsCommandList command_list = render_parameters.command_queue->GetCommandList("Forward Pass");
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
     };
-    command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-    command_list->RSSetViewports(1, &render_parameters.viewport);
-    command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-    command_list->OMSetRenderTargets(
+    command_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+    command_list.list->RSSetViewports(1, &render_parameters.viewport);
+    command_list.list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+    command_list.list->OMSetRenderTargets(
         1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        command_list->ResourceBarrier(1, &barrier);
+        command_list.list->ResourceBarrier(1, &barrier);
     }
 
     uint32_t instance_id = 0;
@@ -301,35 +301,35 @@ void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRende
             {
                 const Primitive& primitive = mesh.primitives[primitive_id];
 
-                command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
+                command_list.list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
                 // TODO: check for -1 as pso_id
                 const std::optional<Pso> pso = renderer->GetPso(primitive.pso_id);
 
                 if (pso.has_value())
                 {
-                    command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
-                    command_list->SetPipelineState(pso.value().pso.get());
+                    command_list.list->SetGraphicsRootSignature(pso.value().root_signature.get());
+                    command_list.list->SetPipelineState(pso.value().pso.get());
 
-                    command_list->IASetPrimitiveTopology(primitive.topology);
+                    command_list.list->IASetPrimitiveTopology(primitive.topology);
 
-                    command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
-                    command_list->SetGraphicsRootConstantBufferView(
+                    command_list.list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
+                    command_list.list->SetGraphicsRootConstantBufferView(
                         1, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-                    command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
+                    command_list.list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
 
-                    command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
-                    command_list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
-                    command_list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
+                    command_list.list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
+                    command_list.list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
+                    command_list.list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
                     if (primitive.index_count)
                     {
-                        command_list->IASetIndexBuffer(&primitive.index_buffer_view);
-                        command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+                        command_list.list->IASetIndexBuffer(&primitive.index_buffer_view);
+                        command_list.list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
                     }
                     else
                     {
-                        command_list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
+                        command_list.list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
                     }
                 }
                 else
@@ -345,7 +345,7 @@ void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRende
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        command_list->ResourceBarrier(1, &barrier);
+        command_list.list->ResourceBarrier(1, &barrier);
     }
 
     render_parameters.command_queue->ExecuteCommandList(command_list);
@@ -588,21 +588,21 @@ void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
 {
     auto renderer = Application::Get().GetRenderer();
 
-    wil::com_ptr<ID3D12GraphicsCommandList4> command_list = render_parameters.command_queue->GetCommandList("Indirect Forward Pass");
+    GraphicsCommandList command_list = render_parameters.command_queue->GetCommandList("Indirect Forward Pass");
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
     };
-    command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-    command_list->RSSetViewports(1, &render_parameters.viewport);
-    command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-    command_list->OMSetRenderTargets(
+    command_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+    command_list.list->RSSetViewports(1, &render_parameters.viewport);
+    command_list.list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+    command_list.list->OMSetRenderTargets(
         1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        command_list->ResourceBarrier(1, &barrier);
+        command_list.list->ResourceBarrier(1, &barrier);
     }
 
     D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
@@ -615,19 +615,19 @@ void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
     indices_index_buffer.Format = DXGI_FORMAT_R32_UINT;
     indices_index_buffer.SizeInBytes = render_scene.indices_count * sizeof(uint32_t);
 
-    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO: Bake it somewhere?
-    command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-    command_list->IASetIndexBuffer(&indices_index_buffer);
+    command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO: Bake it somewhere?
+    command_list.list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+    command_list.list->IASetIndexBuffer(&indices_index_buffer);
 
     const std::optional<Pso> pso = renderer->GetPso(indirect_pso_id);
 
     if (pso.has_value())
     {
-        command_list->SetPipelineState(pso.value().pso.get());
-        command_list->SetGraphicsRootSignature(m_indirect_root_signature.get());
+        command_list.list->SetPipelineState(pso.value().pso.get());
+        command_list.list->SetGraphicsRootSignature(m_indirect_root_signature.get());
 
         // Argument buffer overflow. [ EXECUTION ERROR #744: EXECUTE_INDIRECT_INVALID_PARAMETERS]
-        command_list->ExecuteIndirect(
+        command_list.list->ExecuteIndirect(
             m_command_signature.get(), render_scene.primitives_count, m_command_buffer.resource.get(), 0, nullptr, 0);
     }
     else
@@ -638,7 +638,7 @@ void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        command_list->ResourceBarrier(1, &barrier);
+        command_list.list->ResourceBarrier(1, &barrier);
     }
 
     render_parameters.command_queue->ExecuteCommandList(command_list);

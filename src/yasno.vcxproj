@@ -259,10 +259,7 @@
     <None Include="..\shaders\convert_equirectangular_map.vs.hlsl" />
     <None Include="..\shaders\skybox.ps.hlsl" />
     <None Include="..\shaders\skybox.vs.hlsl" />
-    <ClCompile Include="external\directx.ixx" />
-    <ClCompile Include="external\directx_math.ixx" />
     <ClCompile Include="external\implementation.ixx" />
-    <ClCompile Include="external\windows.ixx" />
     <ClCompile Include="graphics\lights.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
     <ClCompile Include="main.cxx" />
@@ -327,9 +324,6 @@
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\descriptor_heap.ixx" />
-    <ClCompile Include="renderer\dxr_helper.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
     <ClCompile Include="renderer\gpu_buffer.ixx">
       <FileType>Document</FileType>
     </ClCompile>
@@ -340,15 +334,6 @@
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\nv\blas_generator.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\rt_pipeline_generator.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\rs_generator.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\stb_generator.ixx">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\nv\tlas_generator.ixx">
@@ -428,13 +413,7 @@
     <None Include="..\shaders\generate_mips.cs.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\shaders\hit.rt.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\shaders\miss.rt.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\shaders\ray_gen.rt.hlsl">
+    <None Include="..\shaders\pathtracing.rt.hlsl">
       <FileType>Document</FileType>
     </None>
     <None Include="..\shaders\tonemap.cs.hlsl">

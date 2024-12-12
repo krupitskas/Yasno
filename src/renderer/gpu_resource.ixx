@@ -19,6 +19,18 @@ struct GpuResource
         return resource->GetGPUVirtualAddress();
     }
 
+    ID3D12Resource* GetResourcePtr() const
+    {
+        return resource.get();
+    }
+
+    void SetName(std::wstring name)
+    {
+#ifndef YSN_RELEASE
+        resource->SetName(name.c_str());
+#endif
+    }
+
     wil::com_ptr<ID3D12Resource> resource;
 };
 } // namespace ysn
