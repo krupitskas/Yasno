@@ -1,8 +1,8 @@
 <div align="center">
 
-# `🌩️ Yasno`
+# `🌩️ Yasno / Ясно 🌥️`
 
-**Personal DirectX 12 research oriented renderer for quick iterations and easy usage**
+**DirectX 12 research renderer**
 
 </div>
 
@@ -11,34 +11,32 @@
     <img src="docs/images/pathtracing.png" style="width: 49%; height: 49%">
 </p>
 
-## Current research goal idea
+## Research ideas
 
-Yasno has two modes - raster and pathtracing for reference image.  
-Reference pathtracing use RTX for tracing rays from the camera to the world. Raster right now not use any of RTX features (but will in the future like RTXGI, RTXAO)    
-* Main goal to achieve non blurry, not ghosty nice sharp looking picture which is close to the reference pathtracing image. I don't really want to use any TAA or upscaling for this research, so I want to revisit older technques like SMAA which expect image converge via single frame, however - will see..
-* Second goal is to have very efficiient culling (up to each triangle)  
-* Third goal is to load UE5 matrix city demo and run it with this renderer (yeah, not soon)
+Yasno has two modes - raster and pathtracing to have reference image.  
+ 
+Reference pathtracing heavily use RTX for tracing rays from the camera to the world. Raster right now not use any of RTX features (but will in the future like RTXGI, RTXAO)    
+* Main goal to achieve believably raster image which match pathtracing as much as possible
+* Second goal is to have very efficient raster pipeline, that mean culling, meshlets, indirect workflow
+* Third goal (bonus!) is to load UE5 matrix city demo and run it with this renderer (yeah, not soon)
 
 ### Current features
 
-* as raster renderer mode
-* RTX pathtracing renderer mode (materials WIP)
+* Raster direct and indirect
+* RTX pathtracing renderer with multiframe accumulation
 * GLTF format loading
 * HDR Tonemapping (naive one, would be added more modes in the future like ACES and filmic)
 * Bindless textures
-* Single material, vertex, indices buffer
-* Indirect draw (almost finished)
+* Single packed material, vertex, indices buffer
 
-### Planned close next features
+### Planned next features
 
-* RTX Pathtracing with multiframe accumulation
 * Indirect frustum and occlusion cull via HZB
-* RTXGI
+* Yasno architecture refactoring (right now it *very* messy)
 * BRDF, BTDF and BSDF for different type materials to match pathtracing mode
 * Utilize physical light units
 * V Buffer
-* Yasno architecture refactoring (right now it *very* messy)
-* hare hot reloading (tracking for filewi changes is there, but I want to make it right with include support)
+* Shaders and C++ hot reloading
 * Finish naive techniques like
     * CSM
         * PCF
@@ -53,6 +51,7 @@ Reference pathtracing use RTX for tracing rays from the camera to the world. Ras
 
 * Apex and triangle culling
 * Morph, skeletal animations
-* Scene saving and loading (research OpenUSD)
+* Scene saving and loading
 * Texture streaming
 * Async scene loading
+
