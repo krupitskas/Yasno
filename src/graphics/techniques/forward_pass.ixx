@@ -73,8 +73,8 @@ struct ForwardPass
         const GpuBuffer& instance_buffer,
         wil::com_ptr<ID3D12GraphicsCommandList4> cmd_list);
     bool CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials);
-    void Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
-    void RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
+    bool Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
+    bool RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters);
 
     // Indirect data
     wil::com_ptr<ID3D12RootSignature> m_indirect_root_signature;
@@ -268,11 +268,16 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
     return true;
 }
 
-void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
+bool ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
 {
     auto renderer = Application::Get().GetRenderer();
 
-    GraphicsCommandList command_list = render_parameters.command_queue->GetCommandList("Forward Pass");
+    const auto cmd_list_res = render_parameters.command_queue->GetCommandList("Forward Pass");
+
+    if (!cmd_list_res.has_value())
+        return false;
+
+    GraphicsCommandList command_list = cmd_list_res.value();
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
@@ -349,6 +354,8 @@ void ForwardPass::Render(const RenderScene& render_scene, const ForwardPassRende
     }
 
     render_parameters.command_queue->ExecuteCommandList(command_list);
+
+    return true;
 }
 
 bool ForwardPass::Initialize(
@@ -584,11 +591,16 @@ bool ForwardPass::InitializeIndirectPipeline(
     return true;
 }
 
-void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
+bool ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardPassRenderParameters& render_parameters)
 {
     auto renderer = Application::Get().GetRenderer();
 
-    GraphicsCommandList command_list = render_parameters.command_queue->GetCommandList("Indirect Forward Pass");
+    const auto cmd_list_res = render_parameters.command_queue->GetCommandList("Indirect Forward Pass");
+
+    if (!cmd_list_res.has_value())
+        return false;
+
+    GraphicsCommandList command_list = cmd_list_res.value();
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
@@ -642,5 +654,7 @@ void ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
     }
 
     render_parameters.command_queue->ExecuteCommandList(command_list);
+
+    return true;
 }
 } // namespace ysn

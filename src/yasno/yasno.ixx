@@ -39,6 +39,7 @@ import system.game_input;
 import system.helpers;
 import system.logger;
 import system.asserts;
+import system.string_helpers;
 
 export namespace ysn
 {
@@ -70,7 +71,7 @@ private:
     void UpdateGpuCameraBuffer();
     void UpdateGpuSceneParametersBuffer();
 
-    void UpdateBufferResource(
+    bool UpdateBufferResource(
         wil::com_ptr<ID3D12GraphicsCommandList2> commandList,
         ID3D12Resource** pDestinationResource,
         ID3D12Resource** pIntermediateResource,
@@ -79,9 +80,9 @@ private:
         const void* bufferData,
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
-    void ResizeDepthBuffer(int width, int height);
-    void ResizeHdrBuffer(int width, int height);
-    void ResizeBackBuffer(int width, int height);
+    bool ResizeDepthBuffer(int width, int height);
+    bool ResizeHdrBuffer(int width, int height);
+    bool ResizeBackBuffer(int width, int height);
 
     uint64_t m_fence_values[Window::BufferCount] = {};
 
@@ -187,7 +188,7 @@ void Yasno::Destroy()
     ShutdownImgui();
 }
 
-void Yasno::UpdateBufferResource(
+bool Yasno::UpdateBufferResource(
     wil::com_ptr<ID3D12GraphicsCommandList2> commandList,
     ID3D12Resource** destination_resource,
     ID3D12Resource** intermediate_resource,
@@ -204,14 +205,18 @@ void Yasno::UpdateBufferResource(
     const auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
     // Create a committed resource for the GPU resource in a default heap.
-    ThrowIfFailed(device->CreateCommittedResource(
+    if (auto result = device->CreateCommittedResource(
         &heap_properties,
         D3D12_HEAP_FLAG_NONE,
         &gpuBufferDesc,
         D3D12_RESOURCE_STATE_COMMON, // TODO(task): should be here
         // D3D12_RESOURCE_STATE_COPY_DEST?
         nullptr,
-        IID_PPV_ARGS(destination_resource)));
+        IID_PPV_ARGS(destination_resource)); result != S_OK)
+    {
+        LogFatal << "Can't create buffer " << ConvertHrToString(result) << " \n";
+        return false;
+    }
 
     // Create an committed resource for the upload.
     if (buffer_data)
@@ -219,8 +224,12 @@ void Yasno::UpdateBufferResource(
         const auto gpuUploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
         const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
-        ThrowIfFailed(device->CreateCommittedResource(
-            &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &gpuUploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(intermediate_resource)));
+        if(auto result = device->CreateCommittedResource(
+            &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &gpuUploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(intermediate_resource)); result != S_OK)
+        {
+            LogFatal << "Can't create upload buffer " << ConvertHrToString(result) << " \n";
+            return false;
+        }
 
         D3D12_SUBRESOURCE_DATA subresource_ata = {};
         subresource_ata.pData = buffer_data;
@@ -229,11 +238,13 @@ void Yasno::UpdateBufferResource(
 
         UpdateSubresources(commandList.get(), *destination_resource, *intermediate_resource, 0, 0, 1, &subresource_ata);
     }
+
+    return true;
 }
 
 bool Yasno::CreateGpuCameraBuffer()
 {
-    wil::com_ptr<ID3D12Device5> device = Application::Get().GetDevice();
+    const auto device = Application::Get().GetDevice();
 
     D3D12_HEAP_PROPERTIES heap_properties = {};
     heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -264,7 +275,7 @@ bool Yasno::CreateGpuCameraBuffer()
 
 bool Yasno::CreateGpuSceneParametersBuffer()
 {
-    wil::com_ptr<ID3D12Device5> device = Application::Get().GetDevice();
+    const auto device = Application::Get().GetDevice();
 
     D3D12_HEAP_PROPERTIES heap_properties = {};
     heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -340,7 +351,7 @@ void Yasno::UpdateGpuSceneParametersBuffer()
 
 bool Yasno::LoadContent()
 {
-    wil::com_ptr<ID3D12Device5> device = Application::Get().GetDevice();
+    const auto device = Application::Get().GetDevice();
     auto renderer = Application::Get().GetRenderer();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -354,7 +365,12 @@ bool Yasno::LoadContent()
     // auto command_queue = Application::Get().GetCopyQueue();
     auto command_queue = Application::Get().GetDirectQueue();
 
-    GraphicsCommandList command_list = command_queue->GetCommandList("Load Content");
+    const auto cmd_list_res = command_queue->GetCommandList("Load Content");
+
+    if (!cmd_list_res)
+        return false;
+
+    GraphicsCommandList command_list = cmd_list_res.value();
 
     bool capture_loading_pix = false;
 
@@ -362,7 +378,7 @@ bool Yasno::LoadContent()
     {
         PIXCaptureParameters pix_capture_parameters;
         pix_capture_parameters.GpuCaptureParameters.FileName = L"Yasno.pix";
-        PIXSetTargetWindow(m_pWindow->GetWindowHandle());
+        PIXSetTargetWindow(m_window->GetWindowHandle());
         AssertMsg(PIXBeginCapture2(PIX_CAPTURE_GPU, &pix_capture_parameters) != S_OK, "PIX capture failed!");
     }
 
@@ -415,7 +431,7 @@ bool Yasno::LoadContent()
 
             const auto indices_buffer_result = CreateGpuBuffer(create_info, "Indices Buffer");
 
-            if (!indices_buffer_result.has_value())
+            if (!indices_buffer_result)
             {
                 LogError << "Can't create indices buffer\n";
                 return false;
@@ -458,7 +474,7 @@ bool Yasno::LoadContent()
 
             const auto vertices_buffer_result = CreateGpuBuffer(create_info, "Vertices Buffer");
 
-            if (!vertices_buffer_result.has_value())
+            if (!vertices_buffer_result)
             {
                 LogError << "Can't create vertices buffer\n";
                 return false;
@@ -501,7 +517,7 @@ bool Yasno::LoadContent()
 
             const auto materials_buffer_result = CreateGpuBuffer(create_info, "Materials Buffer");
 
-            if (!materials_buffer_result.has_value())
+            if (!materials_buffer_result)
             {
                 LogError << "Can't create materials buffer\n";
                 return false;
@@ -546,7 +562,7 @@ bool Yasno::LoadContent()
 
             const auto per_instance_buffer_result = CreateGpuBuffer(create_info, "RenderInstance Buffer");
 
-            if (!per_instance_buffer_result.has_value())
+            if (!per_instance_buffer_result)
             {
                 LogError << "Can't create RenderInstance buffer\n";
                 return false;
@@ -646,7 +662,7 @@ bool Yasno::LoadContent()
         return false;
     }
 
-    InitializeImgui(m_pWindow, renderer);
+    InitializeImgui(m_window, renderer);
 
     const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
@@ -658,7 +674,7 @@ bool Yasno::LoadContent()
         parameter.is_srgb = false;
         const auto env_texture = LoadTextureFromFile(parameter);
 
-        if (!env_texture.has_value())
+        if (!env_texture)
         {
             return false;
         }
@@ -690,8 +706,12 @@ bool Yasno::LoadContent()
         return false;
     }
 
-    auto fence_value = command_queue->ExecuteCommandList(command_list);
-    command_queue->WaitForFenceValue(fence_value);
+    const auto fence_res = command_queue->ExecuteCommandList(command_list);
+
+    if (!fence_res)
+        return false;
+
+    command_queue->WaitForFenceValue(fence_res.value());
 
     if (capture_loading_pix)
     {
@@ -713,11 +733,11 @@ bool Yasno::LoadContent()
     m_render_scene.camera->SetPosition({-5, 0, 0});
     m_render_scene.camera_controler.pCamera = m_render_scene.camera;
 
-    game_input.Initialize(m_pWindow->GetWindowHandle());
+    game_input.Initialize(m_window->GetWindowHandle());
 
     // Post init
     const auto cubemap_texture_result = CreateCubemapTexture();
-    if (!cubemap_texture_result.has_value())
+    if (!cubemap_texture_result)
     {
         LogError << "Can't create cubemap\n";
         return false;
@@ -747,7 +767,7 @@ bool Yasno::LoadContent()
     return true;
 }
 
-void Yasno::ResizeDepthBuffer(int width, int height)
+bool Yasno::ResizeDepthBuffer(int width, int height)
 {
     if (m_is_content_loaded)
     {
@@ -757,7 +777,7 @@ void Yasno::ResizeDepthBuffer(int width, int height)
         width = std::max(1, width);
         height = std::max(1, height);
 
-        wil::com_ptr<ID3D12Device5> device = Application::Get().GetDevice();
+        const auto device = Application::Get().GetDevice();
 
         // Resize screen dependent resources.
         // Create a depth buffer.
@@ -770,13 +790,18 @@ void Yasno::ResizeDepthBuffer(int width, int height)
         const CD3DX12_RESOURCE_DESC resource_desc =
             CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heap_properties,
-            D3D12_HEAP_FLAG_NONE,
-            &resource_desc,
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            &optimized_clear_valuie,
-            IID_PPV_ARGS(&m_depth_buffer)));
+        if (auto result = device->CreateCommittedResource(
+                &heap_properties,
+                D3D12_HEAP_FLAG_NONE,
+                &resource_desc,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                &optimized_clear_valuie,
+                IID_PPV_ARGS(&m_depth_buffer));
+            result != S_OK)
+        {
+            LogFatal << "Can't create depth buffer" << ConvertHrToString(result) << " \n";
+            return false;
+        }
 
         // Update the depth-stencil view.
         D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
@@ -787,9 +812,11 @@ void Yasno::ResizeDepthBuffer(int width, int height)
 
         device->CreateDepthStencilView(m_depth_buffer.get(), &dsv, m_depth_dsv_descriptor_handle.cpu);
     }
+
+    return true;
 }
 
-void Yasno::ResizeHdrBuffer(int width, int height)
+bool Yasno::ResizeHdrBuffer(int width, int height)
 {
     if (m_is_content_loaded)
     {
@@ -814,21 +841,31 @@ void Yasno::ResizeHdrBuffer(int width, int height)
         const auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(
             Application::Get().GetRenderer()->GetHdrFormat(), width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heap_properties,
-            D3D12_HEAP_FLAG_NONE,
-            &resource_desc,
-            D3D12_RESOURCE_STATE_RENDER_TARGET,
-            &optimized_clear_valuie,
-            IID_PPV_ARGS(&m_scene_color_buffer)));
+        if (auto result = device->CreateCommittedResource(
+                &heap_properties,
+                D3D12_HEAP_FLAG_NONE,
+                &resource_desc,
+                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                &optimized_clear_valuie,
+                IID_PPV_ARGS(&m_scene_color_buffer));
+            result != S_OK)
+        {
+            LogFatal << "Can't create scene color buffer\n";
+            return false;
+        }
 
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heap_properties,
-            D3D12_HEAP_FLAG_NONE,
-            &resource_desc,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-            &optimized_clear_valuie,
-            IID_PPV_ARGS(&m_scene_color_buffer_1)));
+        if (auto result = device->CreateCommittedResource(
+                &heap_properties,
+                D3D12_HEAP_FLAG_NONE,
+                &resource_desc,
+                D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                &optimized_clear_valuie,
+                IID_PPV_ARGS(&m_scene_color_buffer_1));
+            result != S_OK)
+        {
+            LogFatal << "Can't create scene color buffer 1\n";
+            return false;
+        }
 
 #ifndef YSN_RELEASE
         m_scene_color_buffer->SetName(L"Scene Color 0");
@@ -860,9 +897,11 @@ void Yasno::ResizeHdrBuffer(int width, int height)
             device->CreateUnorderedAccessView(m_scene_color_buffer_1.get(), nullptr, &uav_desc, m_scene_color_buffer_1_handle.cpu);
         }
     }
+
+    return true;
 }
 
-void Yasno::ResizeBackBuffer(int width, int height)
+bool Yasno::ResizeBackBuffer(int width, int height)
 {
     if (m_is_content_loaded)
     {
@@ -893,13 +932,18 @@ void Yasno::ResizeBackBuffer(int width, int height)
             0,
             D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heap_properties,
-            D3D12_HEAP_FLAG_NONE,
-            &resource_desc,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-            &optimized_clear_valuie,
-            IID_PPV_ARGS(&m_back_buffer)));
+        if (auto result = device->CreateCommittedResource(
+                &heap_properties,
+                D3D12_HEAP_FLAG_NONE,
+                &resource_desc,
+                D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                &optimized_clear_valuie,
+                IID_PPV_ARGS(&m_back_buffer));
+            result != S_OK)
+        {
+            LogFatal << "Can't create back buffer" << ConvertHrToString(result) << " \n";
+            return false;
+        }
 
 #ifndef YSN_RELEASED
         m_back_buffer->SetName(L"Back Buffer");
@@ -913,6 +957,8 @@ void Yasno::ResizeBackBuffer(int width, int height)
             device->CreateUnorderedAccessView(m_back_buffer.get(), nullptr, &uavDesc, m_backbuffer_uav_descriptor_handle.cpu);
         }
     }
+
+    return true;
 }
 
 void Yasno::OnResize(ResizeEventArgs& e)
@@ -1157,9 +1203,9 @@ void Yasno::OnRender(RenderEventArgs& e)
     std::shared_ptr<ysn::CommandQueue> command_queue = Application::Get().GetDirectQueue();
     auto renderer = Application::Get().GetRenderer();
 
-    UINT current_backbuffer_index = m_pWindow->GetCurrentBackBufferIndex();
-    wil::com_ptr<ID3D12Resource> current_back_buffer = m_pWindow->GetCurrentBackBuffer();
-    D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_pWindow->GetCurrentRenderTargetView();
+    UINT current_backbuffer_index = m_window->GetCurrentBackBufferIndex();
+    wil::com_ptr<ID3D12Resource> current_back_buffer = m_window->GetCurrentBackBuffer();
+    D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_window->GetCurrentRenderTargetView();
 
     // m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
 
@@ -1178,7 +1224,11 @@ void Yasno::OnRender(RenderEventArgs& e)
     if (m_is_raster)
     {
         {
-            GraphicsCommandList command_list = command_queue->GetCommandList("Clear before forward");
+            const auto cmd_list_res = command_queue->GetCommandList("Clear before forward");
+            if (!cmd_list_res)
+                return;
+
+            GraphicsCommandList command_list = cmd_list_res.value();
 
             FLOAT clear_color[] = {0.0f, 0.0f, 0.0f, 0.0f};
 
@@ -1230,7 +1280,11 @@ void Yasno::OnRender(RenderEventArgs& e)
             m_reset_rtx_accumulation = true;
         }
 
-        GraphicsCommandList command_list = command_queue->GetCommandList("RTX Pass");
+        const auto cmd_list_res = command_queue->GetCommandList("RTX Pass");
+        if (!cmd_list_res)
+            return;
+
+        GraphicsCommandList command_list = cmd_list_res.value();
 
         // Clear the render targets.
         {
@@ -1289,7 +1343,11 @@ void Yasno::OnRender(RenderEventArgs& e)
     }
 
     {
-        GraphicsCommandList cmd_list = command_queue->GetCommandList("Copy Backbuffer");
+        const auto cmd_list_res = command_queue->GetCommandList("Copy Backbuffer");
+        if (!cmd_list_res)
+            return;
+
+        const auto cmd_list = cmd_list_res.value();
 
         D3D12_BOX sourceRegion;
         sourceRegion.left = 0;
@@ -1329,7 +1387,11 @@ void Yasno::OnRender(RenderEventArgs& e)
     }
 
     {
-        GraphicsCommandList cmd_list = command_queue->GetCommandList("Imgui");
+        const auto cmd_list_res = command_queue->GetCommandList("Imgui");
+        if (!cmd_list_res)
+            return;
+
+        const auto cmd_list = cmd_list_res.value();
 
         ID3D12DescriptorHeap* ppHeaps[] = {Application::Get().GetRenderer()->GetCbvSrvUavDescriptorHeap()->GetHeapPtr()};
         cmd_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1342,15 +1404,27 @@ void Yasno::OnRender(RenderEventArgs& e)
 
     // Present
     {
-        GraphicsCommandList cmd_list = command_queue->GetCommandList("Present");
+        const auto cmd_list_res = command_queue->GetCommandList("Present");
+        if (!cmd_list_res)
+            return;
+
+        GraphicsCommandList command_list = cmd_list_res.value();
 
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-        cmd_list.list->ResourceBarrier(1, &barrier);
+        command_list.list->ResourceBarrier(1, &barrier);
+        
+        const auto execute_res = command_queue->ExecuteCommandList(command_list);
+        if(!execute_res)
+            return;
 
-        m_fence_values[current_backbuffer_index] = command_queue->ExecuteCommandList(cmd_list);
+        m_fence_values[current_backbuffer_index] = execute_res.value();
 
-        current_backbuffer_index = m_pWindow->Present();
+        const auto present_res = m_window->Present();
+        if (!present_res)
+            return;
+
+        current_backbuffer_index = present_res.value();
 
         command_queue->WaitForFenceValue(m_fence_values[current_backbuffer_index]);
     }

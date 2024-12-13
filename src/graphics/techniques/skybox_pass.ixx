@@ -42,7 +42,7 @@ class SkyboxPass
 
 public:
     bool Initialize();
-    void RenderSkybox(SkyboxPassParameters* parameters);
+    bool RenderSkybox(SkyboxPassParameters* parameters);
 
 private:
     void UpdateParameters();
@@ -60,7 +60,14 @@ namespace ysn
 {
 bool SkyboxPass::Initialize()
 {
-    cube = ConstructBox();
+    const auto box_result = ConstructBox();
+
+    if (!box_result.has_value())
+    {
+        return false;
+    }
+
+    cube = box_result.value();
     // CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING ???
     // A helper structure used to wrap a CD3DX12_VIEW_INSTANCING_DESC structure. Allows shaders to render to multiple views with a single draw call; useful for stereo vision or cubemap generation.
 
@@ -144,14 +151,17 @@ bool SkyboxPass::Initialize()
         return false;
     }
 
-    // glDepthFunc(GL_LEQUAL);
-
     return true;
 }
 
-void SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
+bool SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
 {
-    GraphicsCommandList command_list = parameters->command_queue->GetCommandList("Skybox");
+    const auto command_list_result = parameters->command_queue->GetCommandList("Skybox");
+
+    if(!command_list_result.has_value())
+        return false;
+
+    GraphicsCommandList command_list = command_list_result.value();
 
     ID3D12DescriptorHeap* ppHeaps[] = {parameters->cbv_srv_uav_heap->GetHeapPtr()};
     command_list.list->RSSetViewports(1, &parameters->viewport);
@@ -168,5 +178,7 @@ void SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
     command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 
     parameters->command_queue->ExecuteCommandList(command_list);
+
+    return true;
 }
 } // namespace ysn

@@ -827,9 +827,14 @@ bool ReadModel(RenderScene& render_scene, Model& model, const tinygltf::Model& g
     auto dx_renderer = Application::Get().GetRenderer();
     auto command_queue = Application::Get().GetDirectQueue();
 
+    const auto cmd_list_result = command_queue->GetCommandList("GLTF upload");
+
+    if (!cmd_list_result.has_value())
+        return false;
+
     LoadGltfContext load_gltf_context;
     load_gltf_context.staging_resources.reserve(256);
-    load_gltf_context.copy_cmd_list = command_queue->GetCommandList("GLTF upload");
+    load_gltf_context.copy_cmd_list = cmd_list_result.value();
 
     if (!BuildImages(model, load_gltf_context, gltf_model))
     {
@@ -844,7 +849,13 @@ bool ReadModel(RenderScene& render_scene, Model& model, const tinygltf::Model& g
     BuildNodes(model, gltf_model, loading_parameters);
 
     auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
-    command_queue->WaitForFenceValue(fence_value);
+
+    if (!fence_value.has_value())
+    {
+        return false;
+    }
+
+    command_queue->WaitForFenceValue(fence_value.value());
 
     render_scene.indices_count += mesh_result.mesh_indices_count;
     render_scene.vertices_count += mesh_result.mesh_vertices_count;

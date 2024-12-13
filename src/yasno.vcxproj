@@ -263,7 +263,9 @@
     <ClCompile Include="graphics\lights.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
     <ClCompile Include="main.cxx" />
+    <ClCompile Include="renderer\blas_generator.ixx" />
     <ClCompile Include="renderer\dx_types.ixx" />
+    <ClCompile Include="renderer\tlas_generator.ixx" />
     <ClCompile Include="system\asserts.ixx" />
     <ClCompile Include="system\clock.ixx" />
     <ClCompile Include="system\compilation.ixx" />
@@ -331,12 +333,6 @@
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\index_storage.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\blas_generator.ixx">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\tlas_generator.ixx">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\pso.ixx">

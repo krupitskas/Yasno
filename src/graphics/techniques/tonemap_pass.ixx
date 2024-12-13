@@ -40,7 +40,7 @@ struct TonemapPostprocessParameters
 struct TonemapPostprocess
 {
     bool Initialize();
-    void Render(TonemapPostprocessParameters* parameters);
+    bool Render(TonemapPostprocessParameters* parameters);
 
     wil::com_ptr<ID3D12Resource> parameters_buffer;
 
@@ -160,11 +160,16 @@ bool TonemapPostprocess::Initialize()
     return true;
 }
 
-void TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
+bool TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
 {
     UpdateParameters(parameters_buffer, parameters->backbuffer_width, parameters->backbuffer_height, exposure, tonemap_method);
 
-    GraphicsCommandList command_list = parameters->command_queue->GetCommandList("Tonemap");
+    const auto command_list_result = parameters->command_queue->GetCommandList("Tonemap");
+
+    if(!command_list_result.has_value())
+        return false;
+
+    GraphicsCommandList command_list = command_list_result.value();
 
     command_list.list->SetPipelineState(pipeline_state.get());
     command_list.list->SetComputeRootSignature(root_signature.get());
@@ -184,5 +189,7 @@ void TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
         UINT(std::ceil(parameters->backbuffer_width / (float)8)), UINT(std::ceil(parameters->backbuffer_height / (float)8)), 1);
 
     parameters->command_queue->ExecuteCommandList(command_list);
+
+    return true;
 }
 } // namespace ysn

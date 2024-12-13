@@ -45,7 +45,7 @@ struct ShadowMapPass
     void Initialize(std::shared_ptr<DxRenderer> p_renderer);
     bool CompilePrimitivePso(Primitive& primitive, std::vector<Material> materials);
     void UpdateLight(const DirectionalLight& Light);
-    void Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters);
+    bool Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters);
 
     // Shadow Map resources
     std::uint32_t ShadowMapDimension = 4096;
@@ -311,11 +311,16 @@ void ShadowMapPass::UpdateLight(const DirectionalLight& directional_light)
         SimpleMath::Vector3{directional_light.direction.x, directional_light.direction.y, directional_light.direction.z});
 }
 
-void ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters)
+bool ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters)
 {
     auto renderer = Application::Get().GetRenderer();
 
-    GraphicsCommandList command_list = parameters.command_queue->GetCommandList("ShadowMap");
+    const auto command_list_result = parameters.command_queue->GetCommandList("ShadowMap");
+
+    if (!command_list_result.has_value())
+        return false;
+
+    GraphicsCommandList command_list = command_list_result.value();
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
@@ -360,7 +365,8 @@ void ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderPa
                     command_list.list->IASetPrimitiveTopology(primitive.topology);
 
                     command_list.list->SetGraphicsRootConstantBufferView(0, m_camera_buffer->GetGPUVirtualAddress());
-                    command_list.list->SetGraphicsRootConstantBufferView(1, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+                    command_list.list->SetGraphicsRootConstantBufferView(
+                        1, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
                     command_list.list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
 
                     command_list.list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu); // PerInstanceData
@@ -386,5 +392,7 @@ void ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderPa
     }
 
     parameters.command_queue->ExecuteCommandList(command_list);
+
+    return true;
 }
 } // namespace ysn

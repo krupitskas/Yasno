@@ -8,6 +8,9 @@ export module renderer.descriptor_heap;
 
 import renderer.dx_types;
 import system.helpers;
+import system.compilation;
+import system.logger;
+import system.string_helpers;
 
 export namespace ysn
 {
@@ -23,6 +26,8 @@ class DescriptorHeap
 {
 public:
     DescriptorHeap(wil::com_ptr<DxDevice> d3d12device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shader_visible = false);
+
+    bool Initialize();
 
     DescriptorHandle GetNewHandle();
     CD3DX12_CPU_DESCRIPTOR_HANDLE GetCpuHandle(DescriptorHandle handle);
@@ -41,13 +46,13 @@ public:
 protected:
     virtual uint32_t GetDescriptorHandleIncrementSize() const;
 
-    wil::com_ptr<DxDevice> m_pd3d12device;
+    wil::com_ptr<DxDevice> m_device;
     wil::com_ptr<ID3D12DescriptorHeap> m_descriptor_heap;
 
     uint32_t m_num_descriptors = 0;
     uint32_t m_max_num_descriptors = 0;
 
-    bool b_shader_visible = false;
+    bool m_is_shader_visible = false;
 
     D3D12_DESCRIPTOR_HEAP_TYPE m_type = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 };
@@ -97,38 +102,49 @@ DescriptorHeap::DescriptorHeap(wil::com_ptr<DxDevice> d3d12device, D3D12_DESCRIP
 {
     m_type = type;
     m_max_num_descriptors = count;
-    b_shader_visible = shader_visible;
+    m_is_shader_visible = shader_visible;
+    m_device = d3d12device;
+    }
 
+bool DescriptorHeap::Initialize()
+{
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.Type = m_type;
     desc.NumDescriptors = m_max_num_descriptors;
-    desc.Flags = shader_visible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    desc.Flags = m_is_shader_visible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     desc.NodeMask = 0;
 
-    ThrowIfFailed(d3d12device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptor_heap)));
-
-#ifndef YSN_RELEASE
-    switch (type)
+    if(auto result = m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptor_heap)); result != S_OK)
     {
-    case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-        m_descriptor_heap->SetName(L"CBV_SRV_UAV_DESCRIPTOR_HEAP");
-        break;
-    case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
-        m_descriptor_heap->SetName(L"SAMPLER_DESCRIPTOR_HEAP");
-        break;
-    case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
-        m_descriptor_heap->SetName(L"RTV_DESCRIPTOR_HEAP");
-        break;
-    case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
-        m_descriptor_heap->SetName(L"DSV_DESCRIPTOR_HEAP");
-        break;
-    default:
-        break;
+        LogFatal << "Can't create descriptor heap: " << ConvertHrToString(result) << "\n";
+        return false;
     }
-#endif
 
-    m_pd3d12device = d3d12device;
+    if constexpr (!IsReleaseActive())
+    {
+        switch (m_type)
+        {
+        case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+            m_descriptor_heap->SetName(L"CBV_SRV_UAV_DESCRIPTOR_HEAP");
+            break;
+        case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+            m_descriptor_heap->SetName(L"SAMPLER_DESCRIPTOR_HEAP");
+            break;
+        case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+            m_descriptor_heap->SetName(L"RTV_DESCRIPTOR_HEAP");
+            break;
+        case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+            m_descriptor_heap->SetName(L"DSV_DESCRIPTOR_HEAP");
+            break;
+        default:
+            break;
+        }
+    }
+
+    return true;
 }
+
+
 
 DescriptorHandle DescriptorHeap::GetNewHandle()
 {
@@ -145,7 +161,7 @@ DescriptorHandle DescriptorHeap::GetNewHandle()
     handle.cpu = GetCpuHandle(handle);
 
     // TODO: Handle it more properly than this shit
-    if (b_shader_visible)
+    if (m_is_shader_visible)
     {
         handle.gpu = GetGpuHandle(handle);
     }
@@ -180,6 +196,6 @@ ID3D12DescriptorHeap* DescriptorHeap::GetHeapPtr()
 
 uint32_t DescriptorHeap::GetDescriptorHandleIncrementSize() const
 {
-    return m_pd3d12device->GetDescriptorHandleIncrementSize(m_type);
+    return m_device->GetDescriptorHandleIncrementSize(m_type);
 }
 } // namespace ysn

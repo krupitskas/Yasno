@@ -5,6 +5,8 @@ module;
 
 export module renderer.gpu_resource;
 
+import system.compilation;
+
 export namespace ysn
 {
 struct GpuResource
@@ -26,9 +28,10 @@ struct GpuResource
 
     void SetName(std::wstring name)
     {
-#ifndef YSN_RELEASE
-        resource->SetName(name.c_str());
-#endif
+        if constexpr (!IsReleaseActive())
+        {
+            resource->SetName(name.c_str());
+        }
     }
 
     wil::com_ptr<ID3D12Resource> resource;

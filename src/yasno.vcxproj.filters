@@ -32,9 +32,6 @@
     <Filter Include="source\renderer">
       <UniqueIdentifier>{4e2f953f-626b-4341-ad4c-10508fab96da}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\renderer\nv">
-      <UniqueIdentifier>{cbc70c3f-d7f8-4f68-9d91-d679b7110775}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\include">
       <UniqueIdentifier>{a54ae581-ccf4-4b81-ae4c-105c815356ad}</UniqueIdentifier>
     </Filter>
@@ -179,12 +176,6 @@
     <ClCompile Include="system\helpers.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
-    <ClCompile Include="renderer\nv\tlas_generator.ixx">
-      <Filter>source\renderer\nv</Filter>
-    </ClCompile>
-    <ClCompile Include="renderer\nv\blas_generator.ixx">
-      <Filter>source\renderer\nv</Filter>
-    </ClCompile>
     <ClCompile Include="system\hash.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
@@ -196,6 +187,12 @@
     </ClCompile>
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx">
       <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\blas_generator.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\tlas_generator.ixx">
+      <Filter>source\renderer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -12,8 +12,8 @@ import system.gltf_loader;
 import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
-import renderer.nv.tlas_generator;
-import renderer.nv.blas_generator;
+import renderer.tlas_generator;
+import renderer.blas_generator;
 import renderer.dx_types;
 import renderer.gpu_buffer;
 
@@ -51,7 +51,7 @@ struct RaytracingContext
     void CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer);
     void CreateAccelerationStructures(wil::com_ptr<DxGraphicsCommandList> command_list, const RenderScene& render_scene);
 
-    nv_helpers_dx12::TlasGenerator tlas_generator;
+    TlasGenerator tlas_generator;
 
     std::vector<AccelerationStructureBuffers> blas_res;
 
@@ -67,11 +67,11 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBlas(
     wil::com_ptr<DxGraphicsCommandList> command_list,
     std::vector<BlasInput> vertex_buffers)
 {
-    nv_helpers_dx12::BlasGenerator bottomLevelAS;
+    BlasGenerator blas_generator;
 
     for (const auto& buffer : vertex_buffers)
     {
-        bottomLevelAS.AddVertexBuffer(buffer.vertex_buffer_view, buffer.index_buffer_view, buffer.vertex_count, buffer.index_count, 0, 0);
+        blas_generator.AddVertexBuffer(buffer.vertex_buffer_view, buffer.index_buffer_view, buffer.vertex_count, buffer.index_count, 0, 0);
     }
 
     // The AS build requires some scratch space to store temporary information.
@@ -82,7 +82,7 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBlas(
     // buffers. It size is also dependent on the scene complexity.
     UINT64 result_size_in_bytes = 0;
 
-    bottomLevelAS.ComputeBlasBufferSizes(device.get(), false, &scratch_size_in_bytes, &result_size_in_bytes);
+    blas_generator.ComputeBlasBufferSizes(device.get(), false, &scratch_size_in_bytes, &result_size_in_bytes);
 
     GpuBufferCreateInfo scratch_create_info{
         .size = scratch_size_in_bytes,
@@ -105,7 +105,7 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBlas(
     buffers.scratch = scratch_result.value();
     buffers.result = blas_result.value();
 
-    bottomLevelAS.Generate(command_list.get(), buffers.scratch, buffers.result, false, nullptr);
+    blas_generator.Generate(command_list.get(), buffers.scratch, buffers.result, false, nullptr);
 
     return buffers;
 }

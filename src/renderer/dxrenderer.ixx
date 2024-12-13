@@ -12,6 +12,7 @@ import system.string_helpers;
 import system.logger;
 import system.asserts;
 import system.helpers;
+import system.compilation;
 import renderer.vertex_storage;
 import renderer.index_storage;
 import renderer.command_queue;
@@ -63,7 +64,7 @@ private:
     bool CheckRaytracingSupport();
 
     // Constants
-    static constexpr uint32_t SWAP_CHAIN_BUFFER_COUNT = 3;
+    static constexpr uint32_t m_frames_count = 3;
 
     // Low level objects
     wil::com_ptr<DxDevice> m_device;
@@ -82,7 +83,7 @@ private:
     DXGI_FORMAT backbuffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
     // Resources
-    wil::com_ptr<ID3D12Resource> m_back_buffers[SWAP_CHAIN_BUFFER_COUNT];
+    wil::com_ptr<ID3D12Resource> m_back_buffers[m_frames_count];
 
     // Queues
     std::shared_ptr<CommandQueue> m_direct_command_queue;
@@ -96,7 +97,6 @@ private:
     std::shared_ptr<DsvDescriptorHeap> m_dsv_descriptor_heap;
 
     // Info
-    D3D_FEATURE_LEVEL m_d3d_feature_level = D3D_FEATURE_LEVEL_12_2;
 
     // Get back info
     bool m_tearing_supported = false;
@@ -112,14 +112,15 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
 
     UINT create_factory_flags = 0;
 
-#if defined(_DEBUG)
-    create_factory_flags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
+    if constexpr (ysn::IsDebugActive())
+    {
+        create_factory_flags = DXGI_CREATE_FACTORY_DEBUG;
+    }
 
-    if (HRESULT err = CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory)); FAILED(err))
+    if (auto result = CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory)); FAILED(result))
     {
         ysn::LogError << "Can't create DXGIFactory2 with flags " << std::to_string(create_factory_flags)
-                      << ", error is: " << ysn::ConvertHrToString(err) << " aborting!\n";
+                      << ", error is: " << ysn::ConvertHrToString(result) << " aborting!\n";
         return std::nullopt;
     }
 
@@ -141,7 +142,7 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
 
         ysn::LogInfo << "Found adapter " << ysn::WStringToString(dxgiAdapterDesc.Description) << "\n";
 
-        //The adapter with the largest dedicated video memory is favored.
+        // The adapter with the largest dedicated video memory is favored.
         if (result_dxgi_adapter && (dxgiAdapterDesc.Flags & static_cast<int>(DXGI_ADAPTER_FLAG_SOFTWARE)) == 0 &&
             SUCCEEDED(D3D12CreateDevice(dxgi_adapter.get(), D3D_FEATURE_LEVEL_12_2, __uuidof(ID3D12Device), nullptr)) &&
             dxgiAdapterDesc.DedicatedVideoMemory > max_dedicated_video_memory)
@@ -156,7 +157,7 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
     return dxgi_adapter.query<DxAdapter>();
 }
 
-void DebugMessageCallback(D3D12_MESSAGE_CATEGORY , D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID , LPCSTR description, void* )
+void MsgCallback(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID, LPCSTR description, void*)
 {
     // Handle the debug message
     std::string dx_scope = "[Dx Debug Layer] ";
@@ -180,50 +181,62 @@ void DebugMessageCallback(D3D12_MESSAGE_CATEGORY , D3D12_MESSAGE_SEVERITY severi
     }
 }
 
-wil::com_ptr<DxDevice> CreateDevice(wil::com_ptr<DxAdapter> adapter)
+std::optional<wil::com_ptr<DxDevice>> CreateDevice(wil::com_ptr<DxAdapter> adapter)
 {
     wil::com_ptr<DxDevice> device;
-    ThrowIfFailed(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&device)));
-
-#if defined(_DEBUG)
-    wil::com_ptr<ID3D12InfoQueue1> info_queue;
-
-    if (info_queue = device.try_query<ID3D12InfoQueue1>(); info_queue)
+    if (auto result = D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&device)); result != S_OK)
     {
-        info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-        info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-        info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
-
-        // Suppress whole categories of messages
-        // D3D12_MESSAGE_CATEGORY Categories[] = {};
-
-        // Suppress messages based on their severity level
-        D3D12_MESSAGE_SEVERITY Severities[] = {D3D12_MESSAGE_SEVERITY_INFO};
-
-        // Suppress individual messages by their ID
-        D3D12_MESSAGE_ID DenyIds[] = {
-            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-            D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED, 
-        };
-
-        D3D12_INFO_QUEUE_FILTER NewFilter = {};
-        //NewFilter.DenyList.NumCategories = _countof(Categories);
-        //NewFilter.DenyList.pCategoryList = Categories;
-        NewFilter.DenyList.NumSeverities = _countof(Severities);
-        NewFilter.DenyList.pSeverityList = Severities;
-        //NewFilter.DenyList.NumIDs = _countof(DenyIds);
-        //NewFilter.DenyList.pIDList = DenyIds;
-
-        DWORD cookie = 0;
-        info_queue->RegisterMessageCallback(&DebugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &cookie);
-
-        ThrowIfFailed(info_queue->PushStorageFilter(&NewFilter));
+        ysn::LogFatal << "Can't initialize dx 12 device " << ysn::ConvertHrToString(result) << "\n";
+        return std::nullopt;
     }
-    else
+
+    if constexpr (ysn::IsDebugActive())
     {
-        ysn::LogError << "Dx Device created without Info Queue 1\n";
+        wil::com_ptr<ID3D12InfoQueue1> info_queue;
+
+        if (info_queue = device.try_query<ID3D12InfoQueue1>(); info_queue)
+        {
+            info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+            info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+            info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
+
+            // Suppress whole categories of messages
+            // D3D12_MESSAGE_CATEGORY Categories[] = {};
+
+            // Suppress messages based on their severity level
+            D3D12_MESSAGE_SEVERITY Severities[] = {D3D12_MESSAGE_SEVERITY_INFO};
+
+            // Suppress individual messages by their ID
+            D3D12_MESSAGE_ID DenyIds[] = {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED,
+            };
+
+            D3D12_INFO_QUEUE_FILTER NewFilter = {};
+            // NewFilter.DenyList.NumCategories = _countof(Categories);
+            // NewFilter.DenyList.pCategoryList = Categories;
+            NewFilter.DenyList.NumSeverities = _countof(Severities);
+            NewFilter.DenyList.pSeverityList = Severities;
+            // NewFilter.DenyList.NumIDs = _countof(DenyIds);
+            // NewFilter.DenyList.pIDList = DenyIds;
+
+            DWORD cookie = 0;
+            if (auto result = info_queue->RegisterMessageCallback(&MsgCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &cookie);
+                result != S_OK)
+            {
+                ysn::LogError << "Can't register dx debug message callback " << ysn::ConvertHrToString(result) << "\n";
+            }
+
+            if (auto result = info_queue->PushStorageFilter(&NewFilter); result != S_OK)
+            {
+                ysn::LogError << "Can't push storage filter to info queue" << ysn::ConvertHrToString(result) << "\n";
+            }
+        }
+        else
+        {
+            ysn::LogError << "Dx Device created without Info Queue 1\n";
+        }
     }
-#endif
 
     return device;
 }
@@ -277,11 +290,16 @@ namespace ysn
 {
 bool DxRenderer::Initialize()
 {
-#if defined(_DEBUG)
-    wil::com_ptr<ID3D12Debug> debugInterface;
-    ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
-    debugInterface->EnableDebugLayer();
-#endif
+    if constexpr (IsDebugActive())
+    {
+        wil::com_ptr<ID3D12Debug> dx_debug_interface;
+        if (auto result = D3D12GetDebugInterface(IID_PPV_ARGS(&dx_debug_interface)); result != S_OK)
+        {
+            LogFatal << "Can't create debug interface " << ConvertHrToString(result) << "\n";
+            return false;
+        }
+        dx_debug_interface->EnableDebugLayer();
+    }
 
     const auto dxgi_adapter = CreateDXGIAdapter();
 
@@ -292,12 +310,14 @@ bool DxRenderer::Initialize()
 
     m_dxgi_adapter = dxgi_adapter.value();
 
-    m_device = CreateDevice(m_dxgi_adapter);
+    const auto device_result = CreateDevice(m_dxgi_adapter);
 
-    if (!m_device)
+    if (!device_result.has_value())
     {
         return false;
     }
+
+    m_device = device_result.value();
 
     m_tearing_supported = CheckTearingSupport();
 
@@ -306,14 +326,24 @@ bool DxRenderer::Initialize()
     m_compute_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
     m_copy_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
 
+    // TODO(checks):
+    m_direct_command_queue->Initialize();
+    m_compute_command_queue->Initialize();
+    m_copy_command_queue->Initialize();
+
     m_shader_storage = std::make_shared<ShaderStorage>();
 
-    // Create descriptor heaps
-    // TODO: Save somewhere budgets, make them dynamic?
+    // TODO(checks): Save somewhere budgets, make them dynamic?
     m_cbv_srv_uav_descriptor_heap = std::make_shared<CbvSrvUavDescriptorHeap>(m_device, 1024 * 512, true);
     m_sampler_descriptor_heap = std::make_shared<SamplerDescriptorHeap>(m_device, 1024, true);
     m_rtv_descriptor_heap = std::make_shared<RtvDescriptorHeap>(m_device, 128);
     m_dsv_descriptor_heap = std::make_shared<DsvDescriptorHeap>(m_device, 128);
+
+    // TODO(checks):
+    m_cbv_srv_uav_descriptor_heap->Initialize();
+    m_sampler_descriptor_heap->Initialize();
+    m_rtv_descriptor_heap->Initialize();
+    m_dsv_descriptor_heap->Initialize();
 
     m_is_raytracing_supported = CheckRaytracingSupport();
 
