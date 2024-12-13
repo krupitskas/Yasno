@@ -253,7 +253,7 @@ bool Yasno::CreateGpuCameraBuffer()
 
     D3D12_RESOURCE_DESC resource_desc = {};
     resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resource_desc.Width = GetGpuSize<GpuCamera>();
+    resource_desc.Width = GetGpuSize<CameraParameters>();
     resource_desc.Height = 1;
     resource_desc.DepthOrArraySize = 1;
     resource_desc.MipLevels = 1;
@@ -309,7 +309,7 @@ void Yasno::UpdateGpuCameraBuffer()
     void* data;
     m_camera_gpu_buffer->Map(0, nullptr, &data);
 
-    auto* camera_data = static_cast<GpuCamera*>(data);
+    auto* camera_data = static_cast<CameraParameters*>(data);
 
     DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
     view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_render_scene.camera->GetViewMatrix());
@@ -317,15 +317,14 @@ void Yasno::UpdateGpuCameraBuffer()
 
     DirectX::XMVECTOR det;
 
-    XMStoreFloat4x4(&camera_data->view_projection, view_projection);
-    XMStoreFloat4x4(&camera_data->view, m_render_scene.camera->GetViewMatrix());
-    XMStoreFloat4x4(&camera_data->projection, m_render_scene.camera->GetProjectionMatrix());
-    XMStoreFloat4x4(&camera_data->view_inverse, XMMatrixInverse(&det, m_render_scene.camera->GetViewMatrix()));
-    XMStoreFloat4x4(&camera_data->projection_inverse, XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix()));
-
+    camera_data->view_projection = view_projection;
+    camera_data->view = m_render_scene.camera->GetViewMatrix();
+    camera_data->projection = m_render_scene.camera->GetProjectionMatrix();
+    camera_data->view_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetViewMatrix());
+    camera_data->projection_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix());
     camera_data->position = m_render_scene.camera->GetPosition();
     camera_data->frame_number = m_frame_number;
-    camera_data->frames_accumulated = m_rtx_frames_accumulated;
+    camera_data->rtx_frames_accumulated = m_rtx_frames_accumulated;
     camera_data->reset_accumulation = m_reset_rtx_accumulation ? 1 : 0;
     camera_data->accumulation_enabled = m_is_rtx_accumulation_enabled ? 1 : 0;
 
@@ -339,7 +338,7 @@ void Yasno::UpdateGpuSceneParametersBuffer()
 
     auto* scene_parameters_data = static_cast<GpuSceneParameters*>(data);
 
-    XMStoreFloat4x4(&scene_parameters_data->shadow_matrix, m_shadow_pass.shadow_matrix);
+    scene_parameters_data->shadow_matrix = m_shadow_pass.shadow_matrix;
     scene_parameters_data->directional_light_color = m_render_scene.directional_light.color;
     scene_parameters_data->directional_light_direction = m_render_scene.directional_light.direction;
     scene_parameters_data->directional_light_intensity = m_render_scene.directional_light.intensity;
@@ -556,7 +555,7 @@ bool Yasno::LoadContent()
         // Instance buffer
         {
             GpuBufferCreateInfo create_info{
-                .size = m_render_scene.primitives_count * sizeof(RenderInstanceData),
+                .size = m_render_scene.primitives_count * sizeof(PerInstanceData),
                 .heap_type = D3D12_HEAP_TYPE_DEFAULT,
                 .state = D3D12_RESOURCE_STATE_COPY_DEST};
 
@@ -570,7 +569,7 @@ bool Yasno::LoadContent()
 
             m_render_scene.instance_buffer = per_instance_buffer_result.value();
 
-            std::vector<RenderInstanceData> per_instance_data_buffer;
+            std::vector<PerInstanceData> per_instance_data_buffer;
             per_instance_data_buffer.reserve(m_render_scene.primitives_count);
 
             uint32_t total_indices = 0;
@@ -584,7 +583,7 @@ bool Yasno::LoadContent()
 
                     for (Primitive& primitive : mesh.primitives)
                     {
-                        RenderInstanceData instance_data;
+                        PerInstanceData instance_data;
                         if (primitive.material_id == -1)
                         {
                             LogInfo << "Material ID is negative when filling instance data buffer - investigate";
@@ -620,7 +619,7 @@ bool Yasno::LoadContent()
             srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.FirstElement = 0;
             srv_desc.Buffer.NumElements = static_cast<UINT>(m_render_scene.primitives_count);
-            srv_desc.Buffer.StructureByteStride = sizeof(RenderInstanceData);
+            srv_desc.Buffer.StructureByteStride = sizeof(PerInstanceData);
             srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
             srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 

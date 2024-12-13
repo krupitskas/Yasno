@@ -1,3 +1,4 @@
+#include "shader_structs.h"
 #include "shared.hlsl"
 
 RWTexture2D<float4> result_texture							: register(u0);

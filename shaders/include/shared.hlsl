@@ -5,67 +5,6 @@
 #define ONE_OVER_PI (1.0f / PI)
 #define ONE_OVER_TWO_PI (1.0f / TWO_PI)
 
-// ### Structs 
-
-struct CameraParameters
-{
-  float4x4 view_projection;
-  float4x4 view;
-  float4x4 projection;
-  float4x4 view_inverse;
-  float4x4 projection_inverse;
-  float3 position;
-  uint frame_number;
-  uint rtx_frames_accumulated;
-  uint reset_accumulation;
-  uint accumulation_enabled;
-  uint pad;
-};
-
-struct RtxHitInfo
-{
-	float4 encoded_normals; // Octahedron encoded
-	float3 hit_position;
-	int material_id;
-	float2 uvs;
-
-	bool has_hit() 
-	{
-		return material_id != -1;
-	}
-};
-
-struct RtxAttributes
-{
-	float2 bary;
-};
-
-// Per instance data
-struct PerInstanceData
-{
-	float4x4 model_matrix;
-	int material_id;
-	int vertices_before;
-	int indices_before;
-	int pad;
-};
-
-// Material Buffer Data
-struct SurfaceShaderParameters
-{
-	float4 base_color_factor;
-	float metallic_factor;
-	float roughness_factor;
-
-	int texture_enable_bitmask; // Encoded which textures are should be used
-
-	int albedo_texture_index;
-	int metallic_roughness_texture_index;
-	int normal_texture_index;
-	int occlusion_texture_index;
-	int emissive_texture_index;
-};
-
 // Vertex buffer layout data
 struct VertexLayout
 {
@@ -75,9 +14,7 @@ struct VertexLayout
     float2 texcoord_0;
 };
 
-
 // ### Functions
-
 uint JenkinsHash(uint x)
 {
 	x += x << 10;

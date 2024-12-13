@@ -5,17 +5,17 @@ module;
 #include <d3d12.h>
 #include <d3d12shader.h>
 
- #ifndef YSN_RELEASE
- #include <sys/types.h>
- #include <sys/stat.h>
- #ifndef WIN32
- #include <unistd.h>
- #endif
+#ifndef YSN_RELEASE
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 
- #ifdef WIN32
- #define stat _stat
- #endif
- #endif
+#ifdef WIN32
+#define stat _stat
+#endif
+#endif
 
 export module renderer.shader_storage;
 
@@ -55,10 +55,10 @@ struct ShaderStorage
 #endif
 
 private:
-     #ifndef YSN_RELEASE
-    	std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
-    	std::map<std::wstring, std::time_t> m_shaders_modified_time;
-     #endif
+#ifndef YSN_RELEASE
+    std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
+    std::map<std::wstring, std::time_t> m_shaders_modified_time;
+#endif
 
     std::wstring m_debug_data_path = L"ShadersDebugData";
     std::wstring m_binary_data_path = L"ShadersBinaryData";
@@ -135,18 +135,35 @@ bool ShaderStorage::Initialize()
             return false;
         }
 
-        wil::com_ptr<IDxcBlob> new_included_file;
-
-        const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/include/shared.hlsl");
-        hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
-
-        if (hr != S_OK)
         {
-            LogError << "Can't load shaders/include/shared.hlsl\n";
-            return false;
+            wil::com_ptr<IDxcBlob> new_included_file;
+
+            const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/include/shared.hlsl");
+            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+            if (hr != S_OK)
+            {
+                LogError << "Can't load shaders/include/shared.hlsl\n";
+                return false;
+            }
+
+            m_dxc_included_files.push_back(new_included_file);
         }
 
-        m_dxc_included_files.push_back(new_included_file);
+        {
+            wil::com_ptr<IDxcBlob> new_included_file;
+
+            const std::wstring shared_path = ysn::GetVirtualFilesystemPath(L"shaders/include/shader_structs.h");
+            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+            if (hr != S_OK)
+            {
+                LogError << "Can't load shaders/include/shader_structs.h\n";
+                return false;
+            }
+
+            m_dxc_included_files.push_back(new_included_file);
+        }
     }
 
     return true;
@@ -380,56 +397,56 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
         hash_vec.push_back(hash_buffer->HashDigest[i]);
     }
 
-     #ifndef YSN_RELEASE
-    	const auto shader_modification_time = GetShaderModificationTime(parameters.shader_path);
+#ifndef YSN_RELEASE
+    const auto shader_modification_time = GetShaderModificationTime(parameters.shader_path);
 
-    	if (shader_modification_time.has_value())
-    	{
-    		m_shaders_modified_time.emplace(parameters.shader_path, shader_modification_time.value());
-    	}
-    	else
-    	{
-    		LogError << "Can't get shader modification time: " << WStringToString(parameters.shader_path) << "\n";
-    	}
-     #endif
+    if (shader_modification_time.has_value())
+    {
+        m_shaders_modified_time.emplace(parameters.shader_path, shader_modification_time.value());
+    }
+    else
+    {
+        LogError << "Can't get shader modification time: " << WStringToString(parameters.shader_path) << "\n";
+    }
+#endif
 
     return shader_data;
 }
 
- #ifndef YSN_RELEASE
-	void ShaderStorage::VerifyAnyShaderChanged()
-	{
-		for(const auto& [shader_path, time] : m_shaders_modified_time)
-		{
-			const auto latest_time = GetShaderModificationTime(shader_path);
+#ifndef YSN_RELEASE
+void ShaderStorage::VerifyAnyShaderChanged()
+{
+    for (const auto& [shader_path, time] : m_shaders_modified_time)
+    {
+        const auto latest_time = GetShaderModificationTime(shader_path);
 
-			if(latest_time.has_value())
-			{
-				if(latest_time.value() != time)
-				{
-					LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
+        if (latest_time.has_value())
+        {
+            if (latest_time.value() != time)
+            {
+                LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
 
-					// TODO: Notify PSO manager to compile the shader here
-					m_shaders_modified_time[shader_path] = latest_time.value();
-				}
-			}
-			else
-			{
-				LogError << "Can't get shader modification time: " << WStringToString(shader_path) << "\n";
-			}
-		}
-	}
+                // TODO: Notify PSO manager to compile the shader here
+                m_shaders_modified_time[shader_path] = latest_time.value();
+            }
+        }
+        else
+        {
+            LogError << "Can't get shader modification time: " << WStringToString(shader_path) << "\n";
+        }
+    }
+}
 
-	std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)
-	{
-		struct stat result;
+std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)
+{
+    struct stat result;
 
-		if(stat(shader_path.string().c_str(), &result)==0)
-		{
-			return result.st_mtime;
-		}
+    if (stat(shader_path.string().c_str(), &result) == 0)
+    {
+        return result.st_mtime;
+    }
 
-		return std::nullopt;
-	}
- #endif
+    return std::nullopt;
+}
+#endif
 } // namespace ysn

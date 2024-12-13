@@ -336,7 +336,7 @@ bool ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderPa
         void* data = nullptr;
         m_camera_buffer->Map(0, nullptr, &data);
         auto* pCameraData = static_cast<ShadowCamera*>(data);
-        XMStoreFloat4x4(&pCameraData->shadow_matrix, shadow_matrix);
+        pCameraData->shadow_matrix = shadow_matrix;
         m_camera_buffer->Unmap(0, nullptr);
     }
 

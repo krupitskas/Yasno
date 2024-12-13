@@ -566,7 +566,7 @@ bool ForwardPass::InitializeIndirectPipeline(
                 m_indirect_commands.push_back(command);
 
                 command_index++;
-                instance_data_buffer_gpu_address += sizeof(RenderInstanceData);
+                instance_data_buffer_gpu_address += sizeof(PerInstanceData);
             }
         }
     }

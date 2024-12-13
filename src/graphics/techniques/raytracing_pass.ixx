@@ -319,14 +319,6 @@ module :private;
 
 namespace ysn
 {
-struct HitInfo
-{
-    DirectX::XMFLOAT4 encoded_normals; // Octahedron encoded
-    DirectX::XMFLOAT3 hit_position;
-    int32_t material_id;
-    DirectX::XMFLOAT2 uvs;
-};
-
 bool RaytracingPass::Initialize(
     std::shared_ptr<ysn::DxRenderer> renderer,
     wil::com_ptr<ID3D12Resource> scene_color,
@@ -406,7 +398,7 @@ bool RaytracingPass::Initialize(
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         srv_desc.Buffer.FirstElement = 0;
         srv_desc.Buffer.NumElements = static_cast<UINT>(primitives_count);
-        srv_desc.Buffer.StructureByteStride = sizeof(RenderInstanceData);
+        srv_desc.Buffer.StructureByteStride = sizeof(PerInstanceData);
         srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
         srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
@@ -457,8 +449,8 @@ bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> r
 
     CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT* shader_cfg =
         rtx_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    const UINT payload_size = sizeof(HitInfo);
-    const UINT attribute_size = 2 * sizeof(float); // float2 barycentrics
+    const UINT payload_size = sizeof(RtxHitInfo);
+    const UINT attribute_size = sizeof(RtxAttributes);
     shader_cfg->Config(payload_size, attribute_size);
 
     // Ray gen and miss shaders in this sample are not using a local root signature and thus one is not associated with them.
