@@ -10,6 +10,7 @@ import graphics.primitive;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.gpu_texture;
+import renderer.gpu_pixel_buffer;
 import renderer.command_queue;
 import system.string_helpers;
 import system.filesystem;
@@ -27,7 +28,7 @@ struct SkyboxPassParameters
     DescriptorHandle dsv_descriptor_handle;
     D3D12_VIEWPORT viewport;
     D3D12_RECT scissors_rect;
-    GpuTexture* equirectangular_texture;
+    GpuPixelBuffer3D cubemap_texture;
     wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
 };
 
@@ -78,7 +79,7 @@ bool SkyboxPass::Initialize()
     root_parameters[ShaderInputParameters::InputTexture].InitAsDescriptorTable(1, &cubemap_srv, D3D12_SHADER_VISIBILITY_PIXEL);
 
     CD3DX12_STATIC_SAMPLER_DESC static_sampler(
-        0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+        0, D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 
     D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
     root_signature_desc.NumParameters = ShaderInputParameters::ParametersCount;
@@ -173,7 +174,7 @@ bool SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
     command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
     command_list.list->SetGraphicsRootConstantBufferView(0, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
-    command_list.list->SetGraphicsRootDescriptorTable(1, parameters->equirectangular_texture->descriptor_handle.gpu);
+    command_list.list->SetGraphicsRootDescriptorTable(1, parameters->cubemap_texture.srv.gpu);
     command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
     command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 

@@ -23,6 +23,7 @@ import graphics.techniques.raytracing_pass;
 import graphics.techniques.skybox_pass;
 import graphics.techniques.forward_pass;
 import graphics.techniques.generate_mips_pass;
+import graphics.techniques.debug_renderer;
 import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.gpu_buffer;
@@ -30,6 +31,7 @@ import renderer.command_queue;
 import renderer.gpu_texture;
 import renderer.raytracing_context;
 import renderer.command_queue;
+import renderer.gpu_pixel_buffer;
 import system.math;
 import system.filesystem;
 import system.application;
@@ -54,11 +56,8 @@ public:
 
 protected:
     void OnUpdate(UpdateEventArgs& e) override;
-
     void OnRender(RenderEventArgs& e) override;
-
     void RenderUi();
-
     void OnResize(ResizeEventArgs& e) override;
 
 private:
@@ -104,7 +103,7 @@ private:
     D3D12_RECT m_scissors_rect;
 
     GpuTexture m_environment_texture;
-    wil::com_ptr<ID3D12Resource> m_cubemap_texture;
+    GpuPixelBuffer3D m_cubemap_texture;
 
     wil::com_ptr<ID3D12Resource> m_camera_gpu_buffer;
     wil::com_ptr<ID3D12Resource> m_scene_parameters_gpu_buffer;
@@ -126,6 +125,7 @@ private:
     ConvertToCubemap m_convert_to_cubemap_pass;
     SkyboxPass m_skybox_pass;
     GenerateMipsPass m_generate_mips_pass;
+    DebugRenderer m_debug_renderer;
 };
 } // namespace ysn
 
@@ -133,11 +133,11 @@ module :private;
 
 namespace ysn
 {
-std::optional<wil::com_ptr<ID3D12Resource>> CreateCubemapTexture()
+std::optional<GpuPixelBuffer3D> CreateCubemapTexture()
 {
-    wil::com_ptr<ID3D12Resource> cubemap_gpu_texture;
+    GpuPixelBuffer3D cubemap_gpu_texture;
 
-    auto device = Application::Get().GetDevice();
+    auto renderer = Application::Get().GetRenderer();
 
     const auto size = 512;
     const auto format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -146,6 +146,7 @@ std::optional<wil::com_ptr<ID3D12Resource>> CreateCubemapTexture()
     texture_desc.Format = format;
     texture_desc.Width = size;
     texture_desc.Height = size;
+    texture_desc.MipLevels = 1;
     texture_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     texture_desc.DepthOrArraySize = 6;
     texture_desc.SampleDesc.Count = 1;
@@ -153,19 +154,21 @@ std::optional<wil::com_ptr<ID3D12Resource>> CreateCubemapTexture()
     texture_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
     const auto heap_properties_default = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    // const auto heap_properties_upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
-    if (device->CreateCommittedResource(
-            &heap_properties_default, D3D12_HEAP_FLAG_NONE, &texture_desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&cubemap_gpu_texture)) !=
-        S_OK)
+    if (renderer->GetDevice()->CreateCommittedResource(
+            &heap_properties_default,
+            D3D12_HEAP_FLAG_NONE,
+            &texture_desc,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            nullptr,
+            IID_PPV_ARGS(&cubemap_gpu_texture.resource)) != S_OK)
     {
         LogError << "Can't create cubemap resource\n";
         return std::nullopt;
     }
 
-#ifndef YSN_RELEASE
-    cubemap_gpu_texture->SetName(L"Cubemap Texture");
-#endif
+    cubemap_gpu_texture.SetName(L"Cubemap Texture");
+    cubemap_gpu_texture.GenerateRTVs();
 
     return cubemap_gpu_texture;
 }
@@ -206,13 +209,14 @@ bool Yasno::UpdateBufferResource(
 
     // Create a committed resource for the GPU resource in a default heap.
     if (auto result = device->CreateCommittedResource(
-        &heap_properties,
-        D3D12_HEAP_FLAG_NONE,
-        &gpuBufferDesc,
-        D3D12_RESOURCE_STATE_COMMON, // TODO(task): should be here
-        // D3D12_RESOURCE_STATE_COPY_DEST?
-        nullptr,
-        IID_PPV_ARGS(destination_resource)); result != S_OK)
+            &heap_properties,
+            D3D12_HEAP_FLAG_NONE,
+            &gpuBufferDesc,
+            D3D12_RESOURCE_STATE_COMMON, // TODO(task): should be here
+            // D3D12_RESOURCE_STATE_COPY_DEST?
+            nullptr,
+            IID_PPV_ARGS(destination_resource));
+        result != S_OK)
     {
         LogFatal << "Can't create buffer " << ConvertHrToString(result) << " \n";
         return false;
@@ -224,8 +228,9 @@ bool Yasno::UpdateBufferResource(
         const auto gpuUploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
         const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
-        if(auto result = device->CreateCommittedResource(
-            &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &gpuUploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(intermediate_resource)); result != S_OK)
+        if (auto result = device->CreateCommittedResource(
+                &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &gpuUploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(intermediate_resource));
+            result != S_OK)
         {
             LogFatal << "Can't create upload buffer " << ConvertHrToString(result) << " \n";
             return false;
@@ -389,16 +394,17 @@ bool Yasno::LoadContent()
 
     bool load_result = false;
 
+    //{
+    //    LoadingParameters loading_parameters;
+    //    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+    //    load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+    //}
+
     {
         LoadingParameters loading_parameters;
-        loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-        load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+        load_result =
+            LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
     }
-
-    //{
-    //	LoadingParameters loading_parameters;
-    //	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-    //}
 
     //{
     //	LoadingParameters loading_parameters;
@@ -649,15 +655,21 @@ bool Yasno::LoadContent()
         return false;
     }
 
-    // if (!m_convert_to_cubemap_pass.Initialize())
-    //{
-    //	LogError << "Can't initialize convert to cubemap pass\n";
-    //	return false;
-    // }
+    if (!m_convert_to_cubemap_pass.Initialize())
+    {
+        LogError << "Can't initialize convert to cubemap pass\n";
+        return false;
+    }
 
     if (!m_skybox_pass.Initialize())
     {
         LogError << "Can't initialize skybox pass\n";
+        return false;
+    }
+
+    if (!m_debug_renderer.Initialize())
+    {
+        LogError << "Can't initialize debug renderer\n";
         return false;
     }
 
@@ -1206,8 +1218,6 @@ void Yasno::OnRender(RenderEventArgs& e)
     wil::com_ptr<ID3D12Resource> current_back_buffer = m_window->GetCurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_window->GetCurrentRenderTargetView();
 
-    // m_convert_to_cubemap_pass.EquirectangularToCubemap(command_queue, m_environment_texture, m_cubemap_texture);
-
     if (m_is_raster)
     {
         ShadowRenderParameters parameters;
@@ -1219,6 +1229,15 @@ void Yasno::OnRender(RenderEventArgs& e)
 
     UpdateGpuCameraBuffer();
     UpdateGpuSceneParametersBuffer();
+
+    {
+        ConvertToCubemapParameters parameters;
+        parameters.camera_buffer = m_camera_gpu_buffer;
+        parameters.source_texture = m_environment_texture;
+        parameters.target_cubemap = m_cubemap_texture;
+
+        m_convert_to_cubemap_pass.Render(parameters);
+    }
 
     if (m_is_raster)
     {
@@ -1322,7 +1341,7 @@ void Yasno::OnRender(RenderEventArgs& e)
         skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
         skybox_parameters.viewport = m_viewport;
         skybox_parameters.scissors_rect = m_scissors_rect;
-        skybox_parameters.equirectangular_texture = &m_environment_texture;
+        skybox_parameters.cubemap_texture = m_cubemap_texture;
         skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
 
         m_skybox_pass.RenderSkybox(&skybox_parameters);
@@ -1412,9 +1431,9 @@ void Yasno::OnRender(RenderEventArgs& e)
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
         command_list.list->ResourceBarrier(1, &barrier);
-        
+
         const auto execute_res = command_queue->ExecuteCommandList(command_list);
-        if(!execute_res)
+        if (!execute_res)
             return;
 
         m_fence_values[current_backbuffer_index] = execute_res.value();

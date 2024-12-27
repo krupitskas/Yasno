@@ -21,8 +21,8 @@ struct VertexPosTexCoord
 struct VertexShaderOutput
 {
     float2 TexCoord : TEXCOORD;
-    float4 OriginalPosition : POSITION;
     float4 Position : SV_Position;
+    float3 OriginalPosition : POSITION;
 };
 
 VertexShaderOutput main(VertexPosTexCoord input)
@@ -36,7 +36,7 @@ VertexShaderOutput main(VertexPosTexCoord input)
     float4 clip_pos = mul(projection, mul(rotation_view, float4(input.Position, 1.0)));
     
     output.Position = clip_pos.xyww;
-    output.OriginalPosition = float4(input.Position, 1.0f);
+    output.OriginalPosition = input.Position;
     output.TexCoord = input.TexCoord;
 
     return output;

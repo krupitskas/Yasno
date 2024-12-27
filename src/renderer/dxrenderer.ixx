@@ -500,8 +500,4 @@ std::shared_ptr<ShaderStorage> DxRenderer::GetShaderStorage() const
     return m_shader_storage;
 }
 
-// std::shared_ptr<GenerateMipsSystem> DxRenderer::GetMipGenerator() const
-//{
-//	return m_generate_mips_system;
-// }
 } // namespace ysn

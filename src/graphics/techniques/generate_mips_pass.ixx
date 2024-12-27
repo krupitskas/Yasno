@@ -16,7 +16,7 @@ import renderer.dxrenderer;
 import renderer.gpu_texture;
 import renderer.dx_types;
 
-export namespace ysn
+namespace ysn
 {
 namespace RootSignatureIndex
 {
@@ -28,7 +28,10 @@ namespace RootSignatureIndex
         NumParameters
     };
 }
+} // namespace ysn
 
+export namespace ysn
+{
 class GenerateMipsPass
 {
 public:

@@ -144,8 +144,6 @@ bool DescriptorHeap::Initialize()
     return true;
 }
 
-
-
 DescriptorHandle DescriptorHeap::GetNewHandle()
 {
     DescriptorHandle handle;

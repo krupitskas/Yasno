@@ -270,12 +270,12 @@ std::optional<uint64_t> CommandQueue::ExecuteCommandList(GraphicsCommandList cmd
 
     const auto signal_result = Signal();
 
-    if(!signal_result.has_value())
+    if (!signal_result.has_value())
     {
         return std::nullopt;
     }
 
-     m_cmd_allocator_queue.emplace(CommandAllocatorEntry{signal_result.value(), cmd_allocator});
+    m_cmd_allocator_queue.emplace(CommandAllocatorEntry{signal_result.value(), cmd_allocator});
     m_cmd_list_queue.push(cmd_list);
 
     cmd_allocator->Release();

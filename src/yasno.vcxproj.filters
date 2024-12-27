@@ -194,6 +194,15 @@
     <ClCompile Include="renderer\tlas_generator.ixx">
       <Filter>source\renderer</Filter>
     </ClCompile>
+    <ClCompile Include="graphics\techniques\debug_renderer.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\dx_debug_layer.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\gpu_pixel_buffer.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -273,6 +282,9 @@
     </None>
     <None Include="..\.clang-format">
       <Filter>configs</Filter>
+    </None>
+    <None Include="..\shaders\include\debug_line_renderer.hlsl">
+      <Filter>shaders\include</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

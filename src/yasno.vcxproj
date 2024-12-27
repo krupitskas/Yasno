@@ -261,10 +261,13 @@
     <None Include="..\shaders\skybox.vs.hlsl" />
     <ClCompile Include="external\implementation.ixx" />
     <ClCompile Include="graphics\lights.ixx" />
+    <ClCompile Include="graphics\techniques\debug_renderer.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
     <ClCompile Include="main.cxx" />
     <ClCompile Include="renderer\blas_generator.ixx" />
+    <ClCompile Include="renderer\dx_debug_layer.ixx" />
     <ClCompile Include="renderer\dx_types.ixx" />
+    <ClCompile Include="renderer\gpu_pixel_buffer.ixx" />
     <ClCompile Include="renderer\tlas_generator.ixx" />
     <ClCompile Include="system\asserts.ixx" />
     <ClCompile Include="system\clock.ixx" />
@@ -448,6 +451,11 @@
       <FileType>Document</FileType>
     </None>
     <None Include="..\shaders\include\shared.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\include\debug_line_renderer.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
