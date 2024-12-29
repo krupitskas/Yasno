@@ -1218,8 +1218,6 @@ void Yasno::OnRender(RenderEventArgs& e)
     wil::com_ptr<ID3D12Resource> current_back_buffer = m_window->GetCurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_window->GetCurrentRenderTargetView();
 
-    m_debug_renderer.PrepareBuffers();
-
     if (m_is_raster)
     {
         ShadowRenderParameters parameters;

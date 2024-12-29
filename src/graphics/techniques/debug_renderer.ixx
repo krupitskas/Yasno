@@ -42,7 +42,6 @@ class DebugRenderer
 {
 public:
     bool Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil::com_ptr<ID3D12Resource> camera_gpu_buffer);
-    void PrepareBuffers();
     void RenderDebugGeometry(DebugRendererParameters& parameters);
 
     GpuBuffer counter_buffer;
@@ -52,6 +51,8 @@ public:
     DescriptorHandle vertices_buffer_uav;
 
 private:
+    GpuBuffer m_counter_buffer_zero;
+
     wil::com_ptr<ID3D12CommandSignature> m_command_signature;
     wil::com_ptr<ID3D12RootSignature> m_root_signature;
     GpuBuffer m_command_buffer;
@@ -126,6 +127,27 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
 
         counter_uav = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
         renderer->GetDevice()->CreateUnorderedAccessView(counter_buffer.GetResourcePtr(), nullptr, &uav_desc, counter_uav.cpu);
+    }
+
+    {
+        GpuBufferCreateInfo create_info{
+            .size = sizeof(uint32_t), .heap_type = D3D12_HEAP_TYPE_UPLOAD, .state = D3D12_RESOURCE_STATE_GENERIC_READ};
+
+        const auto result = CreateGpuBuffer(create_info, "Debug Line Counter Zero");
+
+        if (!result.has_value())
+        {
+            LogError << "Can't create debug line counter zero buffer\n";
+            return false;
+        }
+
+        m_counter_buffer_zero = result.value();
+
+        UINT zero = 0;
+        void* mapped_data = nullptr;
+        m_counter_buffer_zero.resource->Map(0, nullptr, &mapped_data);
+        memcpy(mapped_data, &zero, sizeof(zero));
+        m_counter_buffer_zero.resource->Unmap(0, nullptr);
     }
 
     CD3DX12_ROOT_PARAMETER root_parameters[ShaderInputParameters::ParametersCount] = {};
@@ -219,20 +241,20 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
 
     std::vector<IndirectCommand> indirect_commands;
 
-    for (int i = 0; i < g_max_debug_render_vertices_count; i++)
+    for (int i = 0; i < g_max_debug_render_commands_count; i++)
     {
         IndirectCommand command;
         command.camera_parameters_cbv = camera_gpu_buffer->GetGPUVirtualAddress();
-        command.draw_arguments.VertexCountPerInstance = 3;
+        command.draw_arguments.VertexCountPerInstance = 2;
         command.draw_arguments.InstanceCount = 1;
         command.draw_arguments.StartInstanceLocation = 0;
-        command.draw_arguments.StartVertexLocation = 0;
+        command.draw_arguments.StartVertexLocation = i * 2;
 
         indirect_commands.push_back(command);
     }
 
     GpuBufferCreateInfo create_info{
-        .size = g_max_debug_render_vertices_count *sizeof(IndirectCommand),
+        .size = g_max_debug_render_commands_count * sizeof(IndirectCommand),
         .heap_type = D3D12_HEAP_TYPE_DEFAULT,
         .state = D3D12_RESOURCE_STATE_COPY_DEST};
 
@@ -251,18 +273,6 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     return true;
 }
 
-void DebugRenderer::PrepareBuffers()
-{
-    // Clean up counter
-    //{
-    //    void* data;
-    //    counter_buffer.resource->Map(0, nullptr, &data);
-    //    uint32_t* counter_data = static_cast<uint32_t*>(data);
-    //    counter_data = 0;
-    //    counter_buffer.resource->Unmap(0, nullptr);
-    //}
-}
-
 void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
 {
     auto renderer = Application::Get().GetRenderer();
@@ -276,16 +286,11 @@ void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
     vertex_buffer_view.StrideInBytes = sizeof(DebugRenderVertex);
     vertex_buffer_view.SizeInBytes = g_max_debug_render_vertices_count * sizeof(DebugRenderVertex);
 
-    parameters.cmd_list.list->SetGraphicsRootSignature(m_root_signature.get()); // TODO(indirect): remove
-
     parameters.cmd_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
     parameters.cmd_list.list->RSSetViewports(1, &parameters.viewport);
     parameters.cmd_list.list->RSSetScissorRects(1, &parameters.scissors_rect);
     parameters.cmd_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
     parameters.cmd_list.list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-
-    parameters.cmd_list.list->SetGraphicsRootConstantBufferView(
-        ShaderInputParameters::CameraBuffer, parameters.camera_gpu_buffer->GetGPUVirtualAddress()); // TODO(indirect): remove
 
     const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
 
@@ -293,18 +298,28 @@ void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
     {
         parameters.cmd_list.list->SetPipelineState(pso.value().pso.get());
         parameters.cmd_list.list->SetGraphicsRootSignature(m_root_signature.get());
-        parameters.cmd_list.list->DrawInstanced(2, 1, 0, 0);
-        //parameters.cmd_list.list->ExecuteIndirect(
-        //    m_command_signature.get(),
-        //    g_max_debug_render_vertices_count,
-        //    m_command_buffer.resource.get(),
-        //    0,
-        //    counter_buffer.resource.get(),
-        //    0);
+        parameters.cmd_list.list->ExecuteIndirect(
+            m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.GetResourcePtr(), 0, counter_buffer.GetResourcePtr(), 0);
     }
     else
     {
         LogError << "Can't find debug render PSO\n";
+    }
+
+    {
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            counter_buffer.GetResourcePtr(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
+        parameters.cmd_list.list->ResourceBarrier(1, &barrier);
+    }
+
+    // Zero out counter
+    parameters.cmd_list.list->CopyBufferRegion(
+        counter_buffer.GetResourcePtr(), 0, m_counter_buffer_zero.GetResourcePtr(), 0, sizeof(UINT));
+
+    {
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            counter_buffer.GetResourcePtr(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        parameters.cmd_list.list->ResourceBarrier(1, &barrier);
     }
 }
 } // namespace ysn

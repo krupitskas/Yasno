@@ -12,7 +12,8 @@ export namespace ysn
 {
 using namespace DirectX;
 
-constexpr uint32_t g_max_debug_render_vertices_count = 1024 * 1024;
+constexpr uint32_t g_max_debug_render_commands_count = 1024 * 1024;
+constexpr uint32_t g_max_debug_render_vertices_count = g_max_debug_render_commands_count * 2;
 
 struct Vertex
 {

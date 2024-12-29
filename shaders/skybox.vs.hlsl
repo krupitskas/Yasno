@@ -41,7 +41,7 @@ VertexShaderOutput main(VertexPosTexCoord input)
     output.OriginalPosition = input.Position;
     output.TexCoord = input.TexCoord;
 
-    DrawLine(float3(0,0,0), float3(0, 5, 0), float3(255,0,0), float3(0,255,0));
+    DrawLine(float3(0,0,0), input.Position, float3(255,0,0), float3(255,0,0));
 
     return output;
 }
