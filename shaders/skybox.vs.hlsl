@@ -1,3 +1,5 @@
+#include "debug_renderer.hlsl"
+
 cbuffer CameraParameters : register(b0)
 {
     float4x4 view_projection;
@@ -38,6 +40,8 @@ VertexShaderOutput main(VertexPosTexCoord input)
     output.Position = clip_pos.xyww;
     output.OriginalPosition = input.Position;
     output.TexCoord = input.TexCoord;
+
+    DrawLine(float3(0,0,0), float3(0, 5, 0), float3(255,0,0), float3(0,255,0));
 
     return output;
 }

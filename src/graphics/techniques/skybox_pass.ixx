@@ -30,14 +30,20 @@ struct SkyboxPassParameters
     D3D12_RECT scissors_rect;
     GpuPixelBuffer3D cubemap_texture;
     wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
+
+    // TODO: debug renderer test below
+    DescriptorHandle debug_counter_buffer_uav;
+    DescriptorHandle debug_vertices_buffer_uav;
 };
 
 class SkyboxPass
 {
     enum ShaderInputParameters
     {
-        ViewParameters,
+        CameraBuffer,
         InputTexture,
+        DebugVertices,
+        DebugVerticesCount,
         ParametersCount
     };
 
@@ -74,9 +80,14 @@ bool SkyboxPass::Initialize()
 
     CD3DX12_DESCRIPTOR_RANGE cubemap_srv(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 
+    CD3DX12_DESCRIPTOR_RANGE debug_vertices_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 126, 0, 0);
+    CD3DX12_DESCRIPTOR_RANGE debug_counter_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 127, 0, 0);
+
     CD3DX12_ROOT_PARAMETER root_parameters[ShaderInputParameters::ParametersCount] = {};
-    root_parameters[ShaderInputParameters::ViewParameters].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    root_parameters[ShaderInputParameters::CameraBuffer].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
     root_parameters[ShaderInputParameters::InputTexture].InitAsDescriptorTable(1, &cubemap_srv, D3D12_SHADER_VISIBILITY_PIXEL);
+    root_parameters[ShaderInputParameters::DebugVertices].InitAsDescriptorTable(1, &debug_vertices_uav, D3D12_SHADER_VISIBILITY_ALL);
+    root_parameters[ShaderInputParameters::DebugVerticesCount].InitAsDescriptorTable(1, &debug_counter_uav, D3D12_SHADER_VISIBILITY_ALL);
 
     CD3DX12_STATIC_SAMPLER_DESC static_sampler(
         0, D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
@@ -173,8 +184,12 @@ bool SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
     command_list.list->SetGraphicsRootSignature(m_root_signature.get());
     command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
-    command_list.list->SetGraphicsRootConstantBufferView(0, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
-    command_list.list->SetGraphicsRootDescriptorTable(1, parameters->cubemap_texture.srv.gpu);
+
+    command_list.list->SetGraphicsRootConstantBufferView(ShaderInputParameters::CameraBuffer, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
+    command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::InputTexture, parameters->cubemap_texture.srv.gpu);
+    command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVertices, parameters->debug_vertices_buffer_uav.gpu);
+    command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVerticesCount, parameters->debug_counter_buffer_uav.gpu);
+
     command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
     command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 

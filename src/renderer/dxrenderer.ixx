@@ -51,6 +51,7 @@ public:
 
     DXGI_FORMAT GetHdrFormat() const;
     DXGI_FORMAT GetBackBufferFormat() const;
+    DXGI_FORMAT GetDepthBufferFormat() const;
 
     const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputElementsDesc();
 
@@ -81,6 +82,7 @@ private:
     // Formats
     DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT backbuffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    DXGI_FORMAT depth_format = DXGI_FORMAT_D32_FLOAT;
 
     // Resources
     wil::com_ptr<ID3D12Resource> m_back_buffers[m_frames_count];
@@ -446,6 +448,11 @@ DXGI_FORMAT DxRenderer::GetHdrFormat() const
 DXGI_FORMAT DxRenderer::GetBackBufferFormat() const
 {
     return backbuffer_format;
+}
+
+DXGI_FORMAT DxRenderer::GetDepthBufferFormat() const
+{
+    return depth_format;
 }
 
 const std::vector<D3D12_INPUT_ELEMENT_DESC>& DxRenderer::GetInputElementsDesc()

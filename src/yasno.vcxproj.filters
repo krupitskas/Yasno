@@ -283,7 +283,13 @@
     <None Include="..\.clang-format">
       <Filter>configs</Filter>
     </None>
-    <None Include="..\shaders\include\debug_line_renderer.hlsl">
+    <None Include="..\shaders\debug_geometry.vs.hlsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders\debug_geometry.ps.hlsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders\include\debug_renderer.hlsl">
       <Filter>shaders\include</Filter>
     </None>
   </ItemGroup>

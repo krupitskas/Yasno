@@ -23,6 +23,18 @@ import system.application;
 import system.logger;
 import system.asserts;
 
+namespace ysn
+{
+// Data structure to match the command signature used for ExecuteIndirect.
+struct IndirectCommand
+{
+    D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
+    D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
+    D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
+    D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
+};
+}
+
 export namespace ysn
 {
 struct ForwardPassRenderParameters
@@ -41,14 +53,6 @@ struct ForwardPassRenderParameters
     ShadowMapBuffer shadow_map_buffer;
 };
 
-// Data structure to match the command signature used for ExecuteIndirect.
-struct IndirectCommand
-{
-    D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
-    D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
-    D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
-    D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
-};
 
 enum class IndirectRootParameters : uint8_t
 {
@@ -254,7 +258,7 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
         AssertMsg(false, "Unsupported primitive topology");
     }
 
-    new_pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+    new_pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
 
     auto result_pso = renderer->CreatePso(new_pso_desc);
 
@@ -473,7 +477,7 @@ bool ForwardPass::InitializeIndirectPipeline(
             return false;
         }
 
-        pso_desc.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
+        pso_desc.SetVertexShader(vs_shader_result.value());
     }
 
     // Pixel shader
@@ -490,7 +494,7 @@ bool ForwardPass::InitializeIndirectPipeline(
             return false;
         }
 
-        pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
+        pso_desc.SetPixelShader(ps_shader_result.value());
     }
 
     const auto& input_element_desc = renderer->GetInputElementsDesc();

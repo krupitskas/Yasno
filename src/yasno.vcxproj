@@ -455,7 +455,15 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\shaders\include\debug_line_renderer.hlsl">
+    <None Include="..\shaders\include\debug_renderer.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\debug_geometry.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\shaders\debug_geometry.vs.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

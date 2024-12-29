@@ -2,6 +2,7 @@ module;
 
 #include <d3dx12.h>
 #include <wil/com.h>
+#include <dxcapi.h>
 
 export module renderer.pso;
 
@@ -44,6 +45,7 @@ struct GraphicsPsoDesc
     void SetRenderTargetFormat(DXGI_FORMAT rtv_format, DXGI_FORMAT dsv_format, UINT msaa_count = 1, UINT msaa_quality = 0);
     void SetRenderTargetFormats(UINT num_rtv, const DXGI_FORMAT* rtv_formats, DXGI_FORMAT dsv_format, UINT msaa_count = 1, UINT msaa_quality = 0);
     void SetInputLayout(UINT num_elements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs);
+    void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& elements);
     void SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE ib_props);
 
     // These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
@@ -52,6 +54,12 @@ struct GraphicsPsoDesc
     void SetGeometryShader(const void* binary, size_t size);
     void SetHullShader(const void* binary, size_t size);
     void SetDomainShader(const void* binary, size_t size);
+
+    void SetVertexShader(wil::com_ptr<IDxcBlob> blob);
+    void SetPixelShader(wil::com_ptr<IDxcBlob> blob);
+    void SetGeometryShader(wil::com_ptr<IDxcBlob> blob);
+    void SetHullShader(wil::com_ptr<IDxcBlob> blob);
+    void SetDomainShader(wil::com_ptr<IDxcBlob> blob);
 
     void SetVertexShader(const D3D12_SHADER_BYTECODE& binary);
     void SetPixelShader(const D3D12_SHADER_BYTECODE& binary);
@@ -216,6 +224,11 @@ void GraphicsPsoDesc::SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT
     }
 }
 
+void GraphicsPsoDesc::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& elements)
+{
+    SetInputLayout(static_cast<UINT>(elements.size()), elements.data());
+}
+
 void GraphicsPsoDesc::SetVertexShader(const void* Binary, size_t Size)
 {
     m_pso_desc.VS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
@@ -265,6 +278,32 @@ void GraphicsPsoDesc::SetDomainShader(const D3D12_SHADER_BYTECODE& Binary)
 {
     m_pso_desc.DS = Binary;
 }
+
+void GraphicsPsoDesc::SetVertexShader(wil::com_ptr<IDxcBlob> blob)
+{
+    SetVertexShader(blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
+void GraphicsPsoDesc::SetDomainShader(wil::com_ptr<IDxcBlob> blob)
+{
+    SetDomainShader(blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
+void GraphicsPsoDesc::SetPixelShader(wil::com_ptr<IDxcBlob> blob)
+{
+    SetPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
+void GraphicsPsoDesc::SetGeometryShader(wil::com_ptr<IDxcBlob> blob)
+{
+    SetGeometryShader(blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
+void GraphicsPsoDesc::SetHullShader(wil::com_ptr<IDxcBlob> blob)
+{
+    SetHullShader(blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
 
 std::optional<PsoId> PsoStorage::CreateGraphicsPso(wil::com_ptr<ID3D12Device5> device, const GraphicsPsoDesc& pso_desc)
 {

@@ -667,12 +667,6 @@ bool Yasno::LoadContent()
         return false;
     }
 
-    if (!m_debug_renderer.Initialize())
-    {
-        LogError << "Can't initialize debug renderer\n";
-        return false;
-    }
-
     InitializeImgui(m_window, renderer);
 
     const auto enviroment_hdr_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
@@ -714,6 +708,12 @@ bool Yasno::LoadContent()
             m_render_scene, m_camera_gpu_buffer, m_scene_parameters_gpu_buffer, m_render_scene.instance_buffer, command_list.list))
     {
         LogError << "Can't initialize forward pass\n";
+        return false;
+    }
+
+    if (!m_debug_renderer.Initialize(command_list.list, m_camera_gpu_buffer))
+    {
+        LogError << "Can't initialize debug renderer\n";
         return false;
     }
 
@@ -1218,6 +1218,8 @@ void Yasno::OnRender(RenderEventArgs& e)
     wil::com_ptr<ID3D12Resource> current_back_buffer = m_window->GetCurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle = m_window->GetCurrentRenderTargetView();
 
+    m_debug_renderer.PrepareBuffers();
+
     if (m_is_raster)
     {
         ShadowRenderParameters parameters;
@@ -1343,6 +1345,8 @@ void Yasno::OnRender(RenderEventArgs& e)
         skybox_parameters.scissors_rect = m_scissors_rect;
         skybox_parameters.cubemap_texture = m_cubemap_texture;
         skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
+        skybox_parameters.debug_vertices_buffer_uav = m_debug_renderer.vertices_buffer_uav;
+        skybox_parameters.debug_counter_buffer_uav = m_debug_renderer.counter_uav;
 
         m_skybox_pass.RenderSkybox(&skybox_parameters);
     }
@@ -1400,6 +1404,27 @@ void Yasno::OnRender(RenderEventArgs& e)
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
             m_scene_color_buffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET);
         cmd_list.list->ResourceBarrier(1, &barrier);
+
+        command_queue->ExecuteCommandList(cmd_list);
+    }
+
+    // Debug geometry
+    {
+        const auto cmd_list_res = command_queue->GetCommandList("Debug Geometry");
+        if (!cmd_list_res)
+            return;
+
+        const auto cmd_list = cmd_list_res.value();
+
+        cmd_list.list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
+
+        DebugRendererParameters parameters;
+        parameters.viewport = m_viewport;
+        parameters.scissors_rect = m_scissors_rect;
+        parameters.cmd_list = cmd_list;
+        parameters.camera_gpu_buffer = m_camera_gpu_buffer;
+
+        m_debug_renderer.RenderDebugGeometry(parameters);
 
         command_queue->ExecuteCommandList(cmd_list);
     }
