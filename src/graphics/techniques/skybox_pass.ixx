@@ -107,7 +107,7 @@ bool SkyboxPass::Initialize()
         return false;
     }
 
-    ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/skybox.vs.hlsl"));
+    ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/skybox.vs.hlsl"));
     const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
 
     if (!vs_shader_result.has_value())
@@ -116,7 +116,7 @@ bool SkyboxPass::Initialize()
         return false;
     }
 
-    ShaderCompileParameters<PixelShader> ps_parameters(ysn::VfsPath(L"shaders/skybox.ps.hlsl"));
+    ShaderCompileParameters ps_parameters(ShaderType::Pixel, ysn::VfsPath(L"shaders/skybox.ps.hlsl"));
     const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
 
     if (!ps_shader_result.has_value())

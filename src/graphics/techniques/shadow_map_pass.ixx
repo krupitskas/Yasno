@@ -160,9 +160,7 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
 
     // Vertex shader
     {
-        ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/forward_pass.vs.hlsl"));
-        vs_parameters.defines.insert(L"SHADOW_PASS");
-
+        ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl"), {L"SHADOW_PASS"});
         const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
         if (!vs_shader_result.has_value())
@@ -176,7 +174,7 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
 
     // Pixel shader
     {
-        ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/shadow_pass.ps.hlsl"));
+        ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/shadow_pass.ps.hlsl"));
         const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
         if (!ps_shader_result.has_value())

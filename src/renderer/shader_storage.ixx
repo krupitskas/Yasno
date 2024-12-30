@@ -27,35 +27,28 @@ import system.asserts;
 
 using ShaderHash = std::size_t;
 
-class ShaderTypeBase
-{
-};
-
 export namespace ysn
 {
-class LibraryShader : public ShaderTypeBase
+enum class ShaderType
 {
-};
-class PixelShader : public ShaderTypeBase
-{
-};
-class VertexShader : public ShaderTypeBase
-{
-};
-class ComputeShader : public ShaderTypeBase
-{
+    Pixel,
+    Vertex,
+    Compute,
+    Library,
+    NotSpecified
 };
 
-template <typename ShaderType>
 class ShaderCompileParameters
 {
 public:
-    ShaderCompileParameters() = delete;
+    ShaderCompileParameters() = default;
 
-    ShaderCompileParameters(std::wstring_view path) : shader_path(path)
+    ShaderCompileParameters(ShaderType type, std::wstring_view path, const std::set<std::wstring>& defines = {}) :
+        type(type), shader_path(path), defines(defines)
     {
     }
 
+    ShaderType type = ShaderType::NotSpecified;
     std::wstring shader_path = L"";
     std::wstring entry_point = L"main";
     std::set<std::wstring> defines;
@@ -63,14 +56,16 @@ public:
 
     bool operator==(const ShaderCompileParameters& p) const
     {
-        static_assert(ysn::ShaderCompileParameters<ShaderType>::VERSION == 1, "ShaderCompileParameters changed, fix comparation parameters");
+        static_assert(ysn::ShaderCompileParameters::VERSION == 1, "ShaderCompileParameters changed, fix comparation parameters");
 
-        return shader_path == p.shader_path && entry_point == p.entry_point && defines == p.defines &&
+        return type == p.type && shader_path == p.shader_path && entry_point == p.entry_point && defines == p.defines &&
                disable_optimizations == p.disable_optimizations;
     }
 
     // Bump version when changing any of the fields
     constexpr static int VERSION = 1;
+
+private:
 };
 
 class ShaderStorage
@@ -78,25 +73,33 @@ class ShaderStorage
 public:
     bool Initialize();
 
-    template <typename ShaderType>
-    std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters<ShaderType>& parameters);
+    std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters& parameters);
 
 #ifndef YSN_RELEASE
-    void VerifyAnyShaderChanged();
+    std::vector<ShaderHash> VerifyAnyShaderChanged();
 #endif
 
 private:
     uint64_t shader_cache_hits = 0;
 
-    template <typename ShaderType>
-    constexpr std::wstring GetShaderProfile();
+    std::wstring GetShaderProfile(ShaderType type) const;
 
     std::unordered_map<ShaderHash, wil::com_ptr<IDxcBlob>> m_compiled_shaders;
 
 #ifndef YSN_RELEASE
     struct ShaderModificationData
     {
+        ShaderModificationData() = default;
+
+        ShaderModificationData(ShaderHash hash, ShaderCompileParameters params, std::time_t time) :
+            shader_hash(hash),
+            compile_parameters(params),
+            modification_time(time)
+        {
+        }
+
         ShaderHash shader_hash;
+        ShaderCompileParameters compile_parameters;
         std::time_t modification_time;
     };
     std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
@@ -118,16 +121,16 @@ private:
 
 export namespace std
 {
-template <typename ShaderType>
-struct hash<ysn::ShaderCompileParameters<ShaderType>>
+template<>
+struct hash<ysn::ShaderCompileParameters>
 {
-    std::size_t operator()(const ysn::ShaderCompileParameters<ShaderType>& params) const
+    std::size_t operator()(const ysn::ShaderCompileParameters& params) const
     {
-        static_assert(ysn::ShaderCompileParameters<ShaderType>::VERSION == 1, "ShaderCompileParameters changed, update the hash function");
+        static_assert(ysn::ShaderCompileParameters::VERSION == 1, "ShaderCompileParameters changed, update the hash function");
 
         std::size_t seed = 0;
 
-        // seed ^= std::hash<std::string>{}(typeid(ShaderType).name());
+        seed ^= std::hash<int>{}((int)params.type);
 
         for (const auto& define : params.defines)
         {
@@ -143,18 +146,107 @@ struct hash<ysn::ShaderCompileParameters<ShaderType>>
 };
 } // namespace std
 
-export namespace ysn
+module :private;
+
+namespace ysn
 {
 
-// Templates below
+// class CustomIncludeHandler : public IDxcIncludeHandler
+//{
+// public:
+//	HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+//	{
+//		ComPtr<IDxcBlobEncoding> pEncoding;
+//		std::string path = Paths::Normalize(UNICODE_TO_MULTIBYTE(pFilename));
+//		if (IncludedFiles.find(path) != IncludedFiles.end())
+//		{
+//			// Return empty string blob if this file has been included before
+//			static const char nullStr[] = " ";
+//			pUtils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, pEncoding.GetAddressOf());
+//			*ppIncludeSource = pEncoding.Detach();
+//			return S_OK;
+//		}
 
-template <typename ShaderType>
-std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters<ShaderType>& parameters)
+//		HRESULT hr = pUtils->LoadFile(pFilename, nullptr, pEncoding.GetAddressOf());
+//		if (SUCCEEDED(hr))
+//		{
+//			IncludedFiles.insert(path);
+//			*ppIncludeSource = pEncoding.Detach();
+//		}
+//		return hr;
+//	}
+
+//	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override { return E_NOINTERFACE; }
+//	ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+//	ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+//	std::unordered_set<std::string> IncludedFiles;
+//};
+
+bool ShaderStorage::Initialize()
+{
+    if (auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.addressof())); result != S_OK)
+    {
+        LogError << "Can't create dxc compiler\n";
+        return false;
+    }
+
+    if (auto result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_dxc_utils.addressof())); result != S_OK)
+    {
+        LogError << "Can't create dxc utils\n";
+        return false;
+    }
+
+    // Some common include files
+    {
+        HRESULT hr = m_dxc_utils->CreateDefaultIncludeHandler(m_dxc_include_handler.addressof());
+
+        if (hr != S_OK)
+        {
+            LogError << "Can't create include handler\n";
+            return false;
+        }
+
+        {
+            wil::com_ptr<IDxcBlob> new_included_file;
+
+            const std::wstring shared_path = ysn::VfsPath(L"shaders/include/shared.hlsl");
+            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+            if (hr != S_OK)
+            {
+                LogError << "Can't load shaders/include/shared.hlsl\n";
+                return false;
+            }
+
+            m_dxc_included_files.push_back(new_included_file);
+        }
+
+        {
+            wil::com_ptr<IDxcBlob> new_included_file;
+
+            const std::wstring shared_path = ysn::VfsPath(L"shaders/include/shader_structs.h");
+            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+            if (hr != S_OK)
+            {
+                LogError << "Can't load shaders/include/shader_structs.h\n";
+                return false;
+            }
+
+            m_dxc_included_files.push_back(new_included_file);
+        }
+    }
+
+    return true;
+}
+
+std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters& parameters)
 {
     std::filesystem::path fullpath(parameters.shader_path);
 
-    const std::hash<ShaderCompileParameters<ShaderType>> hasher;
-    const ShaderHash shader_hash= hasher(parameters);
+    const std::hash<ShaderCompileParameters> hasher;
+    const ShaderHash shader_hash = hasher(parameters);
 
     if (m_compiled_shaders.contains(shader_hash))
     {
@@ -169,7 +261,7 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
 
     std::vector<LPCWSTR> arguments;
 
-    const std::wstring shader_profile = GetShaderProfile<ShaderType>();
+    const std::wstring shader_profile = GetShaderProfile(parameters.type);
 
     if (!parameters.disable_optimizations)
     {
@@ -372,150 +464,58 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
     m_compiled_shaders.emplace(shader_hash, shader_data);
 
 #ifndef YSN_RELEASE
-    #if 0
+
     const auto shader_modification_time = GetShaderModificationTime(parameters.shader_path);
 
     if (shader_modification_time.has_value())
     {
-        m_shaders_modified_time.emplace(parameters.shader_path, shader_modification_time.value());
+        ShaderModificationData data(shader_hash, parameters, shader_modification_time.value());
+        m_shaders_modified_data[parameters.shader_path] = data;
     }
     else
     {
         LogError << "Can't get shader modification time: " << WStringToString(parameters.shader_path) << "\n";
     }
-    #endif
+
 #endif
 
     return shader_data;
 }
 
-template <typename ShaderType>
-constexpr std::wstring ShaderStorage::GetShaderProfile()
+std::wstring ShaderStorage::GetShaderProfile(ShaderType type) const
 {
-    if constexpr (std::same_as<ShaderType, LibraryShader>)
+    if (type == ShaderType::Library)
         return L"lib_6_6";
-    else if constexpr (std::same_as<ShaderType, PixelShader>)
+    else if (type == ShaderType::Pixel)
         return L"ps_6_6";
-    else if constexpr (std::same_as<ShaderType, VertexShader>)
+    else if (type == ShaderType::Vertex)
         return L"vs_6_6";
-    else if constexpr (std::same_as<ShaderType, ComputeShader>)
+    else if (type == ShaderType::Compute)
         return L"cs_6_6";
     else
-        static_assert(false, "Incorrect ShaderType specified");
-}
-} // namespace ysn
+        AssertMsg(false, "ShaderProfile type is not specified");
 
-module :private;
-
-namespace ysn
-{
-
-// class CustomIncludeHandler : public IDxcIncludeHandler
-//{
-// public:
-//	HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
-//	{
-//		ComPtr<IDxcBlobEncoding> pEncoding;
-//		std::string path = Paths::Normalize(UNICODE_TO_MULTIBYTE(pFilename));
-//		if (IncludedFiles.find(path) != IncludedFiles.end())
-//		{
-//			// Return empty string blob if this file has been included before
-//			static const char nullStr[] = " ";
-//			pUtils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, pEncoding.GetAddressOf());
-//			*ppIncludeSource = pEncoding.Detach();
-//			return S_OK;
-//		}
-
-//		HRESULT hr = pUtils->LoadFile(pFilename, nullptr, pEncoding.GetAddressOf());
-//		if (SUCCEEDED(hr))
-//		{
-//			IncludedFiles.insert(path);
-//			*ppIncludeSource = pEncoding.Detach();
-//		}
-//		return hr;
-//	}
-
-//	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override { return E_NOINTERFACE; }
-//	ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
-//	ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
-
-//	std::unordered_set<std::string> IncludedFiles;
-//};
-
-bool ShaderStorage::Initialize()
-{
-    if (auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.addressof())); result != S_OK)
-    {
-        LogError << "Can't create dxc compiler\n";
-        return false;
-    }
-
-    if (auto result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_dxc_utils.addressof())); result != S_OK)
-    {
-        LogError << "Can't create dxc utils\n";
-        return false;
-    }
-
-    // Some common include files
-    {
-        HRESULT hr = m_dxc_utils->CreateDefaultIncludeHandler(m_dxc_include_handler.addressof());
-
-        if (hr != S_OK)
-        {
-            LogError << "Can't create include handler\n";
-            return false;
-        }
-
-        {
-            wil::com_ptr<IDxcBlob> new_included_file;
-
-            const std::wstring shared_path = ysn::VfsPath(L"shaders/include/shared.hlsl");
-            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
-
-            if (hr != S_OK)
-            {
-                LogError << "Can't load shaders/include/shared.hlsl\n";
-                return false;
-            }
-
-            m_dxc_included_files.push_back(new_included_file);
-        }
-
-        {
-            wil::com_ptr<IDxcBlob> new_included_file;
-
-            const std::wstring shared_path = ysn::VfsPath(L"shaders/include/shader_structs.h");
-            hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
-
-            if (hr != S_OK)
-            {
-                LogError << "Can't load shaders/include/shader_structs.h\n";
-                return false;
-            }
-
-            m_dxc_included_files.push_back(new_included_file);
-        }
-    }
-
-    return true;
+    return L"";
 }
 
 #ifndef YSN_RELEASE
-void ShaderStorage::VerifyAnyShaderChanged()
+std::vector<ShaderHash> ShaderStorage::VerifyAnyShaderChanged()
 {
-    #if 0
-    for (const auto& [shader_path, time] : m_shaders_modified_time)
+    std::vector<ShaderHash> result;
+
+    for (const auto& [shader_path, data] : m_shaders_modified_data)
     {
         const auto latest_time = GetShaderModificationTime(shader_path);
 
         if (latest_time.has_value())
         {
-            if (latest_time.value() != time)
+            if (latest_time.value() != data.modification_time)
             {
                 LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
 
-                // TODO: Notify PSO manager to compile the shader here
-                m_shaders_modified_time[shader_path] = latest_time.value();
+                result.push_back(data.shader_hash);
+
+                m_shaders_modified_data[shader_path].modification_time = latest_time.value();
             }
         }
         else
@@ -523,7 +523,8 @@ void ShaderStorage::VerifyAnyShaderChanged()
             LogError << "Can't get shader modification time: " << WStringToString(shader_path) << "\n";
         }
     }
-    #endif 
+
+    return result;
 }
 
 std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)

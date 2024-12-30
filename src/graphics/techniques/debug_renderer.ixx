@@ -164,7 +164,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         return false;
     }
 
-    ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/debug_geometry.vs.hlsl"));
+    ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/debug_geometry.vs.hlsl"));
     const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
     if (!vs_shader_result.has_value())
@@ -173,7 +173,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         return false;
     }
 
-    ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/debug_geometry.ps.hlsl"));
+    ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/debug_geometry.ps.hlsl"));
     const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
     if (!ps_shader_result.has_value())
@@ -189,17 +189,15 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     D3D12_BLEND_DESC blend_desc = {};
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-    D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
-    depth_stencil_desc.DepthEnable = false;
-
     GraphicsPsoDesc pso_desc("Debug Render PSO");
+
     pso_desc.SetRootSignature(m_root_signature.get());
     pso_desc.SetVertexShader(vs_shader_result.value());
     pso_desc.SetPixelShader(ps_shader_result.value());
 
     pso_desc.SetRasterizerState(rasterizer_desc);
     pso_desc.SetBlendState(blend_desc);
-    pso_desc.SetDepthStencilState(depth_stencil_desc);
+    pso_desc.SetDepthStencilState({.DepthEnable = false});
     pso_desc.SetSampleMask(UINT_MAX);
     pso_desc.SetInputLayout(DebugRenderVertex::GetVertexLayoutDesc());
     pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);

@@ -73,7 +73,7 @@ bool GenerateMipsPass::Initialize(std::shared_ptr<DxRenderer> renderer)
         return false;
     }
 
-    ShaderCompileParameters<ComputeShader> generate_mips_shader_parameters(VfsPath(L"shaders/generate_mips.cs.hlsl"));
+    ShaderCompileParameters generate_mips_shader_parameters(ShaderType::Compute, VfsPath(L"shaders/generate_mips.cs.hlsl"));
     const auto generate_mips_shader = renderer->GetShaderStorage()->CompileShader(generate_mips_shader_parameters);
 
     if (!generate_mips_shader.has_value())

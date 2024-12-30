@@ -119,7 +119,7 @@ bool TonemapPostprocess::Initialize()
 
     Application::Get().GetRenderer()->CreateRootSignature(&root_signature_desc, &root_signature);
 
-    ShaderCompileParameters<ComputeShader> tonemap_shader_parameters(VfsPath(L"Shaders/tonemap.cs.hlsl"));
+    ShaderCompileParameters tonemap_shader_parameters(ShaderType::Compute, VfsPath(L"Shaders/tonemap.cs.hlsl"));
 
     const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(tonemap_shader_parameters);
 
