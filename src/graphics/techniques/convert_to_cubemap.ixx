@@ -12,6 +12,7 @@ import system.filesystem;
 import system.application;
 import system.logger;
 import renderer.dxrenderer;
+import renderer.pso;
 import renderer.gpu_texture;
 import renderer.gpu_pixel_buffer;
 import renderer.vertex_storage;
@@ -30,13 +31,11 @@ class ConvertToCubemap
 {
 public:
     ConvertToCubemap() = default;
-    ~ConvertToCubemap();
     bool Initialize();
     bool Render(ConvertToCubemapParameters& parameters);
 
 private:
-    ID3D12RootSignature* m_root_signature = nullptr;
-    ID3D12PipelineState* m_pipeline_state = nullptr;
+    PsoId m_pso_id;
 
     MeshPrimitive cube;
 
@@ -62,23 +61,10 @@ enum ShaderParameters
     ParametersCount
 };
 
-ConvertToCubemap::~ConvertToCubemap()
-{
-    if (m_root_signature != nullptr)
-    {
-        m_root_signature->Release();
-        m_root_signature = nullptr;
-    }
-
-    if (m_pipeline_state != nullptr)
-    {
-        m_pipeline_state->Release();
-        m_pipeline_state = nullptr;
-    }
-}
-
 bool ConvertToCubemap::Initialize()
 {
+    const auto renderer = Application::Get().GetRenderer();
+
     const auto box_result = ConstructBox();
 
     if (!box_result.has_value())
@@ -107,52 +93,13 @@ bool ConvertToCubemap::Initialize()
     root_signature_desc.pStaticSamplers = &static_sampler;
     root_signature_desc.NumStaticSamplers = 1;
 
-    bool result = Application::Get().GetRenderer()->CreateRootSignature(&root_signature_desc, &m_root_signature);
-
+    ID3D12RootSignature* root_signature = nullptr;
+    bool result = Application::Get().GetRenderer()->CreateRootSignature(&root_signature_desc, &root_signature);
     if (!result)
     {
         LogError << "Can't create ConvertToCubemap root signature\n";
         return false;
     }
-
-    ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/convert_equirectangular_map.vs.hlsl"));
-    const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
-
-    if (!vs_shader_result.has_value())
-    {
-        LogError << "Can't compile ConvertToCubemap vs shader\n";
-        return false;
-    }
-
-    ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/convert_equirectangular_map.ps.hlsl"));
-    const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
-
-    if (!ps_shader_result.has_value())
-    {
-        LogError << "Can't compile ConvertToCubemap ps shader\n";
-        return false;
-    }
-
-    std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_desc;
-
-    D3D12_INPUT_ELEMENT_DESC position_desc = {};
-    position_desc.SemanticName = "POSITION";
-    position_desc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    // position_desc.SemanticIndex = 0;
-    position_desc.InputSlot = 0;
-    position_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-    position_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-
-    D3D12_INPUT_ELEMENT_DESC texture_desc = {};
-    texture_desc.SemanticName = "TEXCOORD";
-    texture_desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-    // texture_desc.SemanticIndex = 0;
-    texture_desc.InputSlot = 0;
-    texture_desc.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-    texture_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-
-    input_element_desc.push_back(position_desc);
-    input_element_desc.push_back(texture_desc);
 
     D3D12_RASTERIZER_DESC rasterizer_desc = {};
     rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -161,27 +108,26 @@ bool ConvertToCubemap::Initialize()
     D3D12_BLEND_DESC blend_desc = {};
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc = {};
-    pipeline_state_desc.pRootSignature = m_root_signature;
-    pipeline_state_desc.VS = {vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize()};
-    pipeline_state_desc.PS = {ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize()};
-    pipeline_state_desc.RasterizerState = rasterizer_desc;
-    pipeline_state_desc.DepthStencilState.DepthEnable = false;
-    pipeline_state_desc.InputLayout = {input_element_desc.data(), static_cast<UINT>(input_element_desc.size())};
-    pipeline_state_desc.BlendState = blend_desc;
-    pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipeline_state_desc.NumRenderTargets = 1;
-    pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Get it from rendertarget
-    pipeline_state_desc.SampleDesc = {1, 0};
-    pipeline_state_desc.SampleMask = UINT_MAX;
+    GraphicsPsoDesc pso_desc("Convert to cubemap PSO");
+    pso_desc.AddShader({ShaderType::Vertex, VfsPath(L"shaders/convert_equirectangular_map.vs.hlsl")});
+    pso_desc.AddShader({ShaderType::Pixel, VfsPath(L"shaders/convert_equirectangular_map.ps.hlsl")});
+    pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+    pso_desc.SetRasterizerState(rasterizer_desc);
+    pso_desc.SetBlendState(blend_desc);
+    pso_desc.SetRootSignature(root_signature);
+    pso_desc.SetDepthStencilState({
+        .DepthEnable = false,
+    });
+    pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+    pso_desc.SetSampleMask(UINT_MAX);
+    pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
 
-    if (auto hr_result =
-            Application::Get().GetDevice()->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&m_pipeline_state));
-        hr_result != S_OK)
-    {
-        LogError << "Can't create ConvertToCubemap pipeline state object :" << ConvertHrToString(hr_result) << "\n";
+    auto result_pso = renderer->BuildPso(pso_desc);
+
+    if (!result_pso.has_value())
         return false;
-    }
+
+    m_pso_id = *result_pso;
 
     const XMVECTOR position = XMVectorSet(0.0, 0.0, 0.0, 1.0);
 
@@ -202,6 +148,16 @@ bool ConvertToCubemap::Render(ConvertToCubemapParameters& parameters)
 {
     const auto renderer = Application::Get().GetRenderer();
 
+    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
+
+    if (!pso.has_value())
+    {
+        LogError << "Can't find debug render PSO\n";
+        return false;
+    }
+
+    auto& pso_object = pso.value();
+
     const auto command_list_result = renderer->GetDirectQueue()->GetCommandList("Convert Cubemap");
 
     if (!command_list_result.has_value())
@@ -217,8 +173,8 @@ bool ConvertToCubemap::Render(ConvertToCubemapParameters& parameters)
     command_list.list->RSSetViewports(1, &m_viewport);
     command_list.list->RSSetScissorRects(1, &m_scissors_rect);
     command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    command_list.list->SetPipelineState(m_pipeline_state);
-    command_list.list->SetGraphicsRootSignature(m_root_signature);
+    command_list.list->SetPipelineState(pso_object.pso.get());
+    command_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
     command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
     command_list.list->IASetIndexBuffer(&cube.index_buffer_view);

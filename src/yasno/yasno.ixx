@@ -1341,8 +1341,6 @@ void Yasno::OnRender(RenderEventArgs& e)
     if (m_is_raster)
     {
         SkyboxPassParameters skybox_parameters;
-        skybox_parameters.command_queue = command_queue;
-        skybox_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
         skybox_parameters.scene_color_buffer = m_scene_color_buffer;
         skybox_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
         skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;

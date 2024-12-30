@@ -33,7 +33,7 @@ struct IndirectCommand
     D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
     D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
 };
-}
+} // namespace ysn
 
 export namespace ysn
 {
@@ -52,7 +52,6 @@ struct ForwardPassRenderParameters
     wil::com_ptr<ID3D12Resource> current_back_buffer;
     ShadowMapBuffer shadow_map_buffer;
 };
-
 
 enum class IndirectRootParameters : uint8_t
 {
@@ -98,7 +97,7 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
 {
     std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
 
-    GraphicsPsoDesc new_pso_desc("Primitive PSO");
+    GraphicsPsoDesc pso_desc("Primitive PSO");
 
     {
         bool result = false;
@@ -188,73 +187,41 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
             return false;
         }
 
-        new_pso_desc.SetRootSignature(root_signature);
+        pso_desc.SetRootSignature(root_signature);
     }
 
-    // Vertex shader
-    {
-        ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl"));
-        const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
-
-        if (!vs_shader_result.has_value())
-        {
-            LogError << "Can't compile GLTF forward pipeline vs shader\n";
-            return false;
-        }
-
-        new_pso_desc.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
-    }
-
-    // Pixel shader
-    {
-        ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/forward_pass.ps.hlsl"));
-        const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
-
-        if (!ps_shader_result.has_value())
-        {
-            LogError << "Can't compile GLTF forward pipeline ps shader\n";
-            return false;
-        }
-
-        new_pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
-    }
-
-    const auto& input_element_desc = renderer->GetInputElementsDesc();
-
-    D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
-    depth_stencil_desc.DepthEnable = true;
-    depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-    depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-
-    new_pso_desc.SetDepthStencilState(depth_stencil_desc);
-    new_pso_desc.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
-    new_pso_desc.SetSampleMask(UINT_MAX);
+    pso_desc.AddShader({ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl")});
+    pso_desc.AddShader({ShaderType::Pixel, VfsPath(L"shaders/forward_pass.ps.hlsl")});
+    pso_desc.SetDepthStencilState(
+        {.DepthEnable = true, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS});
+    pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
+    pso_desc.SetSampleMask(UINT_MAX);
 
     const auto material = materials[primitive.material_id];
 
-    new_pso_desc.SetRasterizerState(material.rasterizer_desc);
-    new_pso_desc.SetBlendState(material.blend_desc);
+    pso_desc.SetRasterizerState(material.rasterizer_desc);
+    pso_desc.SetBlendState(material.blend_desc);
 
     switch (primitive.topology)
     {
     case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
         break;
     case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
     case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
         break;
     case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
     case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
         break;
     default:
         AssertMsg(false, "Unsupported primitive topology");
     }
 
-    new_pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
+    pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
 
-    auto result_pso = renderer->CreatePso(new_pso_desc);
+    auto result_pso = renderer->BuildPso(pso_desc);
 
     if (!result_pso.has_value())
     {
@@ -454,46 +421,12 @@ bool ForwardPass::InitializeIndirectPipeline(
 
     // Create PSO
     GraphicsPsoDesc pso_desc("Indirect Primitive PSO");
-
     pso_desc.SetRootSignature(m_indirect_root_signature.get());
-
-    // Vertex shader
-    {
-        ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/indirect_forward_pass.vs.hlsl"));
-        const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
-
-        if (!vs_shader_result.has_value())
-        {
-            LogError << "Can't compile indirect forward pipeline vs shader\n";
-            return false;
-        }
-
-        pso_desc.SetVertexShader(vs_shader_result.value());
-    }
-
-    // Pixel shader
-    {
-        ysn::ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/indirect_forward_pass.ps.hlsl"));
-        const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
-
-        if (!ps_shader_result.has_value())
-        {
-            LogError << "Can't compile indirect forward pipeline ps shader\n";
-            return false;
-        }
-
-        pso_desc.SetPixelShader(ps_shader_result.value());
-    }
-
-    const auto& input_element_desc = renderer->GetInputElementsDesc();
-
-    D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
-    depth_stencil_desc.DepthEnable = true;
-    depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-    depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-
-    pso_desc.SetDepthStencilState(depth_stencil_desc);
-    pso_desc.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
+    pso_desc.AddShader({ShaderType::Vertex, VfsPath(L"shaders/indirect_forward_pass.vs.hlsl")});
+    pso_desc.AddShader({ShaderType::Pixel, VfsPath(L"shaders/indirect_forward_pass.ps.hlsl")});
+    pso_desc.SetDepthStencilState(
+        {.DepthEnable = true, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS});
+    pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
     pso_desc.SetSampleMask(UINT_MAX);
 
     // TODO: Should use GLTFs parameters
@@ -516,7 +449,7 @@ bool ForwardPass::InitializeIndirectPipeline(
     pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
     pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
 
-    auto result_pso = renderer->CreatePso(pso_desc);
+    auto result_pso = renderer->BuildPso(pso_desc);
 
     if (!result_pso.has_value())
     {

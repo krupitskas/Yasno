@@ -12,6 +12,7 @@ import renderer.shader_storage;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.command_queue;
+import renderer.pso;
 import system.math;
 import system.filesystem;
 import system.application;
@@ -37,18 +38,19 @@ struct TonemapPostprocessParameters
     uint32_t backbuffer_height = 0;
 };
 
-struct TonemapPostprocess
+class TonemapPostprocess
 {
+public:
     bool Initialize();
     bool Render(TonemapPostprocessParameters* parameters);
 
     wil::com_ptr<ID3D12Resource> parameters_buffer;
 
-    wil::com_ptr<ID3D12RootSignature> root_signature;
-    wil::com_ptr<ID3D12PipelineState> pipeline_state;
 
     float exposure = 1.0f;
     TonemapMethod tonemap_method = TonemapMethod::None;
+private:
+    PsoId m_pso_id;
 };
 } // namespace ysn
 
@@ -104,6 +106,8 @@ void UpdateParameters(wil::com_ptr<ID3D12Resource> parameters_buffer, uint32_t w
 
 bool TonemapPostprocess::Initialize()
 {
+    auto renderer = Application::Get().GetRenderer();
+
     CD3DX12_DESCRIPTOR_RANGE hdr_texture_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, 0);
     CD3DX12_DESCRIPTOR_RANGE ldr_texture_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, 0);
 
@@ -112,42 +116,25 @@ bool TonemapPostprocess::Initialize()
     root_parameters[1].InitAsDescriptorTable(1, &ldr_texture_uav);
     root_parameters[2].InitAsConstantBufferView(0);
 
+    ID3D12RootSignature* root_signature = nullptr;
+
     // Setting Root Signature
     D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
     root_signature_desc.NumParameters = 3;
     root_signature_desc.pParameters = &root_parameters[0];
 
-    Application::Get().GetRenderer()->CreateRootSignature(&root_signature_desc, &root_signature);
+    renderer->CreateRootSignature(&root_signature_desc, &root_signature);
 
-    ShaderCompileParameters tonemap_shader_parameters(ShaderType::Compute, VfsPath(L"Shaders/tonemap.cs.hlsl"));
+    ComputePsoDesc pso_desc("Tonemap");
+    pso_desc.AddShader({ShaderType::Compute, VfsPath(L"Shaders/tonemap.cs.hlsl")});
+    pso_desc.SetRootSignature(root_signature);
 
-    const auto tonemap_shader = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(tonemap_shader_parameters);
-
-    if (!tonemap_shader.has_value())
-    {
-        LogError << "Can't load tonemap shader\n";
+    auto pso_result = renderer->BuildPso(pso_desc);
+    
+    if (!pso_result.has_value())
         return false;
-    }
 
-    // Create the Compute pipeline state object
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_CS CS;
-    } pipelineStateStream;
-
-    // Setting the root signature and the compute shader to the PSO
-    pipelineStateStream.pRootSignature = root_signature.get();
-    pipelineStateStream.CS = {tonemap_shader.value()->GetBufferPointer(), tonemap_shader.value()->GetBufferSize()};
-
-    D3D12_PIPELINE_STATE_STREAM_DESC pipeline_state_stream_desc = {sizeof(PipelineStateStream), &pipelineStateStream};
-
-    if (auto result = Application::Get().GetDevice()->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&pipeline_state));
-        result != S_OK)
-    {
-        LogError << "Can't create tonemap pipeline state\n";
-        return false;
-    }
+    m_pso_id = *pso_result;
 
     if (!CreateParameters(parameters_buffer))
     {
@@ -160,6 +147,8 @@ bool TonemapPostprocess::Initialize()
 
 bool TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
 {
+    auto renderer = Application::Get().GetRenderer();
+
     UpdateParameters(parameters_buffer, parameters->backbuffer_width, parameters->backbuffer_height, exposure, tonemap_method);
 
     const auto command_list_result = parameters->command_queue->GetCommandList("Tonemap");
@@ -169,8 +158,17 @@ bool TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
 
     GraphicsCommandList command_list = command_list_result.value();
 
-    command_list.list->SetPipelineState(pipeline_state.get());
-    command_list.list->SetComputeRootSignature(root_signature.get());
+    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
+
+    if (!pso.has_value())
+    {
+        return false;
+    }
+
+    auto& pso_object = pso.value();
+
+    command_list.list->SetPipelineState(pso_object.pso.get());
+    command_list.list->SetComputeRootSignature(pso_object.root_signature.get());
 
     ID3D12DescriptorHeap* ppHeaps[] = {parameters->cbv_srv_uav_heap->GetHeapPtr()};
     command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

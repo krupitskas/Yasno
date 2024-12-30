@@ -12,6 +12,7 @@ import std;
 import system.filesystem;
 import system.logger;
 import system.asserts;
+import renderer.pso;
 import renderer.dxrenderer;
 import renderer.gpu_texture;
 import renderer.dx_types;
@@ -39,8 +40,7 @@ public:
     bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture);
 
 private:
-    wil::com_ptr<ID3D12RootSignature> m_root_signature;
-    wil::com_ptr<ID3D12PipelineState> m_pipeline_state;
+    PsoId m_pso_id;
 };
 } // namespace ysn
 
@@ -67,53 +67,24 @@ bool GenerateMipsPass::Initialize(std::shared_ptr<DxRenderer> renderer)
     root_signature_desc.NumStaticSamplers = 1;
     root_signature_desc.pStaticSamplers = &linear_clamp_sampler;
 
-    if (!renderer->CreateRootSignature(&root_signature_desc, &m_root_signature))
+    ID3D12RootSignature* root_signature = nullptr;
+
+    if (!renderer->CreateRootSignature(&root_signature_desc, &root_signature))
     {
         LogError << "Generate mip pass can't create root signature\n";
         return false;
     }
 
-    ShaderCompileParameters generate_mips_shader_parameters(ShaderType::Compute, VfsPath(L"shaders/generate_mips.cs.hlsl"));
-    const auto generate_mips_shader = renderer->GetShaderStorage()->CompileShader(generate_mips_shader_parameters);
+    ComputePsoDesc pso_desc("Generate Mips PSO");
+    pso_desc.AddShader({ShaderType::Compute, VfsPath(L"shaders/generate_mips.cs.hlsl")});
+    pso_desc.SetRootSignature(root_signature);
 
-    if (!generate_mips_shader.has_value())
-    {
-        LogError << "Can't load generate mips shader\n";
+    auto result_pso = renderer->BuildPso(pso_desc);
+
+    if (!result_pso.has_value())
         return false;
-    }
 
-    // Create the PSO for GenerateMips shader.
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_CS CS;
-    } pipeline_state_stream;
-
-    pipeline_state_stream.pRootSignature = m_root_signature.get();
-    pipeline_state_stream.CS = {generate_mips_shader.value()->GetBufferPointer(), generate_mips_shader.value()->GetBufferSize()};
-
-    D3D12_PIPELINE_STATE_STREAM_DESC pipeline_state_stream_desc = {sizeof(PipelineStateStream), &pipeline_state_stream};
-
-    if (auto result = renderer->GetDevice()->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&m_pipeline_state));
-        result != S_OK)
-    {
-        LogError << "Can't create generate mips pipeline state\n";
-        return false;
-    }
-
-    // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    // m_DefaultUAV = Application::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4);
-
-    // for (UINT i = 0; i < 4; ++i)
-    //{
-    //	D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-    //	uav_desc.ViewDimension			= D3D12_UAV_DIMENSION_TEXTURE2D;
-    //	uav_desc.Format					= DXGI_FORMAT_R8G8B8A8_UNORM;
-    //	uav_desc.Texture2D.MipSlice		= i;
-    //	uav_desc.Texture2D.PlaneSlice	= 0;
-    //
-    //	device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc,m_DefaultUAV.GetDescriptorHandle(i));
-    // }
+    m_pso_id = *result_pso;
 
     return true;
 }
@@ -121,6 +92,16 @@ bool GenerateMipsPass::Initialize(std::shared_ptr<DxRenderer> renderer)
 bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture)
 {
     auto compute_queue = renderer->GetComputeQueue();
+
+    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
+
+    if (!pso.has_value())
+    {
+        LogError << "Can't find debug render PSO\n";
+        return false;
+    }
+
+    auto& pso_object = pso.value();
 
     auto resource = gpu_texture.gpu_resource;
     auto resource_desc = resource->GetDesc();
@@ -140,8 +121,8 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
 
     ID3D12DescriptorHeap* ppHeaps[] = {renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr()};
 
-    command_list->SetPipelineState(m_pipeline_state.get());
-    command_list->SetComputeRootSignature(m_root_signature.get());
+    command_list->SetPipelineState(pso_object.pso.get());
+    command_list->SetComputeRootSignature(pso_object.root_signature.get());
     command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     command_list->SetComputeRootDescriptorTable(RootSignatureIndex::SrcMip, gpu_texture.descriptor_handle.gpu);
 

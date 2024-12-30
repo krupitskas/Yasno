@@ -10,32 +10,74 @@ import std;
 import system.logger;
 import system.hash;
 import system.asserts;
+import renderer.shader_storage;
+import renderer.dx_types;
 
 export namespace ysn
 {
 using PsoId = int64_t;
 
-struct ComputePsoDesc
+// Rename to PsoObject
+struct Pso
 {
-    void SetComputeShader(const void* binary, size_t size);
-    void SetComputeShader(const D3D12_SHADER_BYTECODE& binary);
+    // Rename to id and others
+    PsoId pso_id = -1;
+    wil::com_ptr<ID3D12RootSignature> root_signature;
+    wil::com_ptr<ID3D12PipelineState> pso;
+};
+} // namespace ysn
+
+namespace ysn
+{
+class PsoDesc
+{
+public:
+    virtual PsoId GenerateId() const = 0;
+    virtual void SetRootSignature(ID3D12RootSignature* root_signature) = 0;
+    virtual bool BuildShaders(wil::com_ptr<DxDevice> device, std::shared_ptr<ShaderStorage> shader_storage) = 0;
+
+    std::string GetName() const;
+    std::wstring GetNameWString() const;
+    virtual ID3D12RootSignature* GetRootSignature() const = 0;
+
+protected:
+    std::string m_name = "Unnamed PSO";
+};
+} // namespace ysn
+
+export namespace ysn
+{
+class ComputePsoDesc : public PsoDesc
+{
+public:
+    ComputePsoDesc(std::string name);
+
+    PsoId GenerateId() const override;
+    bool BuildShaders(wil::com_ptr<DxDevice> device, std::shared_ptr<ShaderStorage> shader_storage) override;
+
+    const D3D12_COMPUTE_PIPELINE_STATE_DESC& GetDesc() const;
+
+    void AddShader(const ShaderCompileParameters& shader_parameter);
+    void SetRootSignature(ID3D12RootSignature* root_signature) override;
+    ID3D12RootSignature* GetRootSignature() const override;
 
 private:
+    ShaderCompileParameters m_shader;
     D3D12_COMPUTE_PIPELINE_STATE_DESC m_pso_desc = {};
 };
 
-struct GraphicsPsoDesc
+class GraphicsPsoDesc : public PsoDesc
 {
+public:
     GraphicsPsoDesc(std::string name);
 
-    PsoId GenerateId() const;
+    PsoId GenerateId() const override;
+    bool BuildShaders(wil::com_ptr<DxDevice> device, std::shared_ptr<ShaderStorage> shader_storage) override;
+
     const D3D12_GRAPHICS_PIPELINE_STATE_DESC& GetDesc() const;
-    std::string GetName() const;
-    std::wstring GetNameWString() const;
-    ID3D12RootSignature* GetRootSignature() const;
+    ID3D12RootSignature* GetRootSignature() const override;
 
-    void SetRootSignature(ID3D12RootSignature* root_signature);
-
+    void SetRootSignature(ID3D12RootSignature* root_signature) override;
     void SetBlendState(const D3D12_BLEND_DESC& blend_desc);
     void SetRasterizerState(const D3D12_RASTERIZER_DESC& rasterizer_desc);
     void SetDepthStencilState(const D3D12_DEPTH_STENCIL_DESC& depth_stencil_desc);
@@ -47,62 +89,92 @@ struct GraphicsPsoDesc
     void SetInputLayout(UINT num_elements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs);
     void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& elements);
     void SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE ib_props);
-
-    // These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
-    void SetVertexShader(const void* binary, size_t size);
-    void SetPixelShader(const void* binary, size_t size);
-    void SetGeometryShader(const void* binary, size_t size);
-    void SetHullShader(const void* binary, size_t size);
-    void SetDomainShader(const void* binary, size_t size);
-
-    void SetVertexShader(wil::com_ptr<IDxcBlob> blob);
-    void SetPixelShader(wil::com_ptr<IDxcBlob> blob);
-    void SetGeometryShader(wil::com_ptr<IDxcBlob> blob);
-    void SetHullShader(wil::com_ptr<IDxcBlob> blob);
-    void SetDomainShader(wil::com_ptr<IDxcBlob> blob);
-
-    void SetVertexShader(const D3D12_SHADER_BYTECODE& binary);
-    void SetPixelShader(const D3D12_SHADER_BYTECODE& binary);
-    void SetGeometryShader(const D3D12_SHADER_BYTECODE& binary);
-    void SetHullShader(const D3D12_SHADER_BYTECODE& binary);
-    void SetDomainShader(const D3D12_SHADER_BYTECODE& binary);
-
-    // std::optional<PsoId> Build(wil::com_ptr<ID3D12Device5> device, std::unordered_map<PsoId, GraphicsPso>& pso_pool);
+    void AddShader(const ShaderCompileParameters& shader_parameter);
 
 private:
-    std::string m_name = "Unnamed PSO";
-
-    // wil::com_ptr<ID3D12RootSignature> m_root_signature = nullptr;
+    std::vector<ShaderCompileParameters> m_shaders_to_compile;
     std::shared_ptr<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC m_pso_desc = {};
 };
 
-struct Pso
+class PsoStorage
 {
-    PsoId pso_id = -1;
-    wil::com_ptr<ID3D12RootSignature> root_signature;
-    wil::com_ptr<ID3D12PipelineState> pso;
-};
+public:
+    bool Initialize();
 
-struct PsoStorage
-{
-    std::optional<PsoId> CreateGraphicsPso(wil::com_ptr<ID3D12Device5> device, const GraphicsPsoDesc& pso_desc);
-    // std::optional<PsoId> CreateComputePso();
+    std::optional<PsoId> BuildPso(wil::com_ptr<DxDevice> device, PsoDesc* pso_desc);
 
     std::optional<Pso> GetPso(PsoId pso_id);
-    // std::optional<GraphicsPso> GetGraphicsPso();
-
-    // void DeletePso();
-
     std::unordered_map<PsoId, Pso> m_graphics_pso_pool;
-    // std::unordered_map<PsoId, ComputePso> m_compute_pso_pool;
+
+    // Hide after raytracing manual shader compilation is fixed
+    std::shared_ptr<ShaderStorage> GetShaderStorage()
+    {
+        return m_shader_storage;
+    }
+
+private:
+    std::shared_ptr<ShaderStorage> m_shader_storage;
 };
+
 } // namespace ysn
 
 module :private;
 
 namespace ysn
 {
+ComputePsoDesc::ComputePsoDesc(std::string name)
+{
+    m_name = name;
+}
+
+void ComputePsoDesc::AddShader(const ShaderCompileParameters& shader_parameter)
+{
+    if (shader_parameter.type != ShaderType::Compute)
+    {
+        LogError << "Wrong shader specified" << m_name << "\n";
+        AssertMsg(false, "Wrong shader specified");
+        return; // TODO: enhance handling of the error and type checks
+    }
+    m_shader = shader_parameter;
+}
+
+void ComputePsoDesc::SetRootSignature(ID3D12RootSignature* root_signature)
+{
+    m_pso_desc.pRootSignature = root_signature;
+    AssertMsg(m_pso_desc.pRootSignature != nullptr, "Root signature can't be nullptr");
+}
+
+PsoId ComputePsoDesc::GenerateId() const
+{
+    PsoId pso_id = HashState(&m_pso_desc);
+
+    return pso_id;
+}
+
+bool ComputePsoDesc::BuildShaders(wil::com_ptr<DxDevice> device, std::shared_ptr<ShaderStorage> shader_storage)
+{
+    const auto& compiled_shader_res = shader_storage->CompileShader(m_shader);
+
+    if (!compiled_shader_res.has_value())
+    {
+        LogError << "Can't compile shader\n";
+        return false;
+    }
+
+    wil::com_ptr<IDxcBlob> blob = compiled_shader_res.value();
+    const auto bytecode = CD3DX12_SHADER_BYTECODE(const_cast<void*>(blob->GetBufferPointer()), blob->GetBufferSize());
+
+    m_pso_desc.CS = bytecode;
+
+    return true;
+}
+
+ID3D12RootSignature* ComputePsoDesc::GetRootSignature() const
+{
+    return m_pso_desc.pRootSignature;
+}
+
 GraphicsPsoDesc::GraphicsPsoDesc(std::string name)
 {
     m_name = name;
@@ -122,17 +194,52 @@ PsoId GraphicsPsoDesc::GenerateId() const
     return pso_id;
 }
 
+bool GraphicsPsoDesc::BuildShaders(wil::com_ptr<DxDevice> device, std::shared_ptr<ShaderStorage> shader_storage)
+{
+    for (const auto& shader : m_shaders_to_compile)
+    {
+        const auto& compiled_shader_res = shader_storage->CompileShader(shader);
+
+        if (!compiled_shader_res.has_value())
+        {
+            LogError << "Can't compile shader\n";
+            return false;
+        }
+
+        wil::com_ptr<IDxcBlob> blob = compiled_shader_res.value();
+        const auto bytecode = CD3DX12_SHADER_BYTECODE(const_cast<void*>(blob->GetBufferPointer()), blob->GetBufferSize());
+
+        switch (shader.type)
+        {
+        case ShaderType::Vertex:
+            m_pso_desc.VS = bytecode;
+            break;
+        case ShaderType::Pixel:
+            m_pso_desc.PS = bytecode;
+            break;
+            // TODO: finish and sanitize
+        }
+    }
+
+    return true;
+}
+
 const D3D12_GRAPHICS_PIPELINE_STATE_DESC& GraphicsPsoDesc::GetDesc() const
 {
     return m_pso_desc;
 }
 
-std::string GraphicsPsoDesc::GetName() const
+const D3D12_COMPUTE_PIPELINE_STATE_DESC& ComputePsoDesc::GetDesc() const
+{
+    return m_pso_desc;
+}
+
+std::string PsoDesc::GetName() const
 {
     return m_name;
 }
 
-std::wstring GraphicsPsoDesc::GetNameWString() const
+std::wstring PsoDesc::GetNameWString() const
 {
     std::wstring name(m_name.begin(), m_name.end());
     return name;
@@ -229,85 +336,31 @@ void GraphicsPsoDesc::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>
     SetInputLayout(static_cast<UINT>(elements.size()), elements.data());
 }
 
-void GraphicsPsoDesc::SetVertexShader(const void* Binary, size_t Size)
+void GraphicsPsoDesc::AddShader(const ShaderCompileParameters& shader_parameter)
 {
-    m_pso_desc.VS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
+    m_shaders_to_compile.push_back(shader_parameter);
 }
 
-void GraphicsPsoDesc::SetPixelShader(const void* Binary, size_t Size)
+bool PsoStorage::Initialize()
 {
-    m_pso_desc.PS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
+    m_shader_storage = std::make_shared<ShaderStorage>();
+
+    if (!m_shader_storage->Initialize())
+    {
+        LogError << "Can't create shader storage\n";
+        return false;
+    }
+
+    return true;
 }
 
-void GraphicsPsoDesc::SetGeometryShader(const void* Binary, size_t Size)
+std::optional<PsoId> PsoStorage::BuildPso(wil::com_ptr<DxDevice> device, PsoDesc* pso_desc)
 {
-    m_pso_desc.GS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
-}
+    // TODO: Check result
+    pso_desc->BuildShaders(device, m_shader_storage);
 
-void GraphicsPsoDesc::SetHullShader(const void* Binary, size_t Size)
-{
-    m_pso_desc.HS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
-}
-
-void GraphicsPsoDesc::SetDomainShader(const void* Binary, size_t Size)
-{
-    m_pso_desc.DS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
-}
-
-void GraphicsPsoDesc::SetVertexShader(const D3D12_SHADER_BYTECODE& Binary)
-{
-    m_pso_desc.VS = Binary;
-}
-
-void GraphicsPsoDesc::SetPixelShader(const D3D12_SHADER_BYTECODE& Binary)
-{
-    m_pso_desc.PS = Binary;
-}
-
-void GraphicsPsoDesc::SetGeometryShader(const D3D12_SHADER_BYTECODE& Binary)
-{
-    m_pso_desc.GS = Binary;
-}
-
-void GraphicsPsoDesc::SetHullShader(const D3D12_SHADER_BYTECODE& Binary)
-{
-    m_pso_desc.HS = Binary;
-}
-
-void GraphicsPsoDesc::SetDomainShader(const D3D12_SHADER_BYTECODE& Binary)
-{
-    m_pso_desc.DS = Binary;
-}
-
-void GraphicsPsoDesc::SetVertexShader(wil::com_ptr<IDxcBlob> blob)
-{
-    SetVertexShader(blob->GetBufferPointer(), blob->GetBufferSize());
-}
-
-void GraphicsPsoDesc::SetDomainShader(wil::com_ptr<IDxcBlob> blob)
-{
-    SetDomainShader(blob->GetBufferPointer(), blob->GetBufferSize());
-}
-
-void GraphicsPsoDesc::SetPixelShader(wil::com_ptr<IDxcBlob> blob)
-{
-    SetPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
-}
-
-void GraphicsPsoDesc::SetGeometryShader(wil::com_ptr<IDxcBlob> blob)
-{
-    SetGeometryShader(blob->GetBufferPointer(), blob->GetBufferSize());
-}
-
-void GraphicsPsoDesc::SetHullShader(wil::com_ptr<IDxcBlob> blob)
-{
-    SetHullShader(blob->GetBufferPointer(), blob->GetBufferSize());
-}
-
-
-std::optional<PsoId> PsoStorage::CreateGraphicsPso(wil::com_ptr<ID3D12Device5> device, const GraphicsPsoDesc& pso_desc)
-{
-    const PsoId pso_id = pso_desc.GenerateId();
+    // Compile shaders
+    const PsoId pso_id = pso_desc->GenerateId();
 
     bool should_create_new = !m_graphics_pso_pool.contains(pso_id);
 
@@ -317,28 +370,46 @@ std::optional<PsoId> PsoStorage::CreateGraphicsPso(wil::com_ptr<ID3D12Device5> d
 
         Pso new_pso;
 
-        const auto res = device->CreateGraphicsPipelineState(&pso_desc.GetDesc(), IID_PPV_ARGS(&new_pso.pso));
+        GraphicsPsoDesc* graphics_pso = dynamic_cast<GraphicsPsoDesc*>(pso_desc);
+        ComputePsoDesc* compute_pso = dynamic_cast<ComputePsoDesc*>(pso_desc);
 
-        if (res != S_OK)
+        if (!graphics_pso && !compute_pso)
         {
-            LogError << "Can't compile pso '" << pso_desc.GetName() << "' " << std::to_string(pso_id) << " \n";
+            LogError << "Can't compile PSO '" << pso_desc->GetName() << "' " << std::to_string(pso_id) << " \n";
             return std::nullopt;
         }
 
-        LogInfo << "Compiled new pso " << pso_desc.GetName() << " " << std::to_string(pso_id) << " \n";
+        HRESULT res = S_FALSE;
+
+        if (graphics_pso != nullptr)
+        {
+            res = device->CreateGraphicsPipelineState(&graphics_pso->GetDesc(), IID_PPV_ARGS(&new_pso.pso));
+        }
+        if (compute_pso != nullptr)
+        {
+            res = device->CreateComputePipelineState(&compute_pso->GetDesc(), IID_PPV_ARGS(&new_pso.pso));
+        }
+
+        if (res != S_OK)
+        {
+            LogError << "Can't compile PSO '" << pso_desc->GetName() << "' " << std::to_string(pso_id) << " \n";
+            return std::nullopt;
+        }
+
+        LogInfo << "Compiled new pso " << pso_desc->GetName() << " " << std::to_string(pso_id) << " \n";
 
         new_pso.pso_id = pso_id;
-        new_pso.root_signature.attach(pso_desc.GetRootSignature());
+        new_pso.root_signature.attach(pso_desc->GetRootSignature());
 
 #ifndef YSN_RELEASE
-        new_pso.pso->SetName(pso_desc.GetNameWString().c_str());
+        new_pso.pso->SetName(pso_desc->GetNameWString().c_str());
 #endif
 
         m_graphics_pso_pool[pso_id] = new_pso;
     }
     else
     {
-        LogInfo << "Cache hit for pso: " << pso_desc.GetName() << " " << std::to_string(pso_id) << " \n";
+        LogInfo << "Cache hit for pso: " << pso_desc->GetName() << " " << std::to_string(pso_id) << " \n";
     }
 
     return pso_id;

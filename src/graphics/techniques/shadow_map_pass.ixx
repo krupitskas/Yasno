@@ -110,7 +110,7 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
 {
     std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
 
-    GraphicsPsoDesc new_pso_desc("Shadow PSO");
+    GraphicsPsoDesc pso_desc("Shadow PSO");
 
     {
         bool result = false;
@@ -155,47 +155,20 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
             return false;
         }
 
-        new_pso_desc.SetRootSignature(root_signature);
+        pso_desc.SetRootSignature(root_signature);
     }
 
-    // Vertex shader
-    {
-        ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl"), {L"SHADOW_PASS"});
-        const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
-
-        if (!vs_shader_result.has_value())
-        {
-            LogError << "Can't compile GLTF shadow pipeline vs shader\n";
-            return false;
-        }
-
-        new_pso_desc.SetVertexShader(vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize());
-    }
-
-    // Pixel shader
-    {
-        ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/shadow_pass.ps.hlsl"));
-        const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
-
-        if (!ps_shader_result.has_value())
-        {
-            LogError << "Can't compile GLTF shadpw pipeline ps shader\n";
-            return false;
-        }
-
-        new_pso_desc.SetPixelShader(ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize());
-    }
-
-    const auto& input_element_desc = renderer->GetInputElementsDesc();
+    pso_desc.AddShader({ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl"), {L"SHADOW_PASS"}});
+    pso_desc.AddShader({ShaderType::Pixel, VfsPath(L"shaders/shadow_pass.ps.hlsl")});
 
     D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
     depth_stencil_desc.DepthEnable = true;
     depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
     depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 
-    new_pso_desc.SetDepthStencilState(depth_stencil_desc);
-    new_pso_desc.SetInputLayout(static_cast<UINT>(input_element_desc.size()), input_element_desc.data());
-    new_pso_desc.SetSampleMask(UINT_MAX);
+    pso_desc.SetDepthStencilState(depth_stencil_desc);
+    pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
+    pso_desc.SetSampleMask(UINT_MAX);
 
     const auto material = materials[primitive.material_id];
 
@@ -207,29 +180,29 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
     raster_desc.FillMode = D3D12_FILL_MODE_SOLID;
     raster_desc.CullMode = D3D12_CULL_MODE_FRONT;
 
-    new_pso_desc.SetRasterizerState(raster_desc);
-    new_pso_desc.SetBlendState(blend_desc);
+    pso_desc.SetRasterizerState(raster_desc);
+    pso_desc.SetBlendState(blend_desc);
 
     switch (primitive.topology)
     {
     case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
         break;
     case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
     case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
         break;
     case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
     case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
-        new_pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+        pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
         break;
     default:
         AssertMsg(false, "Unsupported primitive topology");
     }
 
-    new_pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+    pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
 
-    auto result_pso = renderer->CreatePso(new_pso_desc);
+    auto result_pso = renderer->BuildPso(pso_desc);
 
     if (!result_pso.has_value())
     {

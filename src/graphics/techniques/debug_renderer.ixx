@@ -42,7 +42,7 @@ class DebugRenderer
 {
 public:
     bool Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil::com_ptr<ID3D12Resource> camera_gpu_buffer);
-    void RenderDebugGeometry(DebugRendererParameters& parameters);
+    bool RenderDebugGeometry(DebugRendererParameters& parameters);
 
     GpuBuffer counter_buffer;
     DescriptorHandle counter_uav;
@@ -54,7 +54,6 @@ private:
     GpuBuffer m_counter_buffer_zero;
 
     wil::com_ptr<ID3D12CommandSignature> m_command_signature;
-    wil::com_ptr<ID3D12RootSignature> m_root_signature;
     GpuBuffer m_command_buffer;
     PsoId m_pso_id;
 };
@@ -158,27 +157,11 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     root_signature_desc.pParameters = &root_parameters[0];
     root_signature_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-    if (!renderer->CreateRootSignature(&root_signature_desc, &m_root_signature))
+    ID3D12RootSignature* root_signature = nullptr;
+
+    if (!renderer->CreateRootSignature(&root_signature_desc, &root_signature))
     {
         LogError << "Can't create ConvertToCubemap root signature\n";
-        return false;
-    }
-
-    ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/debug_geometry.vs.hlsl"));
-    const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
-
-    if (!vs_shader_result.has_value())
-    {
-        LogError << "Can't compile debug geometry ps shader\n";
-        return false;
-    }
-
-    ShaderCompileParameters ps_parameters(ShaderType::Pixel, VfsPath(L"shaders/debug_geometry.ps.hlsl"));
-    const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
-
-    if (!ps_shader_result.has_value())
-    {
-        LogError << "Can't compile debug geometry ps shader\n";
         return false;
     }
 
@@ -190,11 +173,9 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
     GraphicsPsoDesc pso_desc("Debug Render PSO");
-
-    pso_desc.SetRootSignature(m_root_signature.get());
-    pso_desc.SetVertexShader(vs_shader_result.value());
-    pso_desc.SetPixelShader(ps_shader_result.value());
-
+    pso_desc.SetRootSignature(root_signature);
+    pso_desc.AddShader({ShaderType::Vertex, VfsPath(L"shaders/debug_geometry.vs.hlsl")});
+    pso_desc.AddShader({ShaderType::Pixel, VfsPath(L"shaders/debug_geometry.ps.hlsl")});
     pso_desc.SetRasterizerState(rasterizer_desc);
     pso_desc.SetBlendState(blend_desc);
     pso_desc.SetDepthStencilState({.DepthEnable = false});
@@ -202,6 +183,13 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     pso_desc.SetInputLayout(DebugRenderVertex::GetVertexLayoutDesc());
     pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
     pso_desc.SetRenderTargetFormat(renderer->GetBackBufferFormat(), renderer->GetDepthBufferFormat());
+
+    auto result_pso = renderer->BuildPso(pso_desc);
+
+    if (!result_pso.has_value())
+        return false;
+
+    m_pso_id = *result_pso;
 
     // Create command signature
     D3D12_INDIRECT_ARGUMENT_DESC argument_desc[2] = {};
@@ -214,22 +202,13 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     command_signature_desc.NumArgumentDescs = _countof(argument_desc);
     command_signature_desc.ByteStride = sizeof(IndirectCommand);
 
-    if (auto result = renderer->GetDevice()->CreateCommandSignature(
-            &command_signature_desc, m_root_signature.get(), IID_PPV_ARGS(&m_command_signature));
+    if (auto result =
+            renderer->GetDevice()->CreateCommandSignature(&command_signature_desc, root_signature, IID_PPV_ARGS(&m_command_signature));
         result != S_OK)
     {
         LogError << "Debug render pass can't create command signature\n";
         return false;
     }
-
-    auto result_pso = renderer->CreatePso(pso_desc);
-
-    if (!result_pso.has_value())
-    {
-        return false;
-    }
-
-    m_pso_id = *result_pso;
 
     std::vector<IndirectCommand> indirect_commands;
 
@@ -265,9 +244,19 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
     return true;
 }
 
-void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
+bool DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
 {
     auto renderer = Application::Get().GetRenderer();
+
+    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
+
+    if (!pso.has_value())
+    {
+        LogError << "Can't find debug render PSO\n";
+        return false;
+    }
+
+    auto& pso_object = pso.value();
 
     ID3D12DescriptorHeap* pDescriptorHeaps[] = {
         renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
@@ -284,19 +273,10 @@ void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
     parameters.cmd_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
     parameters.cmd_list.list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
 
-    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
-
-    if (pso.has_value())
-    {
-        parameters.cmd_list.list->SetPipelineState(pso.value().pso.get());
-        parameters.cmd_list.list->SetGraphicsRootSignature(m_root_signature.get());
-        parameters.cmd_list.list->ExecuteIndirect(
-            m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.GetResourcePtr(), 0, counter_buffer.GetResourcePtr(), 0);
-    }
-    else
-    {
-        LogError << "Can't find debug render PSO\n";
-    }
+    parameters.cmd_list.list->SetPipelineState(pso_object.pso.get());
+    parameters.cmd_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
+    parameters.cmd_list.list->ExecuteIndirect(
+        m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.GetResourcePtr(), 0, counter_buffer.GetResourcePtr(), 0);
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -313,5 +293,7 @@ void DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
             counter_buffer.GetResourcePtr(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         parameters.cmd_list.list->ResourceBarrier(1, &barrier);
     }
+
+    return true;
 }
 } // namespace ysn

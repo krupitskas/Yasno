@@ -7,7 +7,6 @@ export module renderer.vertex_storage;
 
 import std;
 
-
 export namespace ysn
 {
 using namespace DirectX;
@@ -30,6 +29,8 @@ struct Vertex
         uv0 = v.uv0;
         return *this;
     }
+
+    static std::vector<D3D12_INPUT_ELEMENT_DESC> GetVertexLayoutDesc();
 };
 
 struct DebugRenderVertex
@@ -50,18 +51,50 @@ struct VertexPosTexCoord
 
 struct VertexStorage
 {
-    //std::vector<Vertex> vertices;
+    // std::vector<Vertex> vertices;
 };
+
 } // namespace ysn
 
 module :private;
 
 namespace ysn
 {
+std::vector<D3D12_INPUT_ELEMENT_DESC> Vertex::GetVertexLayoutDesc()
+{
+    std::vector<D3D12_INPUT_ELEMENT_DESC> result;
+
+    result.push_back(
+        {.SemanticName = "POSITION",
+         .Format = DXGI_FORMAT_R32G32B32_FLOAT,
+         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
+
+    result.push_back(
+        {.SemanticName = "NORMAL",
+         .Format = DXGI_FORMAT_R32G32B32_FLOAT,
+         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
+
+    result.push_back(
+        {.SemanticName = "TANGENT",
+         .Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
+         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
+
+    result.push_back(
+        {.SemanticName = "TEXCOORD_",
+         .SemanticIndex = 0,
+         .Format = DXGI_FORMAT_R32G32_FLOAT,
+         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
+
+    return result;
+}
 
 std::vector<D3D12_INPUT_ELEMENT_DESC> ysn::DebugRenderVertex::GetVertexLayoutDesc()
 {
-    std::vector<D3D12_INPUT_ELEMENT_DESC> elements_desc;
+    std::vector<D3D12_INPUT_ELEMENT_DESC> result;
 
     D3D12_INPUT_ELEMENT_DESC position = {};
     position.SemanticName = "POSITION";
@@ -77,10 +110,10 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> ysn::DebugRenderVertex::GetVertexLayoutDes
     color.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
     color.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
-    elements_desc.push_back(position);
-    elements_desc.push_back(color);
+    result.push_back(position);
+    result.push_back(color);
 
-    return elements_desc;
+    return result;
 }
 
 std::vector<D3D12_INPUT_ELEMENT_DESC> ysn::VertexPosTexCoord::GetVertexLayoutDesc()

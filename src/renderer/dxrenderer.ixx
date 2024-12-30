@@ -32,10 +32,16 @@ public:
 
     bool CreateRootSignature(D3D12_ROOT_SIGNATURE_DESC* pRootSignatureDesc, ID3D12RootSignature** ppRootSignature) const;
 
-    std::optional<PsoId> CreatePso(const GraphicsPsoDesc& pso_desc);
+    wil::com_ptr<DxDevice> GetDevice() const;
+
+    std::optional<PsoId> BuildPso(GraphicsPsoDesc& desc);
+    std::optional<PsoId> BuildPso(ComputePsoDesc& desc);
     std::optional<Pso> GetPso(PsoId pso_id);
 
-    wil::com_ptr<DxDevice> GetDevice() const;
+    std::shared_ptr<ShaderStorage> GetShaderStorage()
+    {
+        return m_pso_storage.GetShaderStorage();
+    }
 
     std::shared_ptr<CommandQueue> GetDirectQueue() const;
     std::shared_ptr<CommandQueue> GetComputeQueue() const;
@@ -46,14 +52,9 @@ public:
     std::shared_ptr<RtvDescriptorHeap> GetRtvDescriptorHeap() const;
     std::shared_ptr<DsvDescriptorHeap> GetDsvDescriptorHeap() const;
 
-    std::shared_ptr<ShaderStorage> GetShaderStorage() const;
-    // std::shared_ptr<GenerateMipsSystem> GetMipGenerator() const;
-
     DXGI_FORMAT GetHdrFormat() const;
     DXGI_FORMAT GetBackBufferFormat() const;
     DXGI_FORMAT GetDepthBufferFormat() const;
-
-    const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputElementsDesc();
 
     void FlushQueues();
 
@@ -73,10 +74,8 @@ private:
     wil::com_ptr<DxSwapChain> m_swap_chain;
 
     // Data
-    std::vector<D3D12_INPUT_ELEMENT_DESC> m_default_input_elements_desc;
     VertexStorage m_vertex_storage;
     IndexStorage m_index_storage;
-    std::shared_ptr<ShaderStorage> m_shader_storage;
     PsoStorage m_pso_storage;
 
     // Formats
@@ -256,38 +255,6 @@ bool CheckTearingSupport()
     return allow_tearing;
 }
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> CreateDefaultInputElementDescArray()
-{
-    std::vector<D3D12_INPUT_ELEMENT_DESC> result;
-
-    result.push_back(
-        {.SemanticName = "POSITION",
-         .Format = DXGI_FORMAT_R32G32B32_FLOAT,
-         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
-
-    result.push_back(
-        {.SemanticName = "NORMAL",
-         .Format = DXGI_FORMAT_R32G32B32_FLOAT,
-         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
-
-    result.push_back(
-        {.SemanticName = "TANGENT",
-         .Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
-         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
-
-    result.push_back(
-        {.SemanticName = "TEXCOORD_",
-         .SemanticIndex = 0,
-         .Format = DXGI_FORMAT_R32G32_FLOAT,
-         .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-         .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA});
-
-    return result;
-}
-
 namespace ysn
 {
 bool DxRenderer::Initialize()
@@ -333,8 +300,6 @@ bool DxRenderer::Initialize()
     m_compute_command_queue->Initialize();
     m_copy_command_queue->Initialize();
 
-    m_shader_storage = std::make_shared<ShaderStorage>();
-
     // TODO(checks): Save somewhere budgets, make them dynamic?
     m_cbv_srv_uav_descriptor_heap = std::make_shared<CbvSrvUavDescriptorHeap>(m_device, 1024 * 512, true);
     m_sampler_descriptor_heap = std::make_shared<SamplerDescriptorHeap>(m_device, 1024, true);
@@ -349,13 +314,11 @@ bool DxRenderer::Initialize()
 
     m_is_raytracing_supported = CheckRaytracingSupport();
 
-    if (!m_shader_storage->Initialize())
+    if (!m_pso_storage.Initialize())
     {
-        LogError << "Can't create shader manager\n";
+        LogError << "Can't initialize pso storage\n";
         return false;
     }
-
-    m_default_input_elements_desc = CreateDefaultInputElementDescArray();
 
     return true;
 }
@@ -364,9 +327,14 @@ void DxRenderer::Shutdown()
 {
 }
 
-std::optional<PsoId> DxRenderer::CreatePso(const GraphicsPsoDesc& pso_desc)
+std::optional<PsoId> DxRenderer::BuildPso(GraphicsPsoDesc& pso_desc)
 {
-    return m_pso_storage.CreateGraphicsPso(m_device, pso_desc);
+    return m_pso_storage.BuildPso(m_device, &pso_desc);
+}
+
+std::optional<PsoId> DxRenderer::BuildPso(ComputePsoDesc& pso_desc)
+{
+    return m_pso_storage.BuildPso(m_device, &pso_desc);
 }
 
 std::optional<Pso> DxRenderer::GetPso(PsoId pso_id)
@@ -455,11 +423,6 @@ DXGI_FORMAT DxRenderer::GetDepthBufferFormat() const
     return depth_format;
 }
 
-const std::vector<D3D12_INPUT_ELEMENT_DESC>& DxRenderer::GetInputElementsDesc()
-{
-    return m_default_input_elements_desc;
-}
-
 void DxRenderer::FlushQueues()
 {
     m_direct_command_queue->Flush();
@@ -500,11 +463,6 @@ std::shared_ptr<RtvDescriptorHeap> DxRenderer::GetRtvDescriptorHeap() const
 std::shared_ptr<DsvDescriptorHeap> DxRenderer::GetDsvDescriptorHeap() const
 {
     return m_dsv_descriptor_heap;
-}
-
-std::shared_ptr<ShaderStorage> DxRenderer::GetShaderStorage() const
-{
-    return m_shader_storage;
 }
 
 } // namespace ysn

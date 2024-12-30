@@ -12,6 +12,7 @@ import renderer.descriptor_heap;
 import renderer.gpu_texture;
 import renderer.gpu_pixel_buffer;
 import renderer.command_queue;
+import renderer.pso;
 import system.string_helpers;
 import system.filesystem;
 import system.application;
@@ -21,8 +22,6 @@ export namespace ysn
 {
 struct SkyboxPassParameters
 {
-    std::shared_ptr<CommandQueue> command_queue = nullptr;
-    std::shared_ptr<CbvSrvUavDescriptorHeap> cbv_srv_uav_heap = nullptr;
     wil::com_ptr<ID3D12Resource> scene_color_buffer = nullptr;
     DescriptorHandle hdr_rtv_descriptor_handle;
     DescriptorHandle dsv_descriptor_handle;
@@ -52,12 +51,8 @@ public:
     bool RenderSkybox(SkyboxPassParameters* parameters);
 
 private:
-    void UpdateParameters();
-
     MeshPrimitive cube;
-
-    wil::com_ptr<ID3D12RootSignature> m_root_signature;
-    wil::com_ptr<ID3D12PipelineState> m_pipeline_state;
+    PsoId m_pso_id;
 };
 } // namespace ysn
 
@@ -67,6 +62,8 @@ namespace ysn
 {
 bool SkyboxPass::Initialize()
 {
+    auto renderer = Application::Get().GetRenderer();
+
     const auto box_result = ConstructBox();
 
     if (!box_result.has_value())
@@ -99,29 +96,13 @@ bool SkyboxPass::Initialize()
     root_signature_desc.pStaticSamplers = &static_sampler;
     root_signature_desc.NumStaticSamplers = 1;
 
-    bool result = Application::Get().GetRenderer()->CreateRootSignature(&root_signature_desc, &m_root_signature);
+    ID3D12RootSignature* root_signature = nullptr;
+
+    bool result = renderer->CreateRootSignature(&root_signature_desc, &root_signature);
 
     if (!result)
     {
         LogError << "Can't create ConvertToCubemap root signature\n";
-        return false;
-    }
-
-    ShaderCompileParameters vs_parameters(ShaderType::Vertex, VfsPath(L"shaders/skybox.vs.hlsl"));
-    const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
-
-    if (!vs_shader_result.has_value())
-    {
-        LogError << "Can't compile SkyBox vs shader\n";
-        return false;
-    }
-
-    ShaderCompileParameters ps_parameters(ShaderType::Pixel, ysn::VfsPath(L"shaders/skybox.ps.hlsl"));
-    const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
-
-    if (!ps_shader_result.has_value())
-    {
-        LogError << "Can't compile Skybox ps shader\n";
         return false;
     }
 
@@ -132,62 +113,75 @@ bool SkyboxPass::Initialize()
     D3D12_BLEND_DESC blend_desc = {};
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc = {};
-    pipeline_state_desc.pRootSignature = m_root_signature.get();
-    pipeline_state_desc.VS = {vs_shader_result.value()->GetBufferPointer(), vs_shader_result.value()->GetBufferSize()};
-    pipeline_state_desc.PS = {ps_shader_result.value()->GetBufferPointer(), ps_shader_result.value()->GetBufferSize()};
-    pipeline_state_desc.RasterizerState = rasterizer_desc;
-    pipeline_state_desc.BlendState = blend_desc;
-    pipeline_state_desc.DepthStencilState.DepthEnable = true;
-    pipeline_state_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    pipeline_state_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-    pipeline_state_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: provide
-    pipeline_state_desc.SampleMask = UINT_MAX;
-    pipeline_state_desc.InputLayout = {cube.input_layout_desc.data(), static_cast<UINT>(cube.input_layout_desc.size())};
-    pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipeline_state_desc.NumRenderTargets = 1;
-    pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT; // TODO: Get it from rendertarget
-    pipeline_state_desc.SampleDesc = {1, 0};
+    GraphicsPsoDesc pso_desc("Skybox PSO");
 
-    if (auto hr_result =
-            Application::Get().GetDevice()->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&m_pipeline_state));
-        hr_result != S_OK)
-    {
-        LogError << "Can't create SkyBox pipeline state object :" << ConvertHrToString(hr_result) << "\n";
+    pso_desc.AddShader({ShaderType::Pixel, ysn::VfsPath(L"shaders/skybox.ps.hlsl")});
+    pso_desc.AddShader({ShaderType::Vertex, ysn::VfsPath(L"shaders/skybox.vs.hlsl")});
+    pso_desc.SetRootSignature(root_signature);
+    pso_desc.SetRasterizerState(rasterizer_desc);
+    pso_desc.SetBlendState(blend_desc);
+    pso_desc.SetDepthStencilState({
+        .DepthEnable = true,
+        .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO,
+        .DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+    });
+    pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+    pso_desc.SetSampleMask(UINT_MAX);
+    pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
+    pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+
+    auto result_pso = renderer->BuildPso(pso_desc);
+
+    if (!result_pso.has_value())
         return false;
-    }
+
+    m_pso_id = *result_pso;
 
     return true;
 }
 
 bool SkyboxPass::RenderSkybox(SkyboxPassParameters* parameters)
 {
-    const auto command_list_result = parameters->command_queue->GetCommandList("Skybox");
+    auto renderer = Application::Get().GetRenderer();
 
-    if(!command_list_result.has_value())
+    const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
+
+    if (!pso.has_value())
+    {
+        LogError << "Can't find debug render PSO\n";
+        return false;
+    }
+
+    auto& pso_object = pso.value();
+
+    const auto command_list_result = renderer->GetDirectQueue()->GetCommandList("Skybox");
+
+    if (!command_list_result.has_value())
         return false;
 
     GraphicsCommandList command_list = command_list_result.value();
 
-    ID3D12DescriptorHeap* ppHeaps[] = {parameters->cbv_srv_uav_heap->GetHeapPtr()};
+    ID3D12DescriptorHeap* ppHeaps[] = {renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr()};
     command_list.list->RSSetViewports(1, &parameters->viewport);
     command_list.list->RSSetScissorRects(1, &parameters->scissors_rect);
     command_list.list->OMSetRenderTargets(1, &parameters->hdr_rtv_descriptor_handle.cpu, FALSE, &parameters->dsv_descriptor_handle.cpu);
     command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    command_list.list->SetPipelineState(m_pipeline_state.get());
-    command_list.list->SetGraphicsRootSignature(m_root_signature.get());
+    command_list.list->SetPipelineState(pso_object.pso.get());
+    command_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
     command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 
-    command_list.list->SetGraphicsRootConstantBufferView(ShaderInputParameters::CameraBuffer, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
+    command_list.list->SetGraphicsRootConstantBufferView(
+        ShaderInputParameters::CameraBuffer, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
     command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::InputTexture, parameters->cubemap_texture.srv.gpu);
     command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVertices, parameters->debug_vertices_buffer_uav.gpu);
-    command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVerticesCount, parameters->debug_counter_buffer_uav.gpu);
+    command_list.list->SetGraphicsRootDescriptorTable(
+        ShaderInputParameters::DebugVerticesCount, parameters->debug_counter_buffer_uav.gpu);
 
     command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
     command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 
-    parameters->command_queue->ExecuteCommandList(command_list);
+    renderer->GetDirectQueue()->ExecuteCommandList(command_list);
 
     return true;
 }
