@@ -115,10 +115,7 @@ bool ConvertToCubemap::Initialize()
         return false;
     }
 
-    ysn::ShaderCompileParameters vs_parameters;
-    vs_parameters.shader_type = ysn::ShaderType::Vertex;
-    vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/convert_equirectangular_map.vs.hlsl");
-
+    ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/convert_equirectangular_map.vs.hlsl"));
     const auto vs_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(vs_parameters);
 
     if (!vs_shader_result.has_value())
@@ -127,10 +124,7 @@ bool ConvertToCubemap::Initialize()
         return false;
     }
 
-    ysn::ShaderCompileParameters ps_parameters;
-    ps_parameters.shader_type = ysn::ShaderType::Pixel;
-    ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/convert_equirectangular_map.ps.hlsl");
-
+    ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/convert_equirectangular_map.ps.hlsl"));
     const auto ps_shader_result = Application::Get().GetRenderer()->GetShaderStorage()->CompileShader(ps_parameters);
 
     if (!ps_shader_result.has_value())

@@ -164,10 +164,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         return false;
     }
 
-    ysn::ShaderCompileParameters vs_parameters;
-    vs_parameters.shader_type = ysn::ShaderType::Vertex;
-    vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/debug_geometry.vs.hlsl");
-
+    ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/debug_geometry.vs.hlsl"));
     const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
     if (!vs_shader_result.has_value())
@@ -176,10 +173,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         return false;
     }
 
-    ysn::ShaderCompileParameters ps_parameters;
-    ps_parameters.shader_type = ysn::ShaderType::Pixel;
-    ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/debug_geometry.ps.hlsl");
-
+    ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/debug_geometry.ps.hlsl"));
     const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
     if (!ps_shader_result.has_value())

@@ -413,10 +413,7 @@ bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> r
 {
     // Load shaders
     {
-        ShaderCompileParameters pathtracing_parameters;
-        pathtracing_parameters.shader_type = ShaderType::Library;
-        pathtracing_parameters.shader_path = GetVirtualFilesystemPath(L"shaders/pathtracing.rt.hlsl");
-
+        ShaderCompileParameters<LibraryShader> pathtracing_parameters(VfsPath(L"shaders/pathtracing.rt.hlsl"));
         const auto pathtracing_result = renderer->GetShaderStorage()->CompileShader(pathtracing_parameters);
 
         if (!pathtracing_result.has_value())

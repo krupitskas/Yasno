@@ -15,6 +15,7 @@ export namespace ysn
 {
 struct GpuBuffer : public GpuResource
 {
+    // TODO: add generators for UAV, SRV, CBV
 };
 
 struct GpuBufferCreateInfo
@@ -40,6 +41,8 @@ module :private;
 
 namespace ysn
 {
+
+// TODO: move to std::expected
 std::optional<GpuBuffer> CreateGpuBuffer(const GpuBufferCreateInfo& info, const std::string& debug_name)
 {
     auto d3d_device = Application::Get().GetDevice();

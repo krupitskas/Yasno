@@ -355,6 +355,8 @@ void Yasno::UpdateGpuSceneParametersBuffer()
 
 bool Yasno::LoadContent()
 {
+    const auto init_start_time = std::chrono::high_resolution_clock::now();
+
     const auto device = Application::Get().GetDevice();
     auto renderer = Application::Get().GetRenderer();
 
@@ -394,27 +396,27 @@ bool Yasno::LoadContent()
 
     bool load_result = false;
 
-    //{
-    //    LoadingParameters loading_parameters;
-    //    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-    //    load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
-    //}
-
     {
         LoadingParameters loading_parameters;
-        load_result =
-            LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+        loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+        load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
     }
+
+    //{
+    //    LoadingParameters loading_parameters;
+    //    load_result =
+    //        LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+    //}
 
     //{
     //	LoadingParameters loading_parameters;
     //	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-    //	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+    //	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
     //}
 
     //{
     //	LoadingParameters loading_parameters;
-    //	load_result = LoadGltfFromFile(m_render_scene, GetVirtualFilesystemPath(L"assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
+    //	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
     //}
 
     // Build mips
@@ -774,6 +776,11 @@ bool Yasno::LoadContent()
         LogError << "Can't initialize raytracing pass\n";
         return false;
     }
+    
+    const auto init_end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(init_end_time - init_start_time);
+
+    LogInfo << "LoadContent finished, duration: " << std::to_string(duration.count()) << " ms\n";
 
     return true;
 }

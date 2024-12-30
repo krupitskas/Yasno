@@ -193,10 +193,7 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
 
     // Vertex shader
     {
-        ysn::ShaderCompileParameters vs_parameters;
-        vs_parameters.shader_type = ysn::ShaderType::Vertex;
-        vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/forward_pass.vs.hlsl");
-
+        ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/forward_pass.vs.hlsl"));
         const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
         if (!vs_shader_result.has_value())
@@ -210,10 +207,7 @@ bool ForwardPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Mat
 
     // Pixel shader
     {
-        ysn::ShaderCompileParameters ps_parameters;
-        ps_parameters.shader_type = ysn::ShaderType::Pixel;
-        ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/forward_pass.ps.hlsl");
-
+        ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/forward_pass.ps.hlsl"));
         const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
         if (!ps_shader_result.has_value())
@@ -465,10 +459,7 @@ bool ForwardPass::InitializeIndirectPipeline(
 
     // Vertex shader
     {
-        ysn::ShaderCompileParameters vs_parameters;
-        vs_parameters.shader_type = ysn::ShaderType::Vertex;
-        vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/indirect_forward_pass.vs.hlsl");
-
+        ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/indirect_forward_pass.vs.hlsl"));
         const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
         if (!vs_shader_result.has_value())
@@ -482,10 +473,7 @@ bool ForwardPass::InitializeIndirectPipeline(
 
     // Pixel shader
     {
-        ysn::ShaderCompileParameters ps_parameters;
-        ps_parameters.shader_type = ysn::ShaderType::Pixel;
-        ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/indirect_forward_pass.ps.hlsl");
-
+        ysn::ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/indirect_forward_pass.ps.hlsl"));
         const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
         if (!ps_shader_result.has_value())

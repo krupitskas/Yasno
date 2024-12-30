@@ -40,8 +40,9 @@ struct ShadowRenderParameters
     wil::com_ptr<ID3D12Resource> scene_parameters_gpu_buffer;
 };
 
-struct ShadowMapPass
+class ShadowMapPass
 {
+public:
     void Initialize(std::shared_ptr<DxRenderer> p_renderer);
     bool CompilePrimitivePso(Primitive& primitive, std::vector<Material> materials);
     void UpdateLight(const DirectionalLight& Light);
@@ -159,10 +160,8 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
 
     // Vertex shader
     {
-        ysn::ShaderCompileParameters vs_parameters;
-        vs_parameters.shader_type = ysn::ShaderType::Vertex;
-        vs_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/forward_pass.vs.hlsl");
-        vs_parameters.defines.emplace_back(L"SHADOW_PASS");
+        ShaderCompileParameters<VertexShader> vs_parameters(VfsPath(L"shaders/forward_pass.vs.hlsl"));
+        vs_parameters.defines.insert(L"SHADOW_PASS");
 
         const auto vs_shader_result = renderer->GetShaderStorage()->CompileShader(vs_parameters);
 
@@ -177,10 +176,7 @@ bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<M
 
     // Pixel shader
     {
-        ysn::ShaderCompileParameters ps_parameters;
-        ps_parameters.shader_type = ysn::ShaderType::Pixel;
-        ps_parameters.shader_path = ysn::GetVirtualFilesystemPath(L"shaders/shadow_pass.ps.hlsl");
-
+        ShaderCompileParameters<PixelShader> ps_parameters(VfsPath(L"shaders/shadow_pass.ps.hlsl"));
         const auto ps_shader_result = renderer->GetShaderStorage()->CompileShader(ps_parameters);
 
         if (!ps_shader_result.has_value())

@@ -10,7 +10,7 @@ export namespace ysn
 {
 bool DirectoryExists(const std::wstring_view path);
 bool CreateDirectoryIfNotExists(const std::wstring_view path);
-std::wstring GetVirtualFilesystemPath(const std::wstring_view path);
+std::wstring VfsPath(const std::wstring_view path);
 } // namespace ysn
 
 namespace ysn
@@ -46,7 +46,7 @@ bool CreateDirectoryIfNotExists(const std::wstring_view path)
     }
 }
 
-std::wstring GetVirtualFilesystemPath(const std::wstring_view path)
+std::wstring VfsPath(const std::wstring_view path)
 {
     std::string source_dir = "";
     std::wstring wsource_dir = std::wstring(source_dir.begin(), source_dir.end());

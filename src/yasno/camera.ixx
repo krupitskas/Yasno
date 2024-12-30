@@ -16,6 +16,7 @@ struct Camera
     Camera();
 
     DirectX::XMMATRIX GetViewMatrix() const;
+    // TODO: Previous View Matrix
     DirectX::XMMATRIX GetProjectionMatrix() const;
 
     void Update();
