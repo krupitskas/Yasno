@@ -414,14 +414,15 @@ bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> r
     // Load shaders
     {
         ShaderCompileParameters pathtracing_parameters(ShaderType::Library, VfsPath(L"shaders/pathtracing.rt.hlsl"));
-        const auto pathtracing_result = renderer->GetShaderStorage()->CompileShader(pathtracing_parameters);
+        const auto compiled_shader_hash = renderer->GetShaderStorage()->CompileShader(pathtracing_parameters);
 
-        if (!pathtracing_result.has_value())
+        if (!compiled_shader_hash.has_value())
         {
             LogError << "Can't compile pathtracing shader\n";
             return false;
         }
-        m_pathtracing_shader_blob = pathtracing_result.value();
+
+        m_pathtracing_shader_blob = renderer->GetShaderStorage()->GetShader(*compiled_shader_hash).value();
     }
 
     CD3DX12_STATE_OBJECT_DESC rtx_pipeline{D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE};

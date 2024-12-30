@@ -56,6 +56,12 @@ public:
     DXGI_FORMAT GetBackBufferFormat() const;
     DXGI_FORMAT GetDepthBufferFormat() const;
 
+    void Tick()
+    {
+        // TODO: Better use another place?
+        m_pso_storage.Tick(m_device);
+    }
+
     void FlushQueues();
 
     bool IsTearingSupported();

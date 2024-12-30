@@ -25,10 +25,10 @@ import system.filesystem;
 import system.logger;
 import system.asserts;
 
-using ShaderHash = std::size_t;
-
 export namespace ysn
 {
+using ShaderHash = std::size_t;
+
 enum class ShaderType
 {
     Pixel,
@@ -68,17 +68,31 @@ public:
 private:
 };
 
+class ShaderModificationData
+{
+public:
+    ShaderModificationData() = default;
+
+    ShaderModificationData(ShaderHash hash, ShaderCompileParameters params, std::time_t time) :
+        shader_hash(hash), compile_parameters(params), modification_time(time)
+    {
+    }
+
+    ShaderHash shader_hash;
+    ShaderCompileParameters compile_parameters;
+    std::time_t modification_time;
+};
+
 class ShaderStorage
 {
 public:
     bool Initialize();
 
-    std::optional<wil::com_ptr<IDxcBlob>> CompileShader(const ShaderCompileParameters& parameters);
+    std::optional<ShaderHash> CompileShader(const ShaderCompileParameters& parameters);
+    std::optional<wil::com_ptr<IDxcBlob>> GetShader(ShaderHash shader_hash);
+    bool RemoveShader(ShaderHash shader_hash);
 
-#ifndef YSN_RELEASE
-    std::vector<ShaderHash> VerifyAnyShaderChanged();
-#endif
-
+    std::vector<ShaderModificationData> VerifyAnyShaderChanged();
 private:
     uint64_t shader_cache_hits = 0;
 
@@ -86,25 +100,8 @@ private:
 
     std::unordered_map<ShaderHash, wil::com_ptr<IDxcBlob>> m_compiled_shaders;
 
-#ifndef YSN_RELEASE
-    struct ShaderModificationData
-    {
-        ShaderModificationData() = default;
-
-        ShaderModificationData(ShaderHash hash, ShaderCompileParameters params, std::time_t time) :
-            shader_hash(hash),
-            compile_parameters(params),
-            modification_time(time)
-        {
-        }
-
-        ShaderHash shader_hash;
-        ShaderCompileParameters compile_parameters;
-        std::time_t modification_time;
-    };
     std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
     std::unordered_map<std::wstring, ShaderModificationData> m_shaders_modified_data;
-#endif
 
     std::wstring m_debug_data_path = L"ShadersDebugData";
     std::wstring m_binary_data_path = L"ShadersBinaryData";
@@ -121,7 +118,7 @@ private:
 
 export namespace std
 {
-template<>
+template <>
 struct hash<ysn::ShaderCompileParameters>
 {
     std::size_t operator()(const ysn::ShaderCompileParameters& params) const
@@ -241,7 +238,23 @@ bool ShaderStorage::Initialize()
     return true;
 }
 
-std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderCompileParameters& parameters)
+std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::GetShader(ShaderHash shader_hash)
+{
+    if (m_compiled_shaders.contains(shader_hash))
+    {
+        return m_compiled_shaders[shader_hash];
+    }
+
+    return std::nullopt;
+}
+
+bool ShaderStorage::RemoveShader(ShaderHash shader_hash)
+{
+    m_compiled_shaders.erase(shader_hash);
+    return true;
+}
+
+std::optional<ShaderHash> ShaderStorage::CompileShader(const ShaderCompileParameters& parameters)
 {
     std::filesystem::path fullpath(parameters.shader_path);
 
@@ -252,7 +265,7 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
     {
         LogInfo << "Shader cache hit: " << fullpath.string().c_str() << "\n";
         shader_cache_hits += 1;
-        return m_compiled_shaders[shader_hash];
+        return shader_hash;
     }
 
     const std::wstring filename = fullpath.filename();
@@ -479,7 +492,7 @@ std::optional<wil::com_ptr<IDxcBlob>> ShaderStorage::CompileShader(const ShaderC
 
 #endif
 
-    return shader_data;
+    return shader_hash;
 }
 
 std::wstring ShaderStorage::GetShaderProfile(ShaderType type) const
@@ -499,9 +512,9 @@ std::wstring ShaderStorage::GetShaderProfile(ShaderType type) const
 }
 
 #ifndef YSN_RELEASE
-std::vector<ShaderHash> ShaderStorage::VerifyAnyShaderChanged()
+std::vector<ShaderModificationData> ShaderStorage::VerifyAnyShaderChanged()
 {
-    std::vector<ShaderHash> result;
+    std::vector<ShaderModificationData> result;
 
     for (const auto& [shader_path, data] : m_shaders_modified_data)
     {
@@ -511,11 +524,8 @@ std::vector<ShaderHash> ShaderStorage::VerifyAnyShaderChanged()
         {
             if (latest_time.value() != data.modification_time)
             {
-                LogInfo << "Shader " << WStringToString(shader_path) << " was modified, recompiling PSO\n";
-
-                result.push_back(data.shader_hash);
-
                 m_shaders_modified_data[shader_path].modification_time = latest_time.value();
+                result.push_back(m_shaders_modified_data[shader_path]);
             }
         }
         else

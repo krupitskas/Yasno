@@ -396,17 +396,17 @@ bool Yasno::LoadContent()
 
     bool load_result = false;
 
-    {
-        LoadingParameters loading_parameters;
-        loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-        load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
-    }
-
     //{
     //    LoadingParameters loading_parameters;
-    //    load_result =
-    //        LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+    //    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+    //    load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
     //}
+
+    {
+        LoadingParameters loading_parameters;
+        load_result =
+            LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+    }
 
     //{
     //	LoadingParameters loading_parameters;
@@ -421,12 +421,8 @@ bool Yasno::LoadContent()
 
     // Build mips
     for (auto& model : m_render_scene.models)
-    {
         for (const GpuTexture& texture : model.textures)
-        {
             m_generate_mips_pass.GenerateMips(renderer, command_list.list, texture);
-        }
-    }
 
     {
         // Index buffer
@@ -1073,14 +1069,9 @@ void Yasno::OnUpdate(UpdateEventArgs& e)
     m_render_scene.camera->SetAspectRatio(GetClientWidth() / static_cast<float>(GetClientHeight()));
     m_render_scene.camera->Update();
 
-    // todo(modules):
-#ifndef YSN_RELEASE
-    // Track shader updates
-    Application::Get().GetRenderer()->GetShaderStorage()->VerifyAnyShaderChanged();
-#endif
-
     // Clear stage GPU resources
     Application::Get().GetRenderer()->stage_heap.clear();
+    Application::Get().GetRenderer()->Tick();
 }
 
 void Yasno::RenderUi()
