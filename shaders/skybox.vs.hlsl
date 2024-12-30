@@ -41,7 +41,8 @@ VertexShaderOutput main(VertexPosTexCoord input)
     output.OriginalPosition = input.Position;
     output.TexCoord = input.TexCoord;
 
-    DrawLine(float3(0,0,0), input.Position, float3(255,0,0), float3(255,0,0));
+    //DrawAxisAlignedBox(camera_position, float3(1.0, 1.0, 1.0), float3(255,0,0));
+    //DrawSphere(camera_position, 1.0, float3(255,0,0));
 
     return output;
 }
