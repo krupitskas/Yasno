@@ -157,11 +157,7 @@ std::expected<GpuPixelBuffer3D, std::string> CreateCubemapTexture()
     ID3D12Resource* result = nullptr;
 
     if (renderer->GetDevice()->CreateCommittedResource(
-            &heap_properties_default,
-            D3D12_HEAP_FLAG_NONE,
-            &texture_desc,
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-            nullptr, IID_PPV_ARGS(&result)) !=
+            &heap_properties_default, D3D12_HEAP_FLAG_NONE, &texture_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&result)) !=
         S_OK)
     {
         return std::unexpected("Can't create cubemap resource\n");
@@ -406,8 +402,7 @@ std::expected<bool, std::string> Yasno::LoadContent()
 
     {
         LoadingParameters loading_parameters;
-        load_result =
-            LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+        load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
     }
 
     //{
@@ -774,7 +769,7 @@ std::expected<bool, std::string> Yasno::LoadContent()
         LogError << "Can't initialize raytracing pass\n";
         return false;
     }
-    
+
     const auto init_end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(init_end_time - init_start_time);
 
@@ -1013,53 +1008,56 @@ void Yasno::OnUpdate(UpdateEventArgs& e)
     auto mouse = game_input.mouse->GetState();
     game_input.mouse->SetMode(mouse.rightButton ? DirectX::Mouse::MODE_RELATIVE : DirectX::Mouse::MODE_ABSOLUTE);
 
-    if (mouse.positionMode == DirectX::Mouse::MODE_RELATIVE)
+    if (!ImGui::GetIO().WantTextInput)
     {
-        m_render_scene.camera_controler.MoveMouse(mouse.x, mouse.y);
+        if (mouse.positionMode == DirectX::Mouse::MODE_RELATIVE)
+        {
+            m_render_scene.camera_controler.MoveMouse(mouse.x, mouse.y);
 
-        m_render_scene.camera_controler.m_is_boost_active = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
+            m_render_scene.camera_controler.m_is_boost_active = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
 
-        if (kb.IsKeyDown(DirectX::Keyboard::W))
-        {
-            m_render_scene.camera_controler.MoveForward(static_cast<float>(e.ElapsedTime));
-        }
-        if (kb.IsKeyDown(DirectX::Keyboard::A))
-        {
-            m_render_scene.camera_controler.MoveLeft(static_cast<float>(e.ElapsedTime));
-        }
-        if (kb.IsKeyDown(DirectX::Keyboard::S))
-        {
-            m_render_scene.camera_controler.MoveBackwards(static_cast<float>(e.ElapsedTime));
-        }
-        if (kb.IsKeyDown(DirectX::Keyboard::D))
-        {
-            m_render_scene.camera_controler.MoveRight(static_cast<float>(e.ElapsedTime));
-        }
-        if (kb.IsKeyDown(DirectX::Keyboard::Space))
-        {
-            m_render_scene.camera_controler.MoveUp(static_cast<float>(e.ElapsedTime));
-        }
-        if (kb.IsKeyDown(DirectX::Keyboard::LeftControl))
-        {
-            m_render_scene.camera_controler.MoveDown(static_cast<float>(e.ElapsedTime));
-        }
-    }
-
-    if (kb.IsKeyDown(DirectX::Keyboard::Escape))
-    {
-        Application::Get().Quit(0);
-    }
-
-    {
-        if (kb.IsKeyDown(DirectX::Keyboard::R) && !m_is_raster_pressed)
-        {
-            m_is_raster = !m_is_raster;
-            m_is_raster_pressed = true;
+            if (kb.IsKeyDown(DirectX::Keyboard::W))
+            {
+                m_render_scene.camera_controler.MoveForward(static_cast<float>(e.ElapsedTime));
+            }
+            if (kb.IsKeyDown(DirectX::Keyboard::A))
+            {
+                m_render_scene.camera_controler.MoveLeft(static_cast<float>(e.ElapsedTime));
+            }
+            if (kb.IsKeyDown(DirectX::Keyboard::S))
+            {
+                m_render_scene.camera_controler.MoveBackwards(static_cast<float>(e.ElapsedTime));
+            }
+            if (kb.IsKeyDown(DirectX::Keyboard::D))
+            {
+                m_render_scene.camera_controler.MoveRight(static_cast<float>(e.ElapsedTime));
+            }
+            if (kb.IsKeyDown(DirectX::Keyboard::Space))
+            {
+                m_render_scene.camera_controler.MoveUp(static_cast<float>(e.ElapsedTime));
+            }
+            if (kb.IsKeyDown(DirectX::Keyboard::LeftControl))
+            {
+                m_render_scene.camera_controler.MoveDown(static_cast<float>(e.ElapsedTime));
+            }
         }
 
-        if (kb.IsKeyUp(DirectX::Keyboard::R))
+        if (kb.IsKeyDown(DirectX::Keyboard::Escape))
         {
-            m_is_raster_pressed = false;
+            Application::Get().Quit(0);
+        }
+
+        {
+            if (kb.IsKeyDown(DirectX::Keyboard::R) && !m_is_raster_pressed)
+            {
+                m_is_raster = !m_is_raster;
+                m_is_raster_pressed = true;
+            }
+
+            if (kb.IsKeyUp(DirectX::Keyboard::R))
+            {
+                m_is_raster_pressed = false;
+            }
         }
     }
 
@@ -1093,6 +1091,17 @@ void Yasno::RenderUi()
 
     {
         ImGui::Begin(CONTROLS_NAME.c_str());
+
+        static std::string text;
+        static char buffer[256] = "";
+        if (ImGui::InputText("cvar", buffer, sizeof(buffer), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            text = buffer;
+            buffer[0] = '\0';
+
+            LogInfo << "New cvar " << text << "\n";
+        }
+        ImGui::Text("You entered: %s", text.c_str());
 
         ImGui::Checkbox("Indirect", &m_is_indirect);
 

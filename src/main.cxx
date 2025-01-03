@@ -4,9 +4,12 @@ import std;
 import yasno;
 import yasno.settings;
 import system.application;
+import system.profiler;
 
 int WINAPI wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
 {
+    ysn::ProfilerSetThreadName("Ysn Main Thread");
+
     ysn::GraphicsSettings gs;
 
     ysn::Application::Create(hinstance);

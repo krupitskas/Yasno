@@ -10,6 +10,14 @@ import std;
 
 export namespace ysn
 {
+void ProfilerSetThreadName(std::string_view name)
+{
+#ifdef SUPERLUMINAL_API_EXIST
+    PerformanceAPI_SetCurrentThreadName(name.data());
+#else
+    (void)name;
+#endif
+}
 
 struct ScopedZone
 {

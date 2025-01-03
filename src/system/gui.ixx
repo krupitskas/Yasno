@@ -90,6 +90,7 @@ void ImguiPrepareNewFrame()
         ImGui::DockBuilderDockWindow(STATS_NAME.c_str(), dock_id_right);
         ImGui::DockBuilderFinish(dockspace_id);
 
+
         is_docking_initialized = true;
     }
 }
