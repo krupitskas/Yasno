@@ -1,8 +1,5 @@
 ﻿module;
 
-#define TRACY_ENABLE
-#include <tracy/Tracy.hpp>
-
 #include <DirectXMath.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -360,8 +357,6 @@ void Yasno::UpdateGpuSceneParametersBuffer()
 
 std::expected<bool, std::string> Yasno::LoadContent()
 {
-    ZoneScopedN("Load Content");
-
     const auto init_start_time = std::chrono::high_resolution_clock::now();
 
     const auto device = Application::Get().GetDevice();
@@ -1188,7 +1183,7 @@ void Yasno::RenderUi()
 
 void Yasno::OnRender(RenderEventArgs& e)
 {
-    ZoneScopedN("Render");
+    ScopedZone s("Frame Render");
 
     Game::OnRender(e);
 
@@ -1207,9 +1202,9 @@ void Yasno::OnRender(RenderEventArgs& e)
 
         ImGuizmo::SetRect(0, 0, static_cast<float>(GetClientWidth()), static_cast<float>(GetClientHeight()));
 
-        XMFLOAT4X4 view;
-        XMFLOAT4X4 projection;
-        XMFLOAT4X4 identity;
+        DirectX::XMFLOAT4X4 view;
+        DirectX::XMFLOAT4X4 projection;
+        DirectX::XMFLOAT4X4 identity;
 
         XMStoreFloat4x4(&view, m_render_scene.camera->GetViewMatrix());
         XMStoreFloat4x4(&projection, m_render_scene.camera->GetProjectionMatrix());
