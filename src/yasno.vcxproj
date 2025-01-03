@@ -268,6 +268,7 @@
     <ClCompile Include="renderer\dx_debug_layer.ixx" />
     <ClCompile Include="renderer\dx_types.ixx" />
     <ClCompile Include="renderer\gpu_pixel_buffer.ixx" />
+    <ClCompile Include="renderer\gpu_readback_buffer.ixx" />
     <ClCompile Include="renderer\tlas_generator.ixx" />
     <ClCompile Include="system\asserts.ixx" />
     <ClCompile Include="system\clock.ixx" />
@@ -275,6 +276,7 @@
     <ClCompile Include="system\cvars.ixx" />
     <ClCompile Include="system\filesystem.ixx" />
     <ClCompile Include="system\math.ixx" />
+    <ClCompile Include="system\profiler.ixx" />
     <ClCompile Include="system\string_helpers.ixx" />
   </ItemGroup>
   <ItemGroup>
@@ -309,7 +311,7 @@
     <ClCompile Include="graphics\techniques\forward_pass.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="graphics\techniques\raytracing_pass.ixx" />
+    <ClCompile Include="graphics\techniques\pathtracing_pass.ixx" />
     <ClCompile Include="graphics\techniques\skybox_pass.ixx">
       <FileType>Document</FileType>
     </ClCompile>
@@ -341,7 +343,7 @@
     <ClCompile Include="renderer\pso.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="renderer\raytracing_context.ixx">
+    <ClCompile Include="renderer\rtx_context.ixx">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\root_signature.ixx">

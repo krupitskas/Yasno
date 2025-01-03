@@ -4,7 +4,7 @@ module;
 #include <d3d12.h>
 #include <DirectXMath.h>
 
-export module renderer.raytracing_context;
+export module renderer.rtx_context;
 
 import std;
 import system.application;
@@ -42,8 +42,9 @@ struct TlasInput
     uint32_t instance_id = 0;
 };
 
-struct RaytracingContext
+class RtxContext
 {
+public:
     AccelerationStructureBuffers CreateBlas(
         wil::com_ptr<DxDevice> device, wil::com_ptr<DxGraphicsCommandList> command_list, std::vector<BlasInput> vertex_buffers);
 
@@ -62,7 +63,7 @@ struct RaytracingContext
 
 module :private;
 
-ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBlas(
+ysn::AccelerationStructureBuffers ysn::RtxContext::CreateBlas(
     wil::com_ptr<DxDevice> device,
     wil::com_ptr<DxGraphicsCommandList> command_list,
     std::vector<BlasInput> vertex_buffers)
@@ -111,7 +112,7 @@ ysn::AccelerationStructureBuffers ysn::RaytracingContext::CreateBlas(
 }
 
 // Instances are pair of bottom level AS and matrix of the instance
-void ysn::RaytracingContext::CreateTlas(
+void ysn::RtxContext::CreateTlas(
     wil::com_ptr<DxDevice> device, wil::com_ptr<DxGraphicsCommandList> command_list, const std::vector<TlasInput>& input_instances)
 {
     // Gather all the instances into the builder helper
@@ -167,7 +168,7 @@ void ysn::RaytracingContext::CreateTlas(
     tlas_generator.Generate(command_list.get(), tlas_buffers.scratch, tlas_buffers.result, tlas_buffers.instance_desc);
 }
 
-void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer)
+void ysn::RtxContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> renderer)
 {
     tlas_buffers.tlas_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
@@ -175,7 +176,7 @@ void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> rend
     srv_desc.Format = DXGI_FORMAT_UNKNOWN;
     srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
     srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srv_desc.RaytracingAccelerationStructure.Location = tlas_buffers.result.GetGPUVirtualAddress();
+    srv_desc.RaytracingAccelerationStructure.Location = tlas_buffers.result.GPUVirtualAddress();
 
     // Write the acceleration structure view in the heap
     renderer->GetDevice()->CreateShaderResourceView(nullptr, &srv_desc, tlas_buffers.tlas_srv.cpu);
@@ -183,7 +184,7 @@ void ysn::RaytracingContext::CreateTlasSrv(std::shared_ptr<ysn::DxRenderer> rend
 
 // Combine the BLAS and TLAS builds to construct the entire acceleration structure required to raytrace the scene
 
-void ysn::RaytracingContext::CreateAccelerationStructures(wil::com_ptr<DxGraphicsCommandList> command_list, const RenderScene& render_scene)
+void ysn::RtxContext::CreateAccelerationStructures(wil::com_ptr<DxGraphicsCommandList> command_list, const RenderScene& render_scene)
 {
     std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
 

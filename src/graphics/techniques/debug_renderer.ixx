@@ -99,7 +99,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         uav_desc.Buffer.StructureByteStride = sizeof(DebugRenderVertex);
 
         vertices_buffer_uav = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-        renderer->GetDevice()->CreateUnorderedAccessView(vertices_buffer.GetResourcePtr(), nullptr, &uav_desc, vertices_buffer_uav.cpu);
+        renderer->GetDevice()->CreateUnorderedAccessView(vertices_buffer.Resource(), nullptr, &uav_desc, vertices_buffer_uav.cpu);
     }
 
     {
@@ -125,7 +125,7 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
         uav_desc.Buffer.StructureByteStride = sizeof(uint32_t);
 
         counter_uav = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-        renderer->GetDevice()->CreateUnorderedAccessView(counter_buffer.GetResourcePtr(), nullptr, &uav_desc, counter_uav.cpu);
+        renderer->GetDevice()->CreateUnorderedAccessView(counter_buffer.Resource(), nullptr, &uav_desc, counter_uav.cpu);
     }
 
     {
@@ -144,9 +144,9 @@ bool DebugRenderer::Initialize(wil::com_ptr<DxGraphicsCommandList> cmd_list, wil
 
         UINT zero = 0;
         void* mapped_data = nullptr;
-        m_counter_buffer_zero.resource->Map(0, nullptr, &mapped_data);
+        m_counter_buffer_zero.Resource()->Map(0, nullptr, &mapped_data);
         memcpy(mapped_data, &zero, sizeof(zero));
-        m_counter_buffer_zero.resource->Unmap(0, nullptr);
+        m_counter_buffer_zero.Resource()->Unmap(0, nullptr);
     }
 
     CD3DX12_ROOT_PARAMETER root_parameters[ShaderInputParameters::ParametersCount] = {};
@@ -263,7 +263,7 @@ bool DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
     };
 
     D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-    vertex_buffer_view.BufferLocation = vertices_buffer.GetGPUVirtualAddress();
+    vertex_buffer_view.BufferLocation = vertices_buffer.GPUVirtualAddress();
     vertex_buffer_view.StrideInBytes = sizeof(DebugRenderVertex);
     vertex_buffer_view.SizeInBytes = g_max_debug_render_vertices_count * sizeof(DebugRenderVertex);
 
@@ -276,21 +276,20 @@ bool DebugRenderer::RenderDebugGeometry(DebugRendererParameters& parameters)
     parameters.cmd_list.list->SetPipelineState(pso_object.pso.get());
     parameters.cmd_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
     parameters.cmd_list.list->ExecuteIndirect(
-        m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.GetResourcePtr(), 0, counter_buffer.GetResourcePtr(), 0);
+        m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.Resource(), 0, counter_buffer.Resource(), 0);
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            counter_buffer.GetResourcePtr(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
+            counter_buffer.Resource(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
         parameters.cmd_list.list->ResourceBarrier(1, &barrier);
     }
 
     // Zero out counter
-    parameters.cmd_list.list->CopyBufferRegion(
-        counter_buffer.GetResourcePtr(), 0, m_counter_buffer_zero.GetResourcePtr(), 0, sizeof(UINT));
+    parameters.cmd_list.list->CopyBufferRegion(counter_buffer.Resource(), 0, m_counter_buffer_zero.Resource(), 0, sizeof(UINT));
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            counter_buffer.GetResourcePtr(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            counter_buffer.Resource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         parameters.cmd_list.list->ResourceBarrier(1, &barrier);
     }
 

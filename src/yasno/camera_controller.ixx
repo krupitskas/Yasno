@@ -12,7 +12,7 @@ export namespace ysn
 class CameraController
 {
 public:
-    std::shared_ptr<Camera> pCamera;
+    std::shared_ptr<Camera> p_camera;
 
     bool IsMoved();
 
@@ -20,7 +20,7 @@ public:
     void Disable();
 
 protected:
-    bool m_IsActive = true;
+    bool m_is_active = true;
 };
 
 class FpsCameraController : public CameraController
@@ -35,15 +35,15 @@ public:
 
     void MoveMouse(int MousePositionX, int MousePositionY);
 
-    bool m_IsMovementBoostActive = false;
+    bool m_is_boost_active = false;
 
     float mouse_speed = 5.0f;
 
 private:
-    float m_Yaw = 0.0f;
-    float m_Pitch = 0.0f;
-    float m_MovementBoost = 5.0;
-    float m_MouseSensitivity = 0.1f;
+    float m_yaw = 0.0f;
+    float m_pitch = 0.0f;
+    float m_movement_boost = 5.0;
+    float m_mouse_sensetivity = 0.1f;
 };
 } // namespace ysn
 
@@ -62,133 +62,133 @@ namespace ysn
 {
 bool CameraController::IsMoved()
 {
-    return pCamera->IsMoved();
+    return p_camera->IsMoved();
 }
 
 void CameraController::Enable()
 {
-    m_IsActive = true;
+    m_is_active = true;
 }
 
 void CameraController::Disable()
 {
-    m_IsActive = false;
+    m_is_active = false;
 }
 
 void FpsCameraController::MoveLeft(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(Distance, pCamera->GetRightVector()));
+    p_camera->Move(MoveWithDirection(Distance, p_camera->GetRightVector()));
 }
 
 void FpsCameraController::MoveRight(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(-Distance, pCamera->GetRightVector()));
+    p_camera->Move(MoveWithDirection(-Distance, p_camera->GetRightVector()));
 }
 
 void FpsCameraController::MoveForward(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(Distance, pCamera->GetForwardVector()));
+    p_camera->Move(MoveWithDirection(Distance, p_camera->GetForwardVector()));
 }
 
 void FpsCameraController::MoveBackwards(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(-Distance, pCamera->GetForwardVector()));
+    p_camera->Move(MoveWithDirection(-Distance, p_camera->GetForwardVector()));
 }
 
 void FpsCameraController::MoveUp(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(Distance, pCamera->GetUpVector()));
+    p_camera->Move(MoveWithDirection(Distance, p_camera->GetUpVector()));
 }
 
 void FpsCameraController::MoveDown(float Distance) const
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
-    if (m_IsMovementBoostActive)
+    if (m_is_boost_active)
     {
-        Distance *= m_MovementBoost;
+        Distance *= m_movement_boost;
     }
 
     Distance *= mouse_speed;
 
-    pCamera->Move(MoveWithDirection(-Distance, pCamera->GetUpVector()));
+    p_camera->Move(MoveWithDirection(-Distance, p_camera->GetUpVector()));
 }
 
 void FpsCameraController::MoveMouse(const int MousePositionX, const int MousePositionY)
 {
-    if (!m_IsActive)
+    if (!m_is_active)
         return;
 
     // limit pitch to straight up or straight down
     // constexpr float Limit = DirectX::XM_PIDIV2 - 0.01f;
-    // m_Pitch = std::max(-Limit, m_Pitch);
-    // m_Pitch = std::min(+Limit, m_Pitch);
+    // m_pitch = std::max(-Limit, m_pitch);
+    // m_pitch = std::min(+Limit, m_pitch);
 
     // keep longitude in sane range by wrapping
-    // if (m_Yaw > DirectX::XM_PI)
+    // if (m_yaw > DirectX::XM_PI)
     // {
-    // 	m_Yaw -= DirectX::XM_2PI;
+    // 	m_yaw -= DirectX::XM_2PI;
     // }
-    // else if (m_Yaw < -DirectX::XM_PI)
+    // else if (m_yaw < -DirectX::XM_PI)
     // {
-    // 	m_Yaw += DirectX::XM_2PI;
+    // 	m_yaw += DirectX::XM_2PI;
     // }
 
-    m_Yaw -= MousePositionX * m_MouseSensitivity;
-    m_Pitch -= MousePositionY * m_MouseSensitivity;
+    m_yaw -= MousePositionX * m_mouse_sensetivity;
+    m_pitch -= MousePositionY * m_mouse_sensetivity;
 
-    pCamera->SetYaw(m_Yaw);
-    pCamera->SetPitch(m_Pitch);
+    p_camera->SetYaw(m_yaw);
+    p_camera->SetPitch(m_pitch);
 }
 } // namespace ysn

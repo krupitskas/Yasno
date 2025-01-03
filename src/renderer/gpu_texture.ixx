@@ -12,20 +12,21 @@ import system.application;
 import system.logger;
 import renderer.dxrenderer;
 import renderer.descriptor_heap;
+import renderer.gpu_resource;
 import system.helpers;
 
 export namespace ysn
 {
-struct GpuTexture
+class GpuTexture : public GpuResource
 {
-    std::wstring name = L"Unnamed Texture";
-
+public:
+    GpuTexture() = default;
+    GpuTexture(ID3D12Resource* resource) : GpuResource(resource) {}
+    
     bool is_srgb = false;
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t num_mips = 0;
-
-    wil::com_ptr<ID3D12Resource> gpu_resource;
 
     DescriptorHandle descriptor_handle;
 };
@@ -56,8 +57,6 @@ static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
 std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& parameters)
 {
     std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();
-
-    GpuTexture result_texture;
 
     // TODO(task): Make it dynamic
     // The number of bytes used to represent a pixel in the texture.
@@ -127,13 +126,10 @@ std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& param
         const CD3DX12_HEAP_PROPERTIES heap_properties_default = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
         const CD3DX12_HEAP_PROPERTIES heap_properties_upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
+        ID3D12Resource* res_result = nullptr;
+
         HRESULT result = renderer->GetDevice()->CreateCommittedResource(
-            &heap_properties_default,
-            D3D12_HEAP_FLAG_NONE,
-            &texture_desc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&result_texture.gpu_resource));
+            &heap_properties_default, D3D12_HEAP_FLAG_NONE, &texture_desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&res_result));
 
         if (result != S_OK)
         {
@@ -141,12 +137,10 @@ std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& param
             return std::nullopt;
         }
 
-#ifndef YSN_RELEASE
-        std::wstring name(parameters.filename.begin(), parameters.filename.end());
-        result_texture.gpu_resource->SetName(name.c_str());
-#endif
+        GpuTexture result_texture(res_result);
+        result_texture.SetName(parameters.filename);
 
-        const UINT64 upload_buffer_size = GetRequiredIntermediateSize(result_texture.gpu_resource.get(), 0, 1);
+        const UINT64 upload_buffer_size = GetRequiredIntermediateSize(result_texture.Resource(), 0, 1);
 
         const auto upload_buffer_size_desc = CD3DX12_RESOURCE_DESC::Buffer(upload_buffer_size);
 
@@ -174,8 +168,7 @@ std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& param
         texture_data.RowPitch = width * texture_pixel_size;
         texture_data.SlicePitch = texture_data.RowPitch * height;
 
-        UpdateSubresources(
-            parameters.command_list.get(), result_texture.gpu_resource.get(), texture_upload_heap.get(), 0, 0, 1, &texture_data);
+        UpdateSubresources(parameters.command_list.get(), result_texture.Resource(), texture_upload_heap.get(), 0, 0, 1, &texture_data);
 
         // Describe and create a SRV for the texture.
         D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -186,7 +179,7 @@ std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& param
 
         const DescriptorHandle srv_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
-        renderer->GetDevice()->CreateShaderResourceView(result_texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
+        renderer->GetDevice()->CreateShaderResourceView(result_texture.Resource(), &srv_desc, srv_handle.cpu);
 
         result_texture.descriptor_handle = srv_handle;
         result_texture.num_mips = num_mips;
@@ -208,16 +201,15 @@ std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& param
         }
 
         // const CD3DX12_RESOURCE_BARRIER barrier_desc = CD3DX12_RESOURCE_BARRIER::Transition(result_texture.gpu_resource.get(),
-        // D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); parameters.command_list->ResourceBarrier(1,
-        // &barrier_desc);
+        // D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        // parameters.command_list->ResourceBarrier(1, &barrier_desc);
+        return result_texture;
     }
     else
     {
         LogError << "Can't load " << parameters.filename << " texture\n";
         return std::nullopt;
     }
-
-    return result_texture;
 }
 
 } // namespace ysn

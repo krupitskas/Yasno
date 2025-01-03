@@ -146,7 +146,7 @@
     <ClCompile Include="renderer\index_storage.ixx">
       <Filter>source\renderer</Filter>
     </ClCompile>
-    <ClCompile Include="renderer\raytracing_context.ixx">
+    <ClCompile Include="renderer\rtx_context.ixx">
       <Filter>source\renderer</Filter>
     </ClCompile>
     <ClCompile Include="graphics\techniques\skybox_pass.ixx">
@@ -161,7 +161,7 @@
     <ClCompile Include="graphics\techniques\forward_pass.ixx">
       <Filter>source\graphics\techniques</Filter>
     </ClCompile>
-    <ClCompile Include="graphics\techniques\raytracing_pass.ixx">
+    <ClCompile Include="graphics\techniques\pathtracing_pass.ixx">
       <Filter>source\graphics\techniques</Filter>
     </ClCompile>
     <ClCompile Include="graphics\lights.ixx">
@@ -202,6 +202,12 @@
     </ClCompile>
     <ClCompile Include="renderer\gpu_pixel_buffer.ixx">
       <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer\gpu_readback_buffer.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="system\profiler.ixx">
+      <Filter>source\system</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

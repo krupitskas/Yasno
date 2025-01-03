@@ -23,17 +23,17 @@ constexpr CompilationMode g_compilation_mode =
 
 export namespace ysn
 {
-constexpr bool IsDebugActive()
+consteval bool IsDebugActive()
 {
     return g_compilation_mode == CompilationMode::Debug;
 }
 
-constexpr bool IsProfileActive()
+consteval bool IsProfileActive()
 {
     return g_compilation_mode == CompilationMode::Profile;
 }
 
-constexpr bool IsReleaseActive()
+consteval bool IsReleaseActive()
 {
     return g_compilation_mode == CompilationMode::Release;
 }

@@ -29,7 +29,7 @@ public:
     bool Generate(
         DxGraphicsCommandList* cmd_list,
         const ysn::GpuBuffer& scratch_buffer,
-        const ysn::GpuBuffer& result_buffer,
+        ysn::GpuBuffer& result_buffer,
         bool update_only = false,
         ID3D12Resource* previous_result = nullptr);
 
@@ -96,7 +96,7 @@ void BlasGenerator::ComputeBlasBufferSizes(DxDevice* device, bool allow_update, 
 bool BlasGenerator::Generate(
     DxGraphicsCommandList* cmd_list,
     const ysn::GpuBuffer& scratch_buffer,
-    const ysn::GpuBuffer& result_buffer,
+    ysn::GpuBuffer& result_buffer,
     bool update_only,
     ID3D12Resource* previous_result)
 {
@@ -130,8 +130,8 @@ bool BlasGenerator::Generate(
     build_desc.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     build_desc.Inputs.NumDescs = static_cast<UINT>(m_vertex_buffers.size());
     build_desc.Inputs.pGeometryDescs = m_vertex_buffers.data();
-    build_desc.DestAccelerationStructureData = {result_buffer.GetGPUVirtualAddress()};
-    build_desc.ScratchAccelerationStructureData = {scratch_buffer.GetGPUVirtualAddress()};
+    build_desc.DestAccelerationStructureData = {result_buffer.GPUVirtualAddress()};
+    build_desc.ScratchAccelerationStructureData = {scratch_buffer.GPUVirtualAddress()};
     build_desc.SourceAccelerationStructureData = previous_result ? previous_result->GetGPUVirtualAddress() : 0;
     build_desc.Inputs.Flags = flags;
 
@@ -139,7 +139,7 @@ bool BlasGenerator::Generate(
 
     D3D12_RESOURCE_BARRIER uav_barrier;
     uav_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    uav_barrier.UAV.pResource = result_buffer.resource.get();
+    uav_barrier.UAV.pResource = result_buffer.Resource();
     uav_barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
     cmd_list->ResourceBarrier(1, &uav_barrier);

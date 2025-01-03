@@ -166,7 +166,7 @@ bool ConvertToCubemap::Render(ConvertToCubemapParameters& parameters)
     GraphicsCommandList command_list = command_list_result.value();
 
     CD3DX12_RESOURCE_BARRIER barrier_before = CD3DX12_RESOURCE_BARRIER::Transition(
-        parameters.target_cubemap.resource.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        parameters.target_cubemap.Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
     command_list.list->ResourceBarrier(1, &barrier_before);
 
     ID3D12DescriptorHeap* ppHeaps[] = {renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr()};
@@ -195,7 +195,7 @@ bool ConvertToCubemap::Render(ConvertToCubemapParameters& parameters)
     }
 
     CD3DX12_RESOURCE_BARRIER barrier_after = CD3DX12_RESOURCE_BARRIER::Transition(
-        parameters.target_cubemap.resource.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        parameters.target_cubemap.Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     command_list.list->ResourceBarrier(1, &barrier_after);
 
     renderer->GetDirectQueue()->ExecuteCommandList(command_list);

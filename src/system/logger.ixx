@@ -9,6 +9,7 @@ module;
 export module system.logger;
 
 import std;
+import system.compilation;
 
 namespace logger
 {
@@ -109,10 +110,11 @@ void InitializeLogger()
     auto sink_file = std::make_shared<AixLog::SinkFile>(AixLog::Severity::trace, "yasno.log", format);
     sinks.push_back(sink_file);
 
-#ifdef YSN_DEBUG
-    auto sink_debug_output = std::make_shared<OutputDebugWindows>(AixLog::Severity::trace, format);
-    sinks.push_back(sink_debug_output);
-#endif
+    if constexpr (!IsReleaseActive())
+    {
+        auto sink_debug_output = std::make_shared<OutputDebugWindows>(AixLog::Severity::trace, format);
+        sinks.push_back(sink_debug_output);
+    }
 
     AixLog::Log::init(std::move(sinks));
 }

@@ -462,7 +462,7 @@ bool ForwardPass::InitializeIndirectPipeline(
     // Create commands
     m_indirect_commands.reserve(render_scene.primitives_count);
 
-    D3D12_GPU_VIRTUAL_ADDRESS instance_data_buffer_gpu_address = instance_buffer.GetGPUVirtualAddress();
+    D3D12_GPU_VIRTUAL_ADDRESS instance_data_buffer_gpu_address = instance_buffer.GPUVirtualAddress();
     UINT command_index = 0;
 
     // Fill commands
@@ -543,12 +543,12 @@ bool ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
     }
 
     D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-    vertex_buffer_view.BufferLocation = render_scene.vertices_buffer.GetGPUVirtualAddress();
+    vertex_buffer_view.BufferLocation = render_scene.vertices_buffer.GPUVirtualAddress();
     vertex_buffer_view.StrideInBytes = sizeof(Vertex);
     vertex_buffer_view.SizeInBytes = render_scene.vertices_count * sizeof(Vertex);
 
     D3D12_INDEX_BUFFER_VIEW indices_index_buffer;
-    indices_index_buffer.BufferLocation = render_scene.indices_buffer.GetGPUVirtualAddress();
+    indices_index_buffer.BufferLocation = render_scene.indices_buffer.GPUVirtualAddress();
     indices_index_buffer.Format = DXGI_FORMAT_R32_UINT;
     indices_index_buffer.SizeInBytes = render_scene.indices_count * sizeof(uint32_t);
 
@@ -565,7 +565,7 @@ bool ForwardPass::RenderIndirect(const RenderScene& render_scene, const ForwardP
 
         // Argument buffer overflow. [ EXECUTION ERROR #744: EXECUTE_INDIRECT_INVALID_PARAMETERS]
         command_list.list->ExecuteIndirect(
-            m_command_signature.get(), render_scene.primitives_count, m_command_buffer.resource.get(), 0, nullptr, 0);
+            m_command_signature.get(), render_scene.primitives_count, m_command_buffer.Resource(), 0, nullptr, 0);
     }
     else
     {

@@ -13,8 +13,12 @@ import system.logger;
 
 export namespace ysn
 {
-struct GpuBuffer : public GpuResource
+class GpuBuffer : public GpuResource
 {
+public:
+    GpuBuffer() = default;
+    GpuBuffer(ID3D12Resource* res);
+
     // TODO: add generators for UAV, SRV, CBV
 };
 
@@ -31,7 +35,7 @@ std::optional<GpuBuffer> CreateGpuBuffer(const GpuBufferCreateInfo& info, const 
 
 bool UploadToGpuBuffer(
     wil::com_ptr<ID3D12GraphicsCommandList4> cmd_list,
-    const GpuBuffer& target_buffer,
+    GpuBuffer& target_buffer,
     const void* upload_data,
     const std::vector<D3D12_SUBRESOURCE_DATA>& subresource_data,
     D3D12_RESOURCE_STATES target_state);
@@ -41,6 +45,10 @@ module :private;
 
 namespace ysn
 {
+GpuBuffer::GpuBuffer(ID3D12Resource* res) : GpuResource(res)
+{
+
+}
 
 // TODO: move to std::expected
 std::optional<GpuBuffer> CreateGpuBuffer(const GpuBufferCreateInfo& info, const std::string& debug_name)
@@ -65,10 +73,10 @@ std::optional<GpuBuffer> CreateGpuBuffer(const GpuBufferCreateInfo& info, const 
     resource_desc.Width = info.size;
     resource_desc.Flags = info.flags;
 
-    GpuBuffer result_buffer;
+    ID3D12Resource* result = nullptr;
 
     const HRESULT hr = d3d_device->CreateCommittedResource(
-        &heap_desc, D3D12_HEAP_FLAG_NONE, &resource_desc, info.state, nullptr, IID_PPV_ARGS(&result_buffer.resource));
+        &heap_desc, D3D12_HEAP_FLAG_NONE, &resource_desc, info.state, nullptr, IID_PPV_ARGS(&result));
 
     if (hr != S_OK)
     {
@@ -77,26 +85,23 @@ std::optional<GpuBuffer> CreateGpuBuffer(const GpuBufferCreateInfo& info, const 
     }
     else
     {
-
-#ifndef YSN_RELEASE
-        std::wstring name(debug_name.begin(), debug_name.end());
-        result_buffer.resource->SetName(name.c_str());
-#endif
-
+        GpuBuffer result_buffer;
+        result_buffer.SetResource(result);
+        result_buffer.SetName(debug_name);
         return result_buffer;
     }
 }
 
 bool UploadToGpuBuffer(
     wil::com_ptr<ID3D12GraphicsCommandList4> cmd_list,
-    const GpuBuffer& target_buffer,
+    GpuBuffer& target_buffer,
     const void* upload_data,
     const std::vector<D3D12_SUBRESOURCE_DATA>& subresource_data,
     D3D12_RESOURCE_STATES target_state)
 {
     const bool subresources_specified = !subresource_data.empty();
     const UINT subresource_count = subresources_specified ? UINT(subresource_data.size()) : 1;
-    const UINT64 required_size = GetRequiredIntermediateSize(target_buffer.resource.get(), 0, subresource_count);
+    const UINT64 required_size = GetRequiredIntermediateSize(target_buffer.Resource(), 0, subresource_count);
 
     // Align buffer for texture uploads (this may not be necessary for other types of buffers)
     const UINT64 upload_buffer_size = D3DX12Align<UINT64>(required_size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -105,7 +110,7 @@ bool UploadToGpuBuffer(
     GpuBufferCreateInfo info_upload{
         .size = upload_buffer_size, .heap_type = D3D12_HEAP_TYPE_UPLOAD, .state = D3D12_RESOURCE_STATE_GENERIC_READ};
 
-    const auto gpu_buffer_result = CreateGpuBuffer(info_upload, "Upload Buffer");
+    auto gpu_buffer_result = CreateGpuBuffer(info_upload, "Upload Buffer");
 
     if (!gpu_buffer_result.has_value())
     {
@@ -113,10 +118,10 @@ bool UploadToGpuBuffer(
         return false;
     }
 
-    const GpuBuffer& upload_buffer = gpu_buffer_result.value();
+    GpuBuffer& upload_buffer = gpu_buffer_result.value();
 
     // Keep in stage
-    Application::Get().GetRenderer()->stage_heap.push_back(upload_buffer.resource);
+    Application::Get().GetRenderer()->stage_heap.push_back(upload_buffer.Resource());
 
     // Build description of subresource data or use the one provided
     const D3D12_SUBRESOURCE_DATA* buffer_data_desc_ptr = nullptr;
@@ -137,7 +142,7 @@ bool UploadToGpuBuffer(
 
     // Schedule a copy from the upload heap to the device memory
     UINT64 uploaded_bytes = UpdateSubresources(
-        cmd_list.get(), target_buffer.resource.get(), upload_buffer.resource.get(), 0, 0, subresource_count, buffer_data_desc_ptr);
+        cmd_list.get(), target_buffer.Resource(), upload_buffer.Resource(), 0, 0, subresource_count, buffer_data_desc_ptr);
     HRESULT hr = (required_size == uploaded_bytes ? S_OK : E_FAIL);
 
     if (hr != S_OK)
@@ -149,7 +154,7 @@ bool UploadToGpuBuffer(
     // Transition resource to target state
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = target_buffer.resource.get();
+    barrier.Transition.pResource = target_buffer.Resource();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barrier.Transition.StateAfter = target_state;
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;

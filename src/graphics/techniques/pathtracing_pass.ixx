@@ -14,7 +14,7 @@ export module graphics.techniques.raytracing_pass;
 import std;
 import yasno.camera;
 import renderer.dxrenderer;
-import renderer.raytracing_context;
+import renderer.rtx_context;
 import renderer.descriptor_heap;
 import renderer.shader_storage;
 import renderer.gpu_buffer;
@@ -95,7 +95,7 @@ public:
 
         // We don't unmap this until the app closes. Keeping buffer mapped for the lifetime of the resource is okay.
         CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-        HRESULT res = buffer.resource->Map(0, &readRange, reinterpret_cast<void**>(&m_mapped_shader_record));
+        HRESULT res = buffer.Resource()->Map(0, &readRange, reinterpret_cast<void**>(&m_mapped_shader_record));
 
         ysn::AssertMsg(res == S_OK, "Can't map ShaderTable resource!");
     }
@@ -255,14 +255,14 @@ void PrintDxrStateObjectDesc(const D3D12_STATE_OBJECT_DESC* desc)
 
 export namespace ysn
 {
-class RaytracingPass
+class PathtracingPass
 {
 public:
     bool Initialize(
         std::shared_ptr<ysn::DxRenderer> renderer,
         wil::com_ptr<ID3D12Resource> scene_color,
         wil::com_ptr<ID3D12Resource> accumulation_buffer_color,
-        RaytracingContext& rtx_context,
+        RtxContext& rtx_context,
         wil::com_ptr<ID3D12Resource> camera_buffer,
         wil::com_ptr<ID3D12Resource> vertex_buffer,
         wil::com_ptr<ID3D12Resource> index_buffer,
@@ -275,12 +275,11 @@ public:
 
     bool CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer);
     bool CreateShaderBindingTable();
-
     bool CreateRootSignatures(std::shared_ptr<ysn::DxRenderer> renderer);
 
     void Execute(
         std::shared_ptr<ysn::DxRenderer> renderer,
-        RaytracingContext& rtx_context,
+        RtxContext& rtx_context,
         const DescriptorHandle& output_texture_srv,
         const DescriptorHandle& accumulation_texture_srv,
         wil::com_ptr<ID3D12GraphicsCommandList4> command_list,
@@ -319,11 +318,11 @@ module :private;
 
 namespace ysn
 {
-bool RaytracingPass::Initialize(
+bool PathtracingPass::Initialize(
     std::shared_ptr<ysn::DxRenderer> renderer,
     wil::com_ptr<ID3D12Resource> scene_color,
     wil::com_ptr<ID3D12Resource> accumulation_buffer_color,
-    RaytracingContext& rtx_context,
+    RtxContext& rtx_context,
     wil::com_ptr<ID3D12Resource> camera_buffer,
     wil::com_ptr<ID3D12Resource> vertex_buffer,
     wil::com_ptr<ID3D12Resource> index_buffer,
@@ -409,7 +408,7 @@ bool RaytracingPass::Initialize(
     return true;
 }
 
-bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer)
+bool PathtracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> renderer)
 {
     // Load shaders
     {
@@ -473,7 +472,7 @@ bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> r
     UINT max_recursion_depth = 1; // ~ primary rays only.
     pipeline_config->Config(max_recursion_depth);
 
-    PrintDxrStateObjectDesc(rtx_pipeline);
+    //PrintDxrStateObjectDesc(rtx_pipeline);
 
     HRESULT hr = renderer->GetDevice()->CreateStateObject(rtx_pipeline, IID_PPV_ARGS(&m_rt_state_object));
 
@@ -492,7 +491,7 @@ bool RaytracingPass::CreateRaytracingPipeline(std::shared_ptr<ysn::DxRenderer> r
     return true;
 }
 
-bool RaytracingPass::CreateRootSignatures(std::shared_ptr<ysn::DxRenderer> renderer)
+bool PathtracingPass::CreateRootSignatures(std::shared_ptr<ysn::DxRenderer> renderer)
 {
     // Global root signature
     {
@@ -593,7 +592,7 @@ bool RaytracingPass::CreateRootSignatures(std::shared_ptr<ysn::DxRenderer> rende
     return true;
 }
 
-bool RaytracingPass::CreateShaderBindingTable()
+bool PathtracingPass::CreateShaderBindingTable()
 {
     void* raygen_shader_id;
     void* miss_shader_id;
@@ -656,9 +655,9 @@ bool RaytracingPass::CreateShaderBindingTable()
     return true;
 }
 
-void RaytracingPass::Execute(
+void PathtracingPass::Execute(
     std::shared_ptr<ysn::DxRenderer> renderer,
-    RaytracingContext& rtx_context,
+    RtxContext& rtx_context,
 
     const DescriptorHandle& output_texture_srv,
     const DescriptorHandle& accumulation_texture_srv,
@@ -691,16 +690,16 @@ void RaytracingPass::Execute(
     command_list->SetComputeRootDescriptorTable(7, m_per_instance_data_buffer_srv.gpu);
 
     D3D12_DISPATCH_RAYS_DESC desc = {};
-    desc.HitGroupTable.StartAddress = m_hit_group_shader_table.GetGPUVirtualAddress();
-    desc.HitGroupTable.SizeInBytes = m_hit_group_shader_table.resource->GetDesc().Width;
+    desc.HitGroupTable.StartAddress = m_hit_group_shader_table.GPUVirtualAddress();
+    desc.HitGroupTable.SizeInBytes = m_hit_group_shader_table.Desc().Width;
     desc.HitGroupTable.StrideInBytes = desc.HitGroupTable.SizeInBytes;
 
-    desc.MissShaderTable.StartAddress = m_miss_shader_table.GetGPUVirtualAddress();
-    desc.MissShaderTable.SizeInBytes = m_miss_shader_table.resource->GetDesc().Width;
+    desc.MissShaderTable.StartAddress = m_miss_shader_table.GPUVirtualAddress();
+    desc.MissShaderTable.SizeInBytes = m_miss_shader_table.Desc().Width;
     desc.MissShaderTable.StrideInBytes = desc.MissShaderTable.SizeInBytes;
 
-    desc.RayGenerationShaderRecord.StartAddress = m_ray_gen_shader_table.GetGPUVirtualAddress();
-    desc.RayGenerationShaderRecord.SizeInBytes = m_ray_gen_shader_table.resource->GetDesc().Width;
+    desc.RayGenerationShaderRecord.StartAddress = m_ray_gen_shader_table.GPUVirtualAddress();
+    desc.RayGenerationShaderRecord.SizeInBytes = m_ray_gen_shader_table.Desc().Width;
 
     desc.Width = width;
     desc.Height = height;

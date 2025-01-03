@@ -37,7 +37,7 @@ class GenerateMipsPass
 {
 public:
     bool Initialize(std::shared_ptr<DxRenderer> renderer);
-    bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture);
+    bool GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, GpuTexture& gpu_texture);
 
 private:
     PsoId m_pso_id;
@@ -89,7 +89,7 @@ bool GenerateMipsPass::Initialize(std::shared_ptr<DxRenderer> renderer)
     return true;
 }
 
-bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, const GpuTexture& gpu_texture)
+bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, GpuTexture& gpu_texture)
 {
     auto compute_queue = renderer->GetComputeQueue();
 
@@ -103,17 +103,14 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
 
     auto& pso_object = pso.value();
 
-    auto resource = gpu_texture.gpu_resource;
-    auto resource_desc = resource->GetDesc();
-
-    if (resource_desc.MipLevels == 1)
+    if (gpu_texture.Desc().MipLevels == 1)
     {
         LogInfo << "Texture requested only single mip, can't generate mips\n";
         return false;
     }
 
-    if (resource_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || resource_desc.DepthOrArraySize != 1 ||
-        resource_desc.SampleDesc.Count > 1)
+    if (gpu_texture.Desc().Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || gpu_texture.Desc().DepthOrArraySize != 1 ||
+        gpu_texture.Desc().SampleDesc.Count > 1)
     {
         LogError << "GenerateMips is only supported for non-multi-sampled 2D Textures.\n";
         return false;
@@ -130,15 +127,15 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
     generate_mips_parameters.is_srgb = gpu_texture.is_srgb;
 
     {
-        CD3DX12_RESOURCE_BARRIER barrier =
-            CD3DX12_RESOURCE_BARRIER::Transition(resource.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            gpu_texture.Resource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         command_list->ResourceBarrier(1, &barrier);
     }
 
-    for (uint32_t src_mip = 0; src_mip < resource_desc.MipLevels - 1u;)
+    for (uint32_t src_mip = 0; src_mip < gpu_texture.Desc().MipLevels - 1u;)
     {
-        uint64_t src_width = resource_desc.Width >> src_mip;
-        uint32_t src_height = resource_desc.Height >> src_mip;
+        uint64_t src_width = gpu_texture.Desc().Width >> src_mip;
+        uint32_t src_height = gpu_texture.Desc().Height >> src_mip;
         uint32_t dst_width = static_cast<uint32_t>(src_width / 2.0f);
         uint32_t dst_height = static_cast<uint32_t>(src_height / 2.0f);
 
@@ -161,7 +158,7 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
         // Maximum number of mips to generate is 4.
         mip_count = std::min<DWORD>(4, mip_count + 1);
         // Clamp to total number of mips left over.
-        mip_count = (src_mip + mip_count) >= resource_desc.MipLevels ? resource_desc.MipLevels - src_mip - 1 : mip_count;
+        mip_count = (src_mip + mip_count) >= gpu_texture.Desc().MipLevels ? gpu_texture.Desc().MipLevels - src_mip - 1 : mip_count;
 
         // Dimensions should not reduce to 0.
         // This can happen if the width and height are not the same.
@@ -180,7 +177,7 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
         uav_orig_desc.Texture2D.MipSlice = src_mip + 1;
 
         const auto uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-        renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.gpu_resource.get(), nullptr, &uav_orig_desc, uav_handle.cpu);
+        renderer->GetDevice()->CreateUnorderedAccessView(gpu_texture.Resource(), nullptr, &uav_orig_desc, uav_handle.cpu);
 
         for (uint32_t mip = 1; mip < mip_count; mip++)
         {
@@ -190,7 +187,7 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
             uav_desc.Texture2D.MipSlice = src_mip + mip + 1;
 
             renderer->GetDevice()->CreateUnorderedAccessView(
-                gpu_texture.gpu_resource.get(), nullptr, &uav_desc, renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu);
+                gpu_texture.Resource(), nullptr, &uav_desc, renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle().cpu);
         }
 
         command_list->SetComputeRoot32BitConstants(
@@ -200,7 +197,7 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
         command_list->Dispatch(UINT(std::ceil(dst_width / (float)8)), UINT(std::ceil(dst_height / (float)8)), 1);
 
         {
-            CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(resource.get());
+            CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(gpu_texture.Resource());
             command_list->ResourceBarrier(1, &barrier);
         }
 
@@ -209,7 +206,7 @@ bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::c
 
     {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            resource.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            gpu_texture.Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         command_list->ResourceBarrier(1, &barrier);
     }
 

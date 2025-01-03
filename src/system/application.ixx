@@ -44,12 +44,12 @@ public:
 
     bool IsTearingSupported() const;
 
-    std::shared_ptr<Window> CreateRenderWindow(const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync = true);
+    std::shared_ptr<Window> CreateRenderWindow(const std::wstring& window_name, int clientWidth, int clientHeight, bool vSync = true);
 
-    void DestroyWindow(const std::wstring& windowName);
+    void DestroyWindow(const std::wstring& window_name);
     void DestroyWindow(std::shared_ptr<Window> window);
 
-    std::shared_ptr<Window> GetWindowByName(const std::wstring& windowName);
+    std::shared_ptr<Window> GetWindowByName(const std::wstring& window_name);
 
     int Run(std::shared_ptr<Game> pGame);
 
@@ -68,7 +68,7 @@ public:
 protected:
     Application(HINSTANCE hInst);
     virtual ~Application();
-
+     
 private:
     Application(const Application& copy) = delete;
     Application& operator=(const Application& other) = delete;
@@ -98,7 +98,7 @@ public:
 
     virtual bool Initialize();
 
-    virtual bool LoadContent() = 0;
+    virtual std::expected<bool, std::string> LoadContent() = 0;
 
     virtual void UnloadContent() = 0;
 
@@ -188,7 +188,7 @@ protected:
     friend class Application;
     friend class Game;
 
-    Window(HWND HWnd, const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync);
+    Window(HWND HWnd, const std::wstring& window_name, int clientWidth, int clientHeight, bool vSync);
     virtual ~Window();
 
     // Update and Draw can only be called by the application.
@@ -254,8 +254,8 @@ extern LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 // A wrapper struct to allow shared pointers for the window class.
 struct MakeWindow : public Window
 {
-    MakeWindow(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync) :
-        Window(hWnd, windowName, clientWidth, clientHeight, vSync)
+    MakeWindow(HWND hWnd, const std::wstring& window_name, int clientWidth, int clientHeight, bool vSync) :
+        Window(hWnd, window_name, clientWidth, clientHeight, vSync)
     {
     }
 };
@@ -339,10 +339,10 @@ bool Application::IsTearingSupported() const
     return m_dx_renderer->IsTearingSupported();
 }
 
-std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync)
+std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& window_name, int clientWidth, int clientHeight, bool vSync)
 {
     // First check if a window with the given name already exists.
-    WindowNameMap::iterator windowIter = gs_WindowByName.find(windowName);
+    WindowNameMap::iterator windowIter = gs_WindowByName.find(window_name);
     if (windowIter != gs_WindowByName.end())
     {
         return windowIter->second;
@@ -355,7 +355,7 @@ std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& wind
 
     HWND hWnd = CreateWindowW(
         WINDOW_CLASS_NAME,
-        windowName.c_str(),
+        window_name.c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -372,10 +372,10 @@ std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& wind
         return nullptr;
     }
 
-    WindowPtr pWindow = std::make_shared<MakeWindow>(hWnd, windowName, clientWidth, clientHeight, vSync);
+    WindowPtr pWindow = std::make_shared<MakeWindow>(hWnd, window_name, clientWidth, clientHeight, vSync);
 
     gs_Windows.insert(WindowMap::value_type(hWnd, pWindow));
-    gs_WindowByName.insert(WindowNameMap::value_type(windowName, pWindow));
+    gs_WindowByName.insert(WindowNameMap::value_type(window_name, pWindow));
 
     return pWindow;
 }
@@ -386,19 +386,19 @@ void Application::DestroyWindow(std::shared_ptr<Window> window)
         window->Destroy();
 }
 
-void Application::DestroyWindow(const std::wstring& windowName)
+void Application::DestroyWindow(const std::wstring& window_name)
 {
-    WindowPtr pWindow = GetWindowByName(windowName);
+    WindowPtr pWindow = GetWindowByName(window_name);
     if (pWindow)
     {
         DestroyWindow(pWindow);
     }
 }
 
-std::shared_ptr<Window> Application::GetWindowByName(const std::wstring& windowName)
+std::shared_ptr<Window> Application::GetWindowByName(const std::wstring& window_name)
 {
     std::shared_ptr<Window> window;
-    WindowNameMap::iterator iter = gs_WindowByName.find(windowName);
+    WindowNameMap::iterator iter = gs_WindowByName.find(window_name);
     if (iter != gs_WindowByName.end())
     {
         window = iter->second;
@@ -576,9 +576,9 @@ extern LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
     return 0;
 }
 
-Window::Window(HWND HWnd, const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync) :
+Window::Window(HWND HWnd, const std::wstring& window_name, int clientWidth, int clientHeight, bool vSync) :
     m_hwnd(HWnd),
-    m_WindowName(windowName),
+    m_WindowName(window_name),
     m_client_height(clientWidth),
     m_client_width(clientHeight),
     m_vsync_active(vSync),

@@ -131,7 +131,7 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
         const uint32_t num_mips = ComputeNumMips(image.width, image.height);
         bool is_srgb = srgb_textures.contains(i);
 
-        wil::com_ptr<ID3D12Resource> dst_texture;
+        ID3D12Resource* dst_texture = nullptr;
         {
             D3D12_HEAP_PROPERTIES heap_properties = {};
             heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -160,14 +160,8 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
                 return false;
             }
 
-#ifndef YSN_RELEASE
-            std::wstring name(image.uri.begin(), image.uri.end());
-            dst_texture->SetName(name.c_str());
-#endif
-
-            ysn::GpuTexture new_texture;
-            new_texture.name = std::wstring(image.uri.begin(), image.uri.end());
-            new_texture.gpu_resource = dst_texture;
+            ysn::GpuTexture new_texture(dst_texture);
+            new_texture.SetName(image.uri);
             new_texture.is_srgb = is_srgb;
             new_texture.num_mips = num_mips;
             new_texture.width = image.width;
@@ -181,7 +175,7 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
             srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
             srv_desc.Texture2D.MipLevels = num_mips;
 
-            dx_renderer->GetDevice()->CreateShaderResourceView(new_texture.gpu_resource.get(), &srv_desc, srv_handle.cpu);
+            dx_renderer->GetDevice()->CreateShaderResourceView(new_texture.Resource(), &srv_desc, srv_handle.cpu);
 
             new_texture.descriptor_handle = srv_handle;
 
@@ -250,7 +244,7 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
         }
 
         D3D12_TEXTURE_COPY_LOCATION dst_copy_location = {};
-        dst_copy_location.pResource = dst_texture.get();
+        dst_copy_location.pResource = dst_texture;
         dst_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         dst_copy_location.SubresourceIndex = 0;
 
@@ -735,13 +729,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
             shader_parameters.albedo_texture_index =
                 dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
-            D3D12_RESOURCE_DESC texture_desc = texture.gpu_resource->GetDesc();
-
-#ifndef YSN_RELEASE
-            texture.gpu_resource->SetName(L"Albedo Texture");
-#endif
-
-            texture.name = L"Albedo Texture";
+            texture.SetName("Albedo Texture");
         }
 
         if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index > 0)
@@ -755,11 +743,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
             shader_parameters.metallic_roughness_texture_index =
                 dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
-#ifndef YSN_RELEASE
-            texture.gpu_resource->SetName(L"Metallic Roughness Texture");
-#endif
-
-            texture.name = L"Metallic Roughness Texture";
+            texture.SetName("Metallic Roughness Texture");
         }
 
         if (gltf_material.normalTexture.index > 0)
@@ -772,11 +756,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
             shader_parameters.normal_texture_index =
                 dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
-#ifndef YSN_RELEASE
-            texture.gpu_resource->SetName(L"Normals Texture");
-#endif
-
-            texture.name = L"Normals Texture";
+            texture.SetName("Normals Texture");
         }
 
         if (gltf_material.occlusionTexture.index > 0)
@@ -789,11 +769,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
             shader_parameters.occlusion_texture_index =
                 dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
-#ifndef YSN_RELEASE
-            texture.gpu_resource->SetName(L"Occlusion Texture");
-#endif
-
-            texture.name = L"Occlusion Texture";
+            texture.SetName("Occlusion Texture");
         }
 
         if (gltf_material.emissiveTexture.index > 0)
@@ -806,11 +782,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
             shader_parameters.emissive_texture_index =
                 dx_renderer->GetCbvSrvUavDescriptorHeap()->GetDescriptorIndex(texture.descriptor_handle);
 
-#ifndef YSN_RELEASE
-            texture.gpu_resource->SetName(L"Emissive Texture");
-#endif
-
-            texture.name = L"Emissive Texture";
+            texture.SetName("Emissive Texture");
         }
 
         model.materials.push_back(material);

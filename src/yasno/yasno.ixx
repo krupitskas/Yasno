@@ -1,5 +1,8 @@
 ﻿module;
 
+#define TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+
 #include <DirectXMath.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -29,7 +32,7 @@ import renderer.dxrenderer;
 import renderer.gpu_buffer;
 import renderer.command_queue;
 import renderer.gpu_texture;
-import renderer.raytracing_context;
+import renderer.rtx_context;
 import renderer.command_queue;
 import renderer.gpu_pixel_buffer;
 import system.math;
@@ -42,6 +45,7 @@ import system.helpers;
 import system.logger;
 import system.asserts;
 import system.string_helpers;
+import system.profiler;
 
 export namespace ysn
 {
@@ -50,7 +54,7 @@ class Yasno : public Game
 public:
     Yasno(const std::wstring& name, int width, int height, bool vsync = false);
 
-    bool LoadContent() override;
+    std::expected<bool, std::string> LoadContent() override;
     void UnloadContent() override;
     void Destroy() override;
 
@@ -97,7 +101,7 @@ private:
     DescriptorHandle m_depth_dsv_descriptor_handle;
     DescriptorHandle m_hdr_rtv_descriptor_handle;
 
-    RaytracingContext m_raytracing_context;
+    RtxContext m_rtx_context;
 
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissors_rect;
@@ -121,7 +125,7 @@ private:
     ForwardPass m_forward_pass;
     ShadowMapPass m_shadow_pass;
     TonemapPostprocess m_tonemap_pass;
-    RaytracingPass m_ray_tracing_pass;
+    PathtracingPass m_ray_tracing_pass;
     ConvertToCubemap m_convert_to_cubemap_pass;
     SkyboxPass m_skybox_pass;
     GenerateMipsPass m_generate_mips_pass;
@@ -133,10 +137,8 @@ module :private;
 
 namespace ysn
 {
-std::optional<GpuPixelBuffer3D> CreateCubemapTexture()
+std::expected<GpuPixelBuffer3D, std::string> CreateCubemapTexture()
 {
-    GpuPixelBuffer3D cubemap_gpu_texture;
-
     auto renderer = Application::Get().GetRenderer();
 
     const auto size = 512;
@@ -155,18 +157,21 @@ std::optional<GpuPixelBuffer3D> CreateCubemapTexture()
 
     const auto heap_properties_default = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
+    ID3D12Resource* result = nullptr;
+
     if (renderer->GetDevice()->CreateCommittedResource(
             &heap_properties_default,
             D3D12_HEAP_FLAG_NONE,
             &texture_desc,
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-            nullptr,
-            IID_PPV_ARGS(&cubemap_gpu_texture.resource)) != S_OK)
+            nullptr, IID_PPV_ARGS(&result)) !=
+        S_OK)
     {
-        LogError << "Can't create cubemap resource\n";
-        return std::nullopt;
+        return std::unexpected("Can't create cubemap resource\n");
     }
 
+    GpuPixelBuffer3D cubemap_gpu_texture;
+    cubemap_gpu_texture.SetResource(result);
     cubemap_gpu_texture.SetName(L"Cubemap Texture");
     cubemap_gpu_texture.GenerateRTVs();
 
@@ -353,8 +358,10 @@ void Yasno::UpdateGpuSceneParametersBuffer()
     m_scene_parameters_gpu_buffer->Unmap(0, nullptr);
 }
 
-bool Yasno::LoadContent()
+std::expected<bool, std::string> Yasno::LoadContent()
 {
+    ZoneScopedN("Load Content");
+
     const auto init_start_time = std::chrono::high_resolution_clock::now();
 
     const auto device = Application::Get().GetDevice();
@@ -420,8 +427,8 @@ bool Yasno::LoadContent()
     //}
 
     // Build mips
-    for (auto& model : m_render_scene.models)
-        for (const GpuTexture& texture : model.textures)
+    for (Model& model : m_render_scene.models)
+        for (GpuTexture& texture : model.textures)
             m_generate_mips_pass.GenerateMips(renderer, command_list.list, texture);
 
     {
@@ -452,7 +459,7 @@ bool Yasno::LoadContent()
                     for (auto& primitive : mesh.primitives)
                     {
                         primitive.index_buffer_view.BufferLocation =
-                            m_render_scene.indices_buffer.GetGPUVirtualAddress() + all_indices_buffer.size() * sizeof(uint32_t);
+                            m_render_scene.indices_buffer.GPUVirtualAddress() + all_indices_buffer.size() * sizeof(uint32_t);
                         primitive.index_buffer_view.SizeInBytes = static_cast<uint32_t>(primitive.indices.size()) * sizeof(uint32_t);
                         primitive.index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 
@@ -495,7 +502,7 @@ bool Yasno::LoadContent()
                     for (auto& primitive : mesh.primitives)
                     {
                         primitive.vertex_buffer_view.BufferLocation =
-                            m_render_scene.vertices_buffer.GetGPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
+                            m_render_scene.vertices_buffer.GPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
                         primitive.vertex_buffer_view.SizeInBytes = UINT(primitive.vertices.size() * sizeof(Vertex));
                         primitive.vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 
@@ -553,7 +560,7 @@ bool Yasno::LoadContent()
 
             m_render_scene.materials_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
             renderer->GetDevice()->CreateShaderResourceView(
-                m_render_scene.materials_buffer.resource.get(), &srv_desc, m_render_scene.materials_buffer_srv.cpu);
+                m_render_scene.materials_buffer.Resource(), &srv_desc, m_render_scene.materials_buffer_srv.cpu);
         }
 
         // Instance buffer
@@ -629,7 +636,7 @@ bool Yasno::LoadContent()
 
             m_render_scene.instance_buffer_srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
             renderer->GetDevice()->CreateShaderResourceView(
-                m_render_scene.instance_buffer.resource.get(), &srv_desc, m_render_scene.instance_buffer_srv.cpu);
+                m_render_scene.instance_buffer.Resource(), &srv_desc, m_render_scene.instance_buffer_srv.cpu);
         }
     }
 
@@ -645,7 +652,7 @@ bool Yasno::LoadContent()
         }
     }
 
-    m_raytracing_context.CreateAccelerationStructures(command_list.list, m_render_scene);
+    m_rtx_context.CreateAccelerationStructures(command_list.list, m_render_scene);
 
     if (!m_tonemap_pass.Initialize())
     {
@@ -739,8 +746,8 @@ bool Yasno::LoadContent()
 
     // Setup camera
     m_render_scene.camera = std::make_shared<ysn::Camera>();
-    m_render_scene.camera->SetPosition({-5, 0, 0});
-    m_render_scene.camera_controler.pCamera = m_render_scene.camera;
+    m_render_scene.camera->SetPosition({0, 0, -5});
+    m_render_scene.camera_controler.p_camera = m_render_scene.camera;
 
     game_input.Initialize(m_window->GetWindowHandle());
 
@@ -758,12 +765,12 @@ bool Yasno::LoadContent()
             Application::Get().GetRenderer(),
             m_scene_color_buffer,
             m_scene_color_buffer_1,
-            m_raytracing_context,
+            m_rtx_context,
             m_camera_gpu_buffer,
-            m_render_scene.vertices_buffer.resource,
-            m_render_scene.indices_buffer.resource,
-            m_render_scene.materials_buffer.resource,
-            m_render_scene.instance_buffer.resource,
+            m_render_scene.vertices_buffer.Resource(),
+            m_render_scene.indices_buffer.Resource(),
+            m_render_scene.materials_buffer.Resource(),
+            m_render_scene.instance_buffer.Resource(),
             m_render_scene.vertices_count,
             m_render_scene.indices_count,
             m_render_scene.materials_count,
@@ -1015,7 +1022,7 @@ void Yasno::OnUpdate(UpdateEventArgs& e)
     {
         m_render_scene.camera_controler.MoveMouse(mouse.x, mouse.y);
 
-        m_render_scene.camera_controler.m_IsMovementBoostActive = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
+        m_render_scene.camera_controler.m_is_boost_active = kb.IsKeyDown(DirectX::Keyboard::LeftShift);
 
         if (kb.IsKeyDown(DirectX::Keyboard::W))
         {
@@ -1181,6 +1188,8 @@ void Yasno::RenderUi()
 
 void Yasno::OnRender(RenderEventArgs& e)
 {
+    ZoneScopedN("Render");
+
     Game::OnRender(e);
 
     if (GetClientWidth() < 8 || GetClientHeight() < 8)
@@ -1317,7 +1326,7 @@ void Yasno::OnRender(RenderEventArgs& e)
 
         m_ray_tracing_pass.Execute(
             Application::Get().GetRenderer(),
-            m_raytracing_context,
+            m_rtx_context,
             m_hdr_uav_descriptor_handle,
             m_scene_color_buffer_1_handle,
             command_list.list,

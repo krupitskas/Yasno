@@ -38,7 +38,7 @@ public:
 
             rtv[i] = renderer->GetRtvDescriptorHeap()->GetNewHandle();
 
-            renderer->GetDevice()->CreateRenderTargetView(resource.get(), &rtv_desc, rtv[i].cpu);
+            renderer->GetDevice()->CreateRenderTargetView(m_resource.get(), &rtv_desc, rtv[i].cpu);
         }
 
         {
@@ -51,7 +51,7 @@ public:
             srv_desc.TextureCube.ResourceMinLODClamp = 0.0f;
 
             srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
-            renderer->GetDevice()->CreateShaderResourceView(resource.get(), &srv_desc, srv.cpu);
+            renderer->GetDevice()->CreateShaderResourceView(m_resource.get(), &srv_desc, srv.cpu);
         }
     }
 };
