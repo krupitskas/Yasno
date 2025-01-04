@@ -414,8 +414,11 @@ int Application::Run(std::shared_ptr<Game> pGame)
 
     if (!pGame->Initialize())
         return 1;
-    if (!pGame->LoadContent())
+    if (const auto return_val = pGame->LoadContent(); !return_val.has_value())
+    {
+        LogFatal << return_val.error() << "\n";
         return 2;
+    }
 
     MSG msg = {0};
     while (msg.message != WM_QUIT)

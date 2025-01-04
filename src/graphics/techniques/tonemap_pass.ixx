@@ -46,9 +46,8 @@ public:
 
     wil::com_ptr<ID3D12Resource> parameters_buffer;
 
-
     float exposure = 1.0f;
-    TonemapMethod tonemap_method = TonemapMethod::None;
+    TonemapMethod tonemap_method = TonemapMethod::Reinhard;
 private:
     PsoId m_pso_id;
 };
@@ -159,11 +158,8 @@ bool TonemapPostprocess::Render(TonemapPostprocessParameters* parameters)
     GraphicsCommandList command_list = command_list_result.value();
 
     const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
-
     if (!pso.has_value())
-    {
         return false;
-    }
 
     auto& pso_object = pso.value();
 

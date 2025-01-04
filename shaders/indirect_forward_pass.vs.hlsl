@@ -1,3 +1,5 @@
+#include "shader_structs.h"
+
 struct IA2VS
 {
 	float3 position : POSITION;
@@ -15,19 +17,7 @@ struct VS2RS
 	float2 texcoord_1: TEXCOORD_1;
 };
 
-cbuffer CameraParameters : register(b0)
-{
-	float4x4 view_projection;
-	float4x4 view;
-	float4x4 projection;
-	float4x4 view_inverse;
-	float4x4 projection_inverse;
-	float3 camera_position;
-	uint frame_number;
-	uint frames_accumulated;
-    uint reset_accumulation;
-    uint accumulation_enabled;
-};
+ConstantBuffer<CameraParameters> parameters : register(b0);
 
 cbuffer SceneParameters : register(b1)
 {
@@ -53,7 +43,7 @@ VS2RS main(IA2VS input)
 	VS2RS output;
 
 	output.position = mul(float4(input.position, 1.0), model_matrix);
-	output.position = mul(view_projection, output.position);
+	output.position = mul(parameters.view_projection, output.position);
 	output.normal = mul(float4(input.normal, 1.0), model_matrix);
 	output.tangent.xyz = mul(float4(input.tangent.xyz, 1.0), model_matrix);
 	output.tangent.w = input.tangent.w;

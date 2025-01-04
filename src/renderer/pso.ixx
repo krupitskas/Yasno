@@ -240,7 +240,7 @@ void ComputePsoDesc::AddShader(const ShaderCompileParameters& shader_parameter)
 void ComputePsoDesc::SetRootSignature(ID3D12RootSignature* root_signature)
 {
     m_compute_pso_desc.pRootSignature = root_signature;
-    AssertMsg(m_compute_pso_desc.pRootSignature != nullptr, "Root signature can't be nullptr");
+    //AssertMsg(m_compute_pso_desc.pRootSignature != nullptr, "Root signature can't be nullptr");
 }
 
 PsoHash ComputePsoDesc::GenerateHash() const

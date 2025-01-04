@@ -20,7 +20,7 @@ void AssertMsg(bool condition, std::string_view msg, std::source_location loc = 
         if (!condition)
         {
             const std::string message = msg.empty() ? "Message not provided!" : msg.data();
-            LogError << "ASSERT in function " << loc.function_name() << "Message: " << message << "\n"
+            LogError << "ASSERT: [" << loc.function_name() << "]\nMessage: " << message << "\n"
                      << "Location: " << std::to_string(loc.line()) << " " << loc.file_name() << " " << "\n";
 
             TriggerBreakpoint();

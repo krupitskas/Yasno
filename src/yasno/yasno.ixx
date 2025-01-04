@@ -387,10 +387,7 @@ std::expected<bool, std::string> Yasno::LoadContent()
     }
 
     if (!m_generate_mips_pass.Initialize(renderer))
-    {
-        LogError << "Can't initialize generate mips pass\n";
-        return false;
-    }
+        return "Can't initialize generate mips pass";
 
     bool load_result = false;
 
@@ -657,10 +654,7 @@ std::expected<bool, std::string> Yasno::LoadContent()
     }
 
     if (!m_skybox_pass.Initialize())
-    {
-        LogError << "Can't initialize skybox pass\n";
-        return false;
-    }
+        return std::unexpected("Can't initialize skybox pass");
 
     InitializeImgui(m_window, renderer);
 
