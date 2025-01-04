@@ -9,11 +9,11 @@ export namespace ysn
 
 	//bool 
 
-class RootSignature
-{
-public:
-private:
-};
-} // namespace ysn
+	class RootSignature
+	{
+	public:
+	private:
+	};
+}
 
 module :private;

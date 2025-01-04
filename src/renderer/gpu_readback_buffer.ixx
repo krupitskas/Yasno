@@ -9,9 +9,9 @@ import renderer.gpu_buffer;
 
 export namespace ysn
 {
-class GpuReadbackBuffer : public GpuBuffer
-{
-public:
+	class GpuReadbackBuffer : public GpuBuffer
+	{
+	public:
 
-};
-} // namespace ysn
+	};
+}

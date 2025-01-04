@@ -7,14 +7,14 @@ export module renderer.index_storage;
 
 export namespace ysn
 {
-using IndexBufferFormat = std::uint32_t;
+	using IndexBufferFormat = std::uint32_t;
 
-struct IndexStorage
-{
-    // uint32_t GetIndexBufferSize();
+	struct IndexStorage
+	{
+		// uint32_t GetIndexBufferSize();
 
-    // std::vector<IndexBufferFormat> index_data;
+		// std::vector<IndexBufferFormat> index_data;
 
-    // GpuResource gpu_index_buffer;
-};
-} // namespace ysn
+		// GpuResource gpu_index_buffer;
+	};
+}

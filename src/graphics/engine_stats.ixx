@@ -12,4 +12,4 @@ export namespace engine_stats
 
 // Frustum culling stats
 // Occlusion culling stats
-}; // namespace engine_stats
+}; 

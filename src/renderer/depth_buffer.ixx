@@ -7,11 +7,11 @@ export module renderer.depth_buffer;
 
 namespace ysn
 {
-class DepthBuffer
-{
-public:
-private:
-};
-} // namespace ysn
+	class DepthBuffer
+	{
+	public:
+	private:
+	};
+}
 
 module :private;

@@ -209,6 +209,12 @@
     <ClCompile Include="system\profiler.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
+    <ClCompile Include="renderer\command_context.ixx">
+      <Filter>source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\color.ixx">
+      <Filter>source\graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

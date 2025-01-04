@@ -4,5 +4,5 @@ import std;
 
 namespace ysn
 {
-using RenderObjectId = std::uint32_t;
+	using RenderObjectId = std::uint32_t;
 }

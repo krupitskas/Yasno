@@ -5,10 +5,10 @@ import graphics.primitive;
 
 export namespace ysn
 {
-struct Mesh
-{
-    std::string name = "Unnamed Mesh";
+	struct Mesh
+	{
+		std::string name = "Unnamed Mesh";
 
-    std::vector<Primitive> primitives;
-};
-} // namespace ysn
+		std::vector<Primitive> primitives;
+	};
+}

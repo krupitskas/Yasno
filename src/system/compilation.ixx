@@ -2,41 +2,41 @@ export module system.compilation;
 
 namespace ysn
 {
-enum class CompilationMode
-{
-    Debug,
-    Profile,
-    Release
-};
+	enum class CompilationMode
+	{
+		Debug,
+		Profile,
+		Release
+	};
 
-constexpr CompilationMode g_compilation_mode =
-#if YSN_DEBUG
-    CompilationMode::Debug;
+	constexpr CompilationMode g_compilation_mode =
+	#if YSN_DEBUG
+		CompilationMode::Debug;
 #elif YSN_PROFILE
-    CompilationMode::Profile;
+		CompilationMode::Profile;
 #elif YSN_RELEASE
-    CompilationMode::Release;
+		CompilationMode::Release;
 #else
-#error Unknown compilation mode!
-#endif
-} // namespace ysn
+	#error Unknown compilation mode!
+	#endif
+}
 
 export namespace ysn
 {
-consteval bool IsDebugActive()
-{
-    return g_compilation_mode == CompilationMode::Debug;
-}
+	consteval bool IsDebugActive()
+	{
+		return g_compilation_mode == CompilationMode::Debug;
+	}
 
-consteval bool IsProfileActive()
-{
-    return g_compilation_mode == CompilationMode::Profile;
-}
+	consteval bool IsProfileActive()
+	{
+		return g_compilation_mode == CompilationMode::Profile;
+	}
 
-consteval bool IsReleaseActive()
-{
-    return g_compilation_mode == CompilationMode::Release;
-}
+	consteval bool IsReleaseActive()
+	{
+		return g_compilation_mode == CompilationMode::Release;
+	}
 }
 
 module :private;

@@ -57,7 +57,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\props\Superluminal.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'" Label="PropertySheets"> 
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\props\Superluminal.props" />
   </ImportGroup>
@@ -178,11 +178,13 @@
     <None Include="..\shaders\skybox.ps.hlsl" />
     <None Include="..\shaders\skybox.vs.hlsl" />
     <ClCompile Include="external\implementation.ixx" />
+    <ClCompile Include="graphics\color.ixx" />
     <ClCompile Include="graphics\lights.ixx" />
     <ClCompile Include="graphics\techniques\debug_renderer.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
     <ClCompile Include="main.cxx" />
     <ClCompile Include="renderer\blas_generator.ixx" />
+    <ClCompile Include="renderer\command_context.ixx" />
     <ClCompile Include="renderer\dx_debug_layer.ixx" />
     <ClCompile Include="renderer\dx_types.ixx" />
     <ClCompile Include="renderer\gpu_pixel_buffer.ixx" />
@@ -405,4 +407,4 @@
     <Error Condition="!Exists('..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.props')" Text="$([System.String]::Format('$(ErrorText)', '..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.props'))" />
     <Error Condition="!Exists('..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.targets'))" />
   </Target>
-</Project> 
+</Project>
