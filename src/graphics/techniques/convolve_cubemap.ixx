@@ -36,6 +36,7 @@ export namespace ysn
 		bool ComputeBRDF();
 		bool ConvolveIrradiance(ConvolveCubemapParameters& parameters);
 		bool ConvolveRadiance(ConvolveCubemapParameters& parameters);
+		DescriptorHandle GetBrdfTextureHandle() const;
 	private:
 		bool InitializeIrradiance();
 		bool InitializeRadiance();
@@ -489,5 +490,10 @@ namespace ysn
 		renderer->GetDirectQueue()->ExecuteCommandList(command_list);
 
 		return true;
+	}
+
+	DescriptorHandle ConvolveCubemap::GetBrdfTextureHandle() const
+	{
+		return m_brdf_handle;
 	}
 }

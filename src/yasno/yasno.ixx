@@ -1358,6 +1358,7 @@ namespace ysn
 				render_parameters.cubemap_texture = m_cubemap_texture;
 				render_parameters.irradiance_texture = m_irradiance_cubemap_texture;
 				render_parameters.radiance_texture = m_radiance_cubemap_texture;
+				render_parameters.brdf_texture_handle = m_cubemap_filter_pass.GetBrdfTextureHandle();
 
 				if (m_is_indirect)
 				{

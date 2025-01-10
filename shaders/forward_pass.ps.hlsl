@@ -23,6 +23,7 @@ Texture2D   g_shadow_map			: register(t2);
 TextureCube g_input_cubemap			: register(t3);
 TextureCube g_input_irradiance		: register(t4);
 TextureCube g_input_radiance		: register(t5);
+Texture2D	g_input_brdf			: register(t6);
 
 // Samplers
 SamplerState g_shadow_sampler		: register(s0);

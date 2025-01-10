@@ -56,6 +56,8 @@ export namespace ysn
 		GpuPixelBuffer3D cubemap_texture;
 		GpuPixelBuffer3D irradiance_texture;
 		GpuPixelBuffer3D radiance_texture;
+
+		DescriptorHandle brdf_texture_handle;
 	};
 
 	enum class IndirectRootParameters : uint8_t
@@ -173,7 +175,18 @@ namespace ysn
 			radiance_parameter.DescriptorTable.NumDescriptorRanges = 1;
 			radiance_parameter.DescriptorTable.pDescriptorRanges = &radiance_descriptor_range;
 
-			D3D12_ROOT_PARAMETER rootParams[9] = {
+			D3D12_DESCRIPTOR_RANGE brdf_descriptor_range = {};
+			brdf_descriptor_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			brdf_descriptor_range.NumDescriptors = 1;
+			brdf_descriptor_range.BaseShaderRegister = 6;
+
+			D3D12_ROOT_PARAMETER brdf_parameter;
+			brdf_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			brdf_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			brdf_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			brdf_parameter.DescriptorTable.pDescriptorRanges = &brdf_descriptor_range;
+
+			D3D12_ROOT_PARAMETER rootParams[10] = {
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {0, 0}, D3D12_SHADER_VISIBILITY_ALL}, // CameraParameters
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {1, 0}, D3D12_SHADER_VISIBILITY_ALL}, // SceneParameters
 
@@ -188,6 +201,7 @@ namespace ysn
 				cubemap_parameter,          // Cubemap input
 				irradiance_parameter,       // Irradiance input
 				radiance_parameter,         // Radiance input
+				brdf_parameter,             // BRDF input
 			};
 
 			// TEMP
@@ -210,7 +224,7 @@ namespace ysn
 				D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters = 9;
+			RootSignatureDesc.NumParameters = 10;
 			RootSignatureDesc.pParameters = &rootParams[0];
 			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
@@ -335,7 +349,8 @@ namespace ysn
 
 						command_list.list->SetGraphicsRootDescriptorTable(6, render_parameters.cubemap_texture.srv.gpu);
 						command_list.list->SetGraphicsRootDescriptorTable(7, render_parameters.irradiance_texture.srv.gpu);
-						//command_list.list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
+						command_list.list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
+						command_list.list->SetGraphicsRootDescriptorTable(9, render_parameters.brdf_texture_handle.gpu);
 
 						if (primitive.index_count)
 						{
