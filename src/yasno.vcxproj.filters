@@ -215,6 +215,9 @@
     <ClCompile Include="graphics\color.ixx">
       <Filter>source\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="graphics\techniques\convolve_cubemap.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -303,6 +306,12 @@
     </None>
     <None Include="..\shaders\include\debug_renderer.hlsl">
       <Filter>shaders\include</Filter>
+    </None>
+    <None Include="..\shaders\convolve_irradiance.ps.hlsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders\convolve_irradiance.vs.hlsl">
+      <Filter>shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

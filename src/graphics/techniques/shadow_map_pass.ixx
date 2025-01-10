@@ -303,7 +303,7 @@ namespace ysn
 			void* data = nullptr;
 			m_camera_buffer->Map(0, nullptr, &data);
 			auto* pCameraData = static_cast<ShadowCamera*>(data);
-			pCameraData->shadow_matrix = shadow_matrix;
+			pCameraData->view_projection = shadow_matrix;
 			m_camera_buffer->Unmap(0, nullptr);
 		}
 

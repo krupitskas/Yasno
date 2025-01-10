@@ -24,6 +24,7 @@ import graphics.techniques.skybox_pass;
 import graphics.techniques.forward_pass;
 import graphics.techniques.generate_mips_pass;
 import graphics.techniques.debug_renderer;
+import graphics.techniques.convolve_cubemap;
 import graphics.render_scene;
 import renderer.dxrenderer;
 import renderer.gpu_buffer;
@@ -43,6 +44,13 @@ import system.logger;
 import system.asserts;
 import system.string_helpers;
 import system.profiler;
+
+enum class SkyboxCubemap : uint8_t
+{
+	Cubemap,
+	Irradiance,
+	Radiance
+};
 
 export namespace ysn
 {
@@ -104,7 +112,12 @@ export namespace ysn
 		D3D12_RECT m_scissors_rect;
 
 		GpuTexture m_environment_texture;
+
+		// Should be single struct
 		GpuPixelBuffer3D m_cubemap_texture;
+		GpuPixelBuffer3D m_irradiance_cubemap_texture;
+		GpuPixelBuffer3D m_radiance_cubemap_texture;
+		SkyboxCubemap m_active_skybox_cubemap = SkyboxCubemap::Cubemap;
 
 		wil::com_ptr<ID3D12Resource> m_camera_gpu_buffer;
 		wil::com_ptr<ID3D12Resource> m_scene_parameters_gpu_buffer;
@@ -127,6 +140,7 @@ export namespace ysn
 		SkyboxPass m_skybox_pass;
 		GenerateMipsPass m_generate_mips_pass;
 		DebugRenderer m_debug_renderer;
+		ConvolveCubemap m_cubemap_filter_pass;
 	};
 }
 
@@ -134,18 +148,17 @@ module :private;
 
 namespace ysn
 {
-	std::expected<GpuPixelBuffer3D, std::string> CreateCubemapTexture()
+	std::expected<GpuPixelBuffer3D, std::string> CreateCubemapTexture(std::string name, uint32_t size, bool create_mips = false)
 	{
 		auto renderer = Application::Get().GetRenderer();
 
-		const auto size = 512;
 		const auto format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 
 		D3D12_RESOURCE_DESC texture_desc = {};
 		texture_desc.Format = format;
 		texture_desc.Width = size;
 		texture_desc.Height = size;
-		texture_desc.MipLevels = 1;
+		texture_desc.MipLevels = create_mips ? static_cast<UINT16>(ComputeNumMips(size, size)) : 1;
 		texture_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		texture_desc.DepthOrArraySize = 6;
 		texture_desc.SampleDesc.Count = 1;
@@ -165,7 +178,7 @@ namespace ysn
 
 		GpuPixelBuffer3D cubemap_gpu_texture;
 		cubemap_gpu_texture.SetResource(result);
-		cubemap_gpu_texture.SetName(L"Cubemap Texture");
+		cubemap_gpu_texture.SetName(name);
 		cubemap_gpu_texture.GenerateRTVs();
 
 		return cubemap_gpu_texture;
@@ -391,16 +404,16 @@ namespace ysn
 
 		bool load_result = false;
 
-		//{
-		//    LoadingParameters loading_parameters;
-		//    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		//    load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
-		//}
-
 		{
-			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		    LoadingParameters loading_parameters;
+		    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+		    load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
+
+		//{
+		//	LoadingParameters loading_parameters;
+		//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		//}
 
 		//{
 		//	LoadingParameters loading_parameters;
@@ -412,6 +425,17 @@ namespace ysn
 		//	LoadingParameters loading_parameters;
 		//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza_New/NewSponza_Main_glTF_002.gltf"), loading_parameters);
 		//}
+
+		// TODO: Verify all of this tests
+		{
+			
+			LoadingParameters loading_parameters;
+			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"), loading_parameters); // Texture coordinate test
+			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
+
+			//loading_parameters.model_modifier = DirectX::XMMatrixScaling(10.f, 10.f, 10.f);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), loading_parameters); // Boombox with axes
+		}
 
 		// Build mips
 		for (Model& model : m_render_scene.models)
@@ -653,6 +677,12 @@ namespace ysn
 			return false;
 		}
 
+		if (!m_cubemap_filter_pass.Initialize())
+		{
+			LogError << "Can't initialize cubemap filter pass\n";
+			return false;
+		}
+
 		if (!m_skybox_pass.Initialize())
 			return std::unexpected("Can't initialize skybox pass");
 
@@ -662,7 +692,7 @@ namespace ysn
 
 		{
 			LoadTextureParameters parameter;
-			parameter.filename = "assets/HDRI/drackenstein_quarry_puresky_4k.hdr";
+			parameter.filename = "assets/HDRI/photo_studio_loft_hall_4k.hdr";
 			parameter.command_list = command_list.list;
 			parameter.generate_mips = false;
 			parameter.is_srgb = false;
@@ -736,14 +766,31 @@ namespace ysn
 		game_input.Initialize(m_window->GetWindowHandle());
 
 		// Post init
-		const auto cubemap_texture_result = CreateCubemapTexture();
+		const auto cubemap_texture_result = CreateCubemapTexture("Cubemap Source", 512);
+		const auto irradiance_result = CreateCubemapTexture("Irradiance Cubemap", 512);
+		const auto radiance_result = CreateCubemapTexture("Radiance cubemap", 128, true);
+
 		if (!cubemap_texture_result)
 		{
 			LogError << "Can't create cubemap\n";
 			return false;
 		}
 
+		if (!irradiance_result)
+		{
+			LogError << "Can't create irradiance cubemap\n";
+			return false;
+		}
+
+		if (!radiance_result)
+		{
+			LogError << "Can't create radiance cubemap\n";
+			return false;
+		}
+
 		m_cubemap_texture = cubemap_texture_result.value();
+		m_irradiance_cubemap_texture = irradiance_result.value();
+		m_radiance_cubemap_texture = radiance_result.value();
 
 		if (!m_ray_tracing_pass.Initialize(
 			Application::Get().GetRenderer(),
@@ -1123,6 +1170,17 @@ namespace ysn
 
 				ImGui::InputFloat("Intensity", &m_render_scene.directional_light.intensity, 0.0f, 1000.0f);
 				ImGui::InputFloat("Env Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
+
+				{
+					const char* items[] = {
+						"Cubemap",
+						"Irradiance",
+						"Radiance",
+					};
+					static int item_current = (int)m_active_skybox_cubemap;
+					ImGui::Combo("Skybox", &item_current, items, IM_ARRAYSIZE(items));
+					m_active_skybox_cubemap = static_cast<SkyboxCubemap>(item_current);
+				}
 			}
 
 			if (ImGui::CollapsingHeader("Shadows"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -1244,6 +1302,16 @@ namespace ysn
 			m_convert_to_cubemap_pass.Render(parameters);
 		}
 
+		{
+			ConvolveCubemapParameters parameters;
+			parameters.camera_buffer = m_camera_gpu_buffer;
+			parameters.source_cubemap = m_cubemap_texture;
+			parameters.target_irradiance = m_irradiance_cubemap_texture;
+			parameters.target_radiance = m_radiance_cubemap_texture;
+
+			m_cubemap_filter_pass.Render(parameters);
+		}
+
 		if (m_is_raster)
 		{
 			{
@@ -1280,6 +1348,9 @@ namespace ysn
 				render_parameters.current_back_buffer = current_back_buffer;
 				render_parameters.shadow_map_buffer = m_shadow_pass.shadow_map_buffer;
 				render_parameters.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer;
+				render_parameters.cubemap_texture = m_cubemap_texture;
+				render_parameters.irradiance_texture = m_irradiance_cubemap_texture;
+				render_parameters.radiance_texture = m_radiance_cubemap_texture;
 
 				if (m_is_indirect)
 				{
@@ -1344,7 +1415,18 @@ namespace ysn
 			skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
 			skybox_parameters.viewport = m_viewport;
 			skybox_parameters.scissors_rect = m_scissors_rect;
-			skybox_parameters.cubemap_texture = m_cubemap_texture;
+			switch(m_active_skybox_cubemap)
+			{
+				case SkyboxCubemap::Cubemap:
+					skybox_parameters.cubemap_texture = m_cubemap_texture;
+					break;
+				case SkyboxCubemap::Irradiance:
+					skybox_parameters.cubemap_texture = m_irradiance_cubemap_texture;
+					break;
+				case SkyboxCubemap::Radiance:
+					skybox_parameters.cubemap_texture = m_radiance_cubemap_texture;
+					break;
+			}
 			skybox_parameters.camera_gpu_buffer = m_camera_gpu_buffer;
 			skybox_parameters.debug_vertices_buffer_uav = m_debug_renderer.vertices_buffer_uav;
 			skybox_parameters.debug_counter_buffer_uav = m_debug_renderer.counter_uav;

@@ -18,6 +18,7 @@ import renderer.dxrenderer;
 import renderer.descriptor_heap;
 import renderer.gpu_texture;
 import renderer.gpu_buffer;
+import renderer.gpu_pixel_buffer;
 import system.filesystem;
 import system.application;
 import system.logger;
@@ -51,6 +52,10 @@ export namespace ysn
 		D3D12_CPU_DESCRIPTOR_HANDLE backbuffer_handle;
 		wil::com_ptr<ID3D12Resource> current_back_buffer;
 		ShadowMapBuffer shadow_map_buffer;
+
+		GpuPixelBuffer3D cubemap_texture;
+		GpuPixelBuffer3D irradiance_texture;
+		GpuPixelBuffer3D radiance_texture;
 	};
 
 	enum class IndirectRootParameters : uint8_t
@@ -135,7 +140,40 @@ namespace ysn
 			shadow_parameter.DescriptorTable.NumDescriptorRanges = 1;
 			shadow_parameter.DescriptorTable.pDescriptorRanges = &shadow_input_range;
 
-			D3D12_ROOT_PARAMETER rootParams[6] = {
+			D3D12_DESCRIPTOR_RANGE cubemap_descriptor_range = {};
+			cubemap_descriptor_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			cubemap_descriptor_range.NumDescriptors = 1;
+			cubemap_descriptor_range.BaseShaderRegister = 3;
+
+			D3D12_ROOT_PARAMETER cubemap_parameter;
+			cubemap_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			cubemap_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			cubemap_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			cubemap_parameter.DescriptorTable.pDescriptorRanges = &cubemap_descriptor_range;
+
+			D3D12_DESCRIPTOR_RANGE irradiance_descriptor_range = {};
+			irradiance_descriptor_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			irradiance_descriptor_range.NumDescriptors = 1;
+			irradiance_descriptor_range.BaseShaderRegister = 4;
+
+			D3D12_ROOT_PARAMETER irradiance_parameter;
+			irradiance_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			irradiance_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			irradiance_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			irradiance_parameter.DescriptorTable.pDescriptorRanges = &irradiance_descriptor_range;
+
+			D3D12_DESCRIPTOR_RANGE radiance_descriptor_range = {};
+			radiance_descriptor_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			radiance_descriptor_range.NumDescriptors = 1;
+			radiance_descriptor_range.BaseShaderRegister = 5;
+
+			D3D12_ROOT_PARAMETER radiance_parameter;
+			radiance_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+			radiance_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			radiance_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			radiance_parameter.DescriptorTable.pDescriptorRanges = &radiance_descriptor_range;
+
+			D3D12_ROOT_PARAMETER rootParams[9] = {
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {0, 0}, D3D12_SHADER_VISIBILITY_ALL}, // CameraParameters
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {1, 0}, D3D12_SHADER_VISIBILITY_ALL}, // SceneParameters
 
@@ -146,7 +184,10 @@ namespace ysn
 
 				instance_buffer_parameter,  // PerInstanceData
 				materials_buffer_parameter, // Materials buffer
-				shadow_parameter            // Shadow Map input
+				shadow_parameter,           // Shadow Map input
+				cubemap_parameter,          // Cubemap input
+				irradiance_parameter,       // Irradiance input
+				radiance_parameter,         // Radiance input
 			};
 
 			// TEMP
@@ -169,7 +210,7 @@ namespace ysn
 				D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters = 6;
+			RootSignatureDesc.NumParameters = 9;
 			RootSignatureDesc.pParameters = &rootParams[0];
 			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
@@ -291,6 +332,10 @@ namespace ysn
 						command_list.list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
 						command_list.list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
 						command_list.list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
+
+						command_list.list->SetGraphicsRootDescriptorTable(6, render_parameters.cubemap_texture.srv.gpu);
+						command_list.list->SetGraphicsRootDescriptorTable(7, render_parameters.irradiance_texture.srv.gpu);
+						//command_list.list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
 
 						if (primitive.index_count)
 						{

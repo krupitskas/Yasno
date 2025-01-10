@@ -37,7 +37,6 @@ export namespace ysn
 				rtv_desc.Texture2DArray.ArraySize = 1;
 
 				rtv[i] = renderer->GetRtvDescriptorHeap()->GetNewHandle();
-
 				renderer->GetDevice()->CreateRenderTargetView(m_resource.get(), &rtv_desc, rtv[i].cpu);
 			}
 

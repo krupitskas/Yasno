@@ -41,6 +41,13 @@ export namespace ysn
 		bool is_srgb = false;
 	};
 
+	uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
+	{
+		uint32_t HighBit;
+		_BitScanReverse((unsigned long*)&HighBit, Width | Height);
+		return HighBit + 1;
+	}
+
 	std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& parameters);
 }
 
@@ -48,14 +55,6 @@ module :private;
 
 namespace ysn
 {
-
-	static inline uint32_t ComputeNumMips(uint32_t Width, uint32_t Height)
-	{
-		uint32_t HighBit;
-		_BitScanReverse((unsigned long*)&HighBit, Width | Height);
-		return HighBit + 1;
-	}
-
 	std::optional<GpuTexture> LoadTextureFromFile(const LoadTextureParameters& parameters)
 	{
 		std::shared_ptr<DxRenderer> renderer = Application::Get().GetRenderer();

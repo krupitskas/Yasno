@@ -180,6 +180,7 @@
     <ClCompile Include="external\implementation.ixx" />
     <ClCompile Include="graphics\color.ixx" />
     <ClCompile Include="graphics\lights.ixx" />
+    <ClCompile Include="graphics\techniques\convolve_cubemap.ixx" />
     <ClCompile Include="graphics\techniques\debug_renderer.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
     <ClCompile Include="main.cxx" />
@@ -386,6 +387,14 @@
       <FileType>Document</FileType>
     </None>
     <None Include="..\shaders\debug_geometry.vs.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\convolve_irradiance.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\shaders\convolve_irradiance.vs.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

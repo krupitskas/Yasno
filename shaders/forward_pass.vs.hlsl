@@ -1,3 +1,6 @@
+#include "shader_structs.h"
+#include "shared.hlsl"
+
 struct IA2VS
 {
 	float3 position : POSITION;
@@ -20,24 +23,9 @@ struct VS2RS
 };
 
 #ifdef SHADOW_PASS
-cbuffer ShadowCameraParameters : register(b0)
-{
-	float4x4 view_projection;
-};
+ConstantBuffer<ShadowCamera>		camera : register(b0);
 #else
-cbuffer CameraParameters : register(b0)
-{
-	float4x4 view_projection;
-	float4x4 view;
-	float4x4 projection;
-	float4x4 view_inverse;
-	float4x4 projection_inverse;
-	float3 camera_position;
-	uint frame_number;
-	uint frames_accumulated;
-    uint reset_accumulation;
-    uint accumulation_enabled;
-};
+ConstantBuffer<CameraParameters>	camera : register(b0);
 #endif
 
 cbuffer SceneParameters : register(b1)
@@ -55,14 +43,6 @@ cbuffer InstanceId : register(b2)
     uint instance_id;
 };
 
-struct PerInstanceData
-{
-	float4x4 model_matrix;
-	int material_id;
-	int vertices_before;
-	int indices_before;
-	int pad;
-};
 StructuredBuffer<PerInstanceData> per_instance_data : register(t0);
 
 VS2RS main(IA2VS input)
@@ -76,7 +56,7 @@ VS2RS main(IA2VS input)
 	output.position_shadow_space = mul(shadow_matrix, output.position);
 #endif
 
-	output.position = mul(view_projection, output.position);
+	output.position = mul(camera.view_projection, output.position);
 	output.normal = mul(float4(input.normal, 1.0), instance_data.model_matrix).xyz;
 	output.tangent.xyz = mul(float4(input.tangent.xyz, 1.0), instance_data.model_matrix).xyz;
 	output.tangent.w = input.tangent.w;

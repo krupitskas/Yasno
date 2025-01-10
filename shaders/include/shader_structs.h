@@ -68,6 +68,12 @@ struct PerInstanceData
 };
 CHECK_STRUCT_ALIGNMENT(PerInstanceData);
 
+struct InstanceID
+{
+    uint id;
+};
+//CHECK_STRUCT_ALIGNMENT(InstanceID);
+
 struct GpuSceneParameters
 {
     matrix shadow_matrix;
@@ -83,7 +89,7 @@ CHECK_STRUCT_ALIGNMENT(GpuSceneParameters);
 
 struct ShadowCamera
 {
-    matrix shadow_matrix;
+    matrix view_projection;
 };
 CHECK_STRUCT_ALIGNMENT(ShadowCamera);
 
