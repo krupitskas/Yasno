@@ -100,6 +100,9 @@ export namespace ysn
 		wil::com_ptr<ID3D12Resource> m_scene_color_buffer;
 		wil::com_ptr<ID3D12Resource> m_scene_color_buffer_1;
 
+		//wil::com_ptr<ID3D12Resource> m_velocity_buffer;
+		DescriptorHandle m_velocity_descriptor_handle;
+
 		DescriptorHandle m_hdr_uav_descriptor_handle;
 		DescriptorHandle m_scene_color_buffer_1_handle;
 		DescriptorHandle m_backbuffer_uav_descriptor_handle;
@@ -335,6 +338,7 @@ namespace ysn
 
 		camera_data->view_projection = view_projection;
 		camera_data->view = m_render_scene.camera->GetViewMatrix();
+		camera_data->previous_view = m_render_scene.camera->GetPrevViewMatrix();
 		camera_data->projection = m_render_scene.camera->GetProjectionMatrix();
 		camera_data->view_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetViewMatrix());
 		camera_data->projection_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix());
@@ -710,6 +714,7 @@ namespace ysn
 		m_scene_color_buffer_1_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
+		m_velocity_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
 		if (!CreateGpuCameraBuffer())
 		{
@@ -1309,7 +1314,9 @@ namespace ysn
 			parameters.target_irradiance = m_irradiance_cubemap_texture;
 			parameters.target_radiance = m_radiance_cubemap_texture;
 
-			m_cubemap_filter_pass.Render(parameters);
+			m_cubemap_filter_pass.ConvolveRadiance(parameters);
+			m_cubemap_filter_pass.ConvolveIrradiance(parameters);
+			m_cubemap_filter_pass.ComputeBRDF();
 		}
 
 		if (m_is_raster)

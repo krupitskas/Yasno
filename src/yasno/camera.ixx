@@ -16,6 +16,7 @@ export namespace ysn
 		Camera();
 
 		DirectX::XMMATRIX GetViewMatrix() const;
+		DirectX::XMMATRIX GetPrevViewMatrix() const;
 		// TODO: Previous View Matrix
 		DirectX::XMMATRIX GetProjectionMatrix() const;
 
@@ -55,6 +56,7 @@ export namespace ysn
 		DirectX::XMFLOAT3 m_right_vector;
 
 		DirectX::XMMATRIX m_view_matrix;
+		DirectX::XMMATRIX m_prev_view_matrix;
 		DirectX::XMMATRIX m_projection_matrix;
 
 		float m_mouse_sensetivity = 1.0f;
@@ -82,6 +84,11 @@ namespace ysn
 		return m_view_matrix;
 	}
 
+	XMMATRIX Camera::GetPrevViewMatrix() const
+	{
+		return m_prev_view_matrix;
+	}
+
 	XMMATRIX Camera::GetProjectionMatrix() const
 	{
 		return m_projection_matrix;
@@ -98,6 +105,8 @@ namespace ysn
 			XMVectorSet(m_position.x + m_forward_vector.x, m_position.y + m_forward_vector.y, m_position.z + m_forward_vector.z, 0.0);
 
 		const XMVECTOR RightVector = XMVector3Cross(XMLoadFloat3(&Vector3::Up), XMLoadFloat3(&m_forward_vector));
+
+		m_prev_view_matrix = m_view_matrix; // Save it
 
 		m_view_matrix = XMMatrixLookAtRH(Position, FocusPosition, Vector3::Up);
 		m_projection_matrix = XMMatrixPerspectiveFovRH(XMConvertToRadians(fov), m_aspect_ratio, m_near_plane, m_far_plane);

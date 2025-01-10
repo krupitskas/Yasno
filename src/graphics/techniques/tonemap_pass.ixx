@@ -125,7 +125,7 @@ namespace ysn
 		renderer->CreateRootSignature(&root_signature_desc, &root_signature);
 
 		ComputePsoDesc pso_desc("Tonemap");
-		pso_desc.AddShader({ ShaderType::Compute, VfsPath(L"Shaders/tonemap.cs.hlsl") });
+		pso_desc.AddShader({ ShaderType::Compute, VfsPath(L"shaders/tonemap.cs.hlsl") });
 		pso_desc.SetRootSignature(root_signature);
 
 		auto pso_result = renderer->BuildPso(pso_desc);

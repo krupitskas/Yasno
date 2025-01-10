@@ -16,7 +16,8 @@ void main(uint3 threadId : SV_DispatchThreadID)
 	const float gamma = 2.2;
 	const float3 hdr_color = HDRTexture[threadId.xy];
 
-	// This crazy if is not optimized but this is only for research purpose
+	// This 'if' is not optimized but this is only for research purpose
+	// In normal world should be ifdef or different shader code (ubershader)
 	if (parameters.tonemap_method == 0) // None
 	{
 		LDRTexture[threadId.xy] = float4(hdr_color, 0.0);

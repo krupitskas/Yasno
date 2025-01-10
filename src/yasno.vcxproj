@@ -394,7 +394,17 @@
     <None Include="..\shaders\convolve_irradiance.ps.hlsl">
       <FileType>Document</FileType>
     </None>
-    <None Include="..\shaders\convolve_irradiance.vs.hlsl">
+    <None Include="..\shaders\convolve_cubemap.vs.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\bake_brdf.cs.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\convolve_radiance.ps.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

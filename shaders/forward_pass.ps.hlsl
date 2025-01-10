@@ -28,6 +28,33 @@ TextureCube g_input_radiance		: register(t5);
 SamplerState g_shadow_sampler		: register(s0);
 SamplerState g_linear_sampler		: register(s1);
 
+float PCFShadowCalculation(float4 position)
+{
+	float shadow_value = 0.0;
+
+	// TODO: dynamic shadowmap size, now it's 4096
+	float2 texel_size = 1.0f / 4096.f;
+
+	float3 projected_coordinate;
+	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
+	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
+	projected_coordinate.z = position.z / position.w;
+
+	float current_depth = projected_coordinate.z + 0.005;
+
+	for(int x = -1; x <= 1; ++x)
+	{
+		for(int y = -1; y <= 1; ++y)
+		{
+			float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy + float2(x, y) * texel_size).r;
+			shadow_value += current_depth > closest_depth ? 1.0 : 0.0;        
+		}    
+	}
+	shadow_value /= 9.0;
+
+	return shadow_value;
+}
+
 float ShadowCalculation(float4 position)
 {
 	float3 projected_coordinate;
@@ -135,7 +162,10 @@ float4 main(RS2PS input) : SV_Target
 	float3 C_diff = lerp(base_color.rgb * (1.0f - dieletricSpecular.r), black, metallicResult);
 	float3 C_diffuse = diffuse(C_diff, scene_parameters.directional_light_color.rgb * scene_parameters.directional_light_intensity, n_dot_l);
 
-	const float in_shadow = scene_parameters.shadows_enabled > 0 ? ShadowCalculation(input.position_shadow_space) : 1.0;
+	//const float shadow_value = ShadowCalculation(input.position_shadow_space);
+	const float shadow_value = PCFShadowCalculation(input.position_shadow_space);
+
+	const float in_shadow = scene_parameters.shadows_enabled > 0 ? shadow_value : 1.0;
 
 	float3 f = C_ambient + C_diffuse * in_shadow + emissive.xyz; //  + cubeMapSample.xyz + Specular
 

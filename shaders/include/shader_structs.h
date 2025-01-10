@@ -118,6 +118,7 @@ struct CameraParameters
 {
     matrix view_projection;
     matrix view;
+    matrix previous_view;
     matrix projection;
     matrix view_inverse;
     matrix projection_inverse;
