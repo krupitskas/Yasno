@@ -20,24 +20,31 @@ export namespace ysn
 	class GpuPixelBuffer3D : public GpuBuffer
 	{
 	public:
-		DescriptorHandle rtv[6];
+		std::vector<std::array<DescriptorHandle, 6>> rtv; // mip -> [6 faces]
 		DescriptorHandle srv;
 
 		void GenerateRTVs()
 		{
 			auto renderer = Application::Get().GetRenderer();
 
-			for (int i = 0; i < 6; i++)
+			for(int mip = 0; mip < m_resource->GetDesc().MipLevels; mip++)
 			{
-				D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-				rtv_desc.Format = Application::Get().GetRenderer()->GetHdrFormat();
-				rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				rtv_desc.Texture2DArray.MipSlice = 0;
-				rtv_desc.Texture2DArray.FirstArraySlice = i;
-				rtv_desc.Texture2DArray.ArraySize = 1;
+				std::array<DescriptorHandle, 6> faces;
 
-				rtv[i] = renderer->GetRtvDescriptorHeap()->GetNewHandle();
-				renderer->GetDevice()->CreateRenderTargetView(m_resource.get(), &rtv_desc, rtv[i].cpu);
+				for (int face = 0; face < 6; face++)
+				{
+					D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+					rtv_desc.Format = Application::Get().GetRenderer()->GetHdrFormat();
+					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+					rtv_desc.Texture2DArray.MipSlice = mip;
+					rtv_desc.Texture2DArray.FirstArraySlice = face;
+					rtv_desc.Texture2DArray.ArraySize = 1;
+
+					faces[face] = renderer->GetRtvDescriptorHeap()->GetNewHandle();
+					renderer->GetDevice()->CreateRenderTargetView(m_resource.get(), &rtv_desc, faces[face].cpu);
+				}
+
+				rtv.push_back(faces);
 			}
 
 			{

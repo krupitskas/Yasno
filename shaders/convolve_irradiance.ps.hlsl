@@ -40,7 +40,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
 	irradiance = PI * irradiance * (1.0 / float(samples_num));
 
-	float3 test_irrd = g_input_cubemap.Sample(g_linear_sampler, normal).rgb ;
+	float3 test_irrd = g_input_cubemap.Sample(g_linear_sampler, normal).rgb;
 
     return float4(test_irrd, 1.0);
 }

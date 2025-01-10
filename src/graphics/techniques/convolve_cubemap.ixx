@@ -393,16 +393,16 @@ namespace ysn
 
 		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_cubemap.srv.gpu);
 
-		for (int i = 0; i < 6; i++)
+		for (int face = 0; face < 6; face++)
 		{
 			DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[i]);
+			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
 			view_projection = XMMatrixMultiply(view_projection, m_projection);
 			float data[16];
 			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
 
 			command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
-			command_list.list->OMSetRenderTargets(1, &parameters.target_irradiance.rtv[i].cpu, FALSE, nullptr);
+			command_list.list->OMSetRenderTargets(1, &parameters.target_irradiance.rtv[0][face].cpu, FALSE, nullptr);
 			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 		}
 
@@ -442,11 +442,7 @@ namespace ysn
 
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 
-		const auto viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
-											   static_cast<float>(parameters.target_radiance->GetDesc().Width),
-											   static_cast<float>(parameters.target_radiance->GetDesc().Height));
 
-		command_list.list->RSSetViewports(1, &viewport);
 		command_list.list->RSSetScissorRects(1, &m_rect);
 		command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		command_list.list->SetPipelineState(pso_object.pso.get());
@@ -457,17 +453,33 @@ namespace ysn
 
 		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_cubemap.srv.gpu);
 
-		for (int i = 0; i < 6; i++)
-		{
-			DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[i]);
-			view_projection = XMMatrixMultiply(view_projection, m_projection);
-			float data[16];
-			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
+		const uint32_t max_mip_levels = 5;
 
-			command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
-			command_list.list->OMSetRenderTargets(1, &parameters.target_radiance.rtv[i].cpu, FALSE, nullptr);
-			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
+		for (uint32_t mip = 0; mip < max_mip_levels; mip++)
+		{
+			unsigned int mip_width  = parameters.target_radiance->GetDesc().Width * std::pow(0.5, mip);
+			unsigned int mip_height = parameters.target_radiance->GetDesc().Height * std::pow(0.5, mip);
+
+			float roughness = (float)mip / (float)(max_mip_levels - 1); // TODO: provide
+
+			for (int face = 0; face < 6; face++)
+			{
+				const auto viewport = CD3DX12_VIEWPORT(0.0f, 0.0f,
+													   static_cast<float>(mip_width),
+													   static_cast<float>(mip_height));
+
+				command_list.list->RSSetViewports(1, &viewport);
+
+				DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
+				view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
+				view_projection = XMMatrixMultiply(view_projection, m_projection);
+				float data[16];
+				XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
+
+				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
+				command_list.list->OMSetRenderTargets(1, &parameters.target_radiance.rtv[mip][face].cpu, FALSE, nullptr);
+				command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
+			}
 		}
 
 		CD3DX12_RESOURCE_BARRIER barrier_after = CD3DX12_RESOURCE_BARRIER::Transition(

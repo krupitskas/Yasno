@@ -1,4 +1,5 @@
 #include "shader_structs.h"
+#include "shared.hlsl"
 
 RWTexture2D<float2> brdf_texture : register(u0);
 
@@ -10,5 +11,8 @@ void main(uint3 threadId : SV_DispatchThreadID)
 	//	return;
 	//}
 
-	brdf_texture[threadId.xy] = float2(13, 64); 
+    float2 texcoords = threadId.xy / float2(512, 512);
+    float2 integratedBRDF = IntegrateBRDF(texcoords.x, texcoords.y);
+
+	brdf_texture[threadId.xy] = integratedBRDF; 
 }

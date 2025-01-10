@@ -181,16 +181,16 @@ namespace ysn
 
 		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_texture.descriptor_handle.gpu);
 
-		for (int i = 0; i < 6; i++)
+		for (int face = 0; face < 6; face++)
 		{
 			DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[i]);
+			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
 			view_projection = XMMatrixMultiply(view_projection, m_projection);
 			float data[16];
 			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
 
 			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::ViewProjectionMatrix, 16, data, 0);
-			command_list.list->OMSetRenderTargets(1, &parameters.target_cubemap.rtv[i].cpu, FALSE, nullptr);
+			command_list.list->OMSetRenderTargets(1, &parameters.target_cubemap.rtv[0][face].cpu, FALSE, nullptr);
 			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 		}
 

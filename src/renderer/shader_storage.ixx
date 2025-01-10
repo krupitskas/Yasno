@@ -219,6 +219,22 @@ namespace ysn
 				m_dxc_included_files.push_back(new_included_file);
 			}
 
+
+			{
+				wil::com_ptr<IDxcBlob> new_included_file;
+
+				const std::wstring shared_path = ysn::VfsPath(L"shaders/include/brdf.hlsl");
+				hr = m_dxc_include_handler->LoadSource(shared_path.c_str(), new_included_file.addressof());
+
+				if (hr != S_OK)
+				{
+					LogError << "Can't load shaders/include/brdf.hlsl\n";
+					return false;
+				}
+
+				m_dxc_included_files.push_back(new_included_file);
+			}
+
 			{
 				wil::com_ptr<IDxcBlob> new_included_file;
 
