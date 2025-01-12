@@ -58,6 +58,10 @@ export namespace ysn
 		GpuPixelBuffer3D radiance_texture;
 
 		DescriptorHandle brdf_texture_handle;
+
+		// TODO: debug renderer test below
+		DescriptorHandle debug_counter_buffer_uav;
+		DescriptorHandle debug_vertices_buffer_uav;
 	};
 
 	enum class IndirectRootParameters : uint8_t
@@ -186,7 +190,21 @@ namespace ysn
 			brdf_parameter.DescriptorTable.NumDescriptorRanges = 1;
 			brdf_parameter.DescriptorTable.pDescriptorRanges = &brdf_descriptor_range;
 
-			D3D12_ROOT_PARAMETER rootParams[10] = {
+			CD3DX12_DESCRIPTOR_RANGE debug_vertices_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 126, 0, 0);
+			D3D12_ROOT_PARAMETER debug_vertices_parameter;
+			debug_vertices_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			debug_vertices_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			debug_vertices_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			debug_vertices_parameter.DescriptorTable.pDescriptorRanges = &debug_vertices_uav;
+
+			CD3DX12_DESCRIPTOR_RANGE debug_counter_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 127, 0, 0);
+			D3D12_ROOT_PARAMETER debug_counter_parameter;
+			debug_counter_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			debug_counter_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			debug_counter_parameter.DescriptorTable.NumDescriptorRanges = 1;
+			debug_counter_parameter.DescriptorTable.pDescriptorRanges = &debug_counter_uav;
+
+			D3D12_ROOT_PARAMETER rootParams[12] = {
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {0, 0}, D3D12_SHADER_VISIBILITY_ALL}, // CameraParameters
 				{D3D12_ROOT_PARAMETER_TYPE_CBV, {1, 0}, D3D12_SHADER_VISIBILITY_ALL}, // SceneParameters
 
@@ -202,6 +220,8 @@ namespace ysn
 				irradiance_parameter,       // Irradiance input
 				radiance_parameter,         // Radiance input
 				brdf_parameter,             // BRDF input
+				debug_vertices_parameter, 
+				debug_counter_parameter
 			};
 
 			// TEMP
@@ -224,7 +244,7 @@ namespace ysn
 				D3D12_COMPARISON_FUNC_NONE);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-			RootSignatureDesc.NumParameters = 10;
+			RootSignatureDesc.NumParameters = 12;
 			RootSignatureDesc.pParameters = &rootParams[0];
 			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
@@ -351,6 +371,9 @@ namespace ysn
 						command_list.list->SetGraphicsRootDescriptorTable(7, render_parameters.irradiance_texture.srv.gpu);
 						command_list.list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
 						command_list.list->SetGraphicsRootDescriptorTable(9, render_parameters.brdf_texture_handle.gpu);
+
+						command_list.list->SetGraphicsRootDescriptorTable(10, render_parameters.debug_vertices_buffer_uav.gpu);
+						command_list.list->SetGraphicsRootDescriptorTable(11, render_parameters.debug_counter_buffer_uav.gpu);
 
 						if (primitive.index_count)
 						{

@@ -200,9 +200,7 @@ namespace ysn
 		pso_desc.SetRasterizerState(rasterizer_desc);
 		pso_desc.SetBlendState(blend_desc);
 		pso_desc.SetRootSignature(root_signature);
-		pso_desc.SetDepthStencilState({
-			.DepthEnable = false,
-									  });
+		pso_desc.SetDepthStencilState({.DepthEnable = false});
 		pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		pso_desc.SetSampleMask(UINT_MAX);
 		pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());

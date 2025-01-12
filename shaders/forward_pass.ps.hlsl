@@ -1,5 +1,6 @@
 #include "shader_structs.h"
 #include "shared.hlsl"
+#include "debug_renderer.hlsl"
 
 struct RS2PS
 {
@@ -153,7 +154,7 @@ float4 main(RS2PS input) : SV_Target
 	float3 L = scene_parameters.directional_light_direction.xyz; //normalize(LightPosition.xyz - input.position.xyz); // From the shading location to the LIGHT
 	float3 N = normal; // Interpolated vertex normal
 
-	//return float4(g_input_irradiance.Sample(g_linear_sampler, N)); // g_input_cubemap
+	return float4(g_input_cubemap.Sample(g_linear_sampler, N)); // g_input_cubemap
 
 	float n_dot_l = dot(N, L);
 

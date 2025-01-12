@@ -421,10 +421,10 @@ namespace ysn
 		    //load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
-		{
-			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-		}
+	//{
+	//	LoadingParameters loading_parameters;
+	//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+	//}
 
 		{
 			LoadingParameters loading_parameters;
@@ -442,7 +442,7 @@ namespace ysn
 			
 			LoadingParameters loading_parameters;
 			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"), loading_parameters); // Texture coordinate test
-			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
 
 			//loading_parameters.model_modifier = DirectX::XMMatrixScaling(10.f, 10.f, 10.f);
 			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), loading_parameters); // Boombox with axes
@@ -1361,6 +1361,9 @@ namespace ysn
 				render_parameters.irradiance_texture = m_irradiance_cubemap_texture;
 				render_parameters.radiance_texture = m_radiance_cubemap_texture;
 				render_parameters.brdf_texture_handle = m_cubemap_filter_pass.GetBrdfTextureHandle();
+
+				render_parameters.debug_vertices_buffer_uav = m_debug_renderer.vertices_buffer_uav;
+				render_parameters.debug_counter_buffer_uav = m_debug_renderer.counter_uav;
 
 				if (m_is_indirect)
 				{

@@ -101,7 +101,7 @@ export namespace ysn
 		std::unordered_map<ShaderHash, wil::com_ptr<IDxcBlob>> m_compiled_shaders;
 
 		std::optional<std::time_t> GetShaderModificationTime(const std::filesystem::path& shader_path);
-		std::unordered_map<std::wstring, ShaderModificationData> m_shaders_modified_data;
+		std::unordered_map<std::wstring, ShaderModificationData> m_shaders_modified_data; // TODO: fix multiple different shaders
 
 		std::wstring m_debug_data_path = L"ShadersDebugData";
 		std::wstring m_binary_data_path = L"ShadersBinaryData";
