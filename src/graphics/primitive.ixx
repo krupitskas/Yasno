@@ -73,11 +73,10 @@ namespace ysn
 			{{1.0f, 1.0f, -1.0f}, {1.0f, 0.0f}},   // 2: Top-right
 			{{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f}},  // 3: Bottom-right
 
-			// Back face
-			{{-1.0f, -1.0f, 1.0f}, {1.0f, 1.0f}}, // 4: Bottom-left
-			{{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},  // 5: Top-left
-			{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},   // 6: Top-right
-			{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f}}   // 7: Bottom-right
+			{{-1.0f, -1.0f,  1.0f}, {0.0f, 1.0f}}, // 4: Bottom-left
+			{{-1.0f,  1.0f,  1.0f}, {0.0f, 0.0f}}, // 5: Top-left
+			{{ 1.0f,  1.0f,  1.0f}, {1.0f, 0.0f}}, // 6: Top-right
+			{{ 1.0f, -1.0f,  1.0f}, {1.0f, 1.0f}}  // 7: Bottom-right
 		};
 
 		std::vector<uint16_t> indices = { 0, 1, 2, 0, 2, 3,

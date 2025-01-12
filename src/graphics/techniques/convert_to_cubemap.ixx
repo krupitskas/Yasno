@@ -66,12 +66,8 @@ namespace ysn
 		const auto renderer = Application::Get().GetRenderer();
 
 		const auto box_result = ConstructBox();
-
 		if (!box_result.has_value())
-		{
 			return false;
-		}
-
 		cube = box_result.value();
 
 		m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(512), static_cast<float>(512));
@@ -131,13 +127,12 @@ namespace ysn
 
 		const XMVECTOR position = XMVectorSet(0.0, 0.0, 0.0, 1.0);
 
-		// TODO: Sus! 0 and 1 are reversed.
-		m_views[0] = XMMatrixLookAtRH(position, XMVectorSet(-1.0, 0.0, 0.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
-		m_views[1] = XMMatrixLookAtRH(position, XMVectorSet(1.0, 0.0, 0.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
-		m_views[2] = XMMatrixLookAtRH(position, XMVectorSet(0.0, 1.0, 0.0, 0.0), XMVectorSet(0.0, 0.0, -1.0, 0.0));
-		m_views[3] = XMMatrixLookAtRH(position, XMVectorSet(0.0, -1.0, 0.0, 0.0), XMVectorSet(0.0, 0.0, 1.0, 0.0));
-		m_views[4] = XMMatrixLookAtRH(position, XMVectorSet(0.0, 0.0, 1.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
-		m_views[5] = XMMatrixLookAtRH(position, XMVectorSet(0.0, 0.0, -1.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
+		m_views[0] = XMMatrixLookAtRH(position, XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -X
+		m_views[1] = XMMatrixLookAtRH(position, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +X
+		m_views[2] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)); // +Y
+		m_views[3] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // -Y
+		m_views[4] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +Z
+		m_views[5] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -Z
 
 		m_projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(90.f), 1.0f, 0.1f, 10.f);
 
@@ -183,9 +178,8 @@ namespace ysn
 
 		for (int face = 0; face < 6; face++)
 		{
-			DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
-			view_projection = XMMatrixMultiply(view_projection, m_projection);
+			DirectX::XMMATRIX view_projection = XMMatrixMultiply(m_views[face], m_projection);
+
 			float data[16];
 			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
 
