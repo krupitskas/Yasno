@@ -18,16 +18,6 @@ import renderer.descriptor_heap;
 
 export namespace ysn
 {
-	struct NodeTransform
-	{
-		NodeTransform() = default;
-		NodeTransform(const DirectX::XMMATRIX& transform) : transform(transform)
-		{
-		}
-
-		DirectX::XMMATRIX transform;
-	};
-
 	struct ModelRenderParameters
 	{
 		bool should_cast_shadow = false;
@@ -42,7 +32,7 @@ export namespace ysn
 		// Merge this two below maybe?
 		std::vector<Material> materials;
 		std::vector<SurfaceShaderParameters> shader_parameters;
-		std::vector<NodeTransform> transforms;
+		std::vector<DirectX::XMMATRIX> transforms;
 
 		// Not sure about that
 		std::vector<GpuTexture> textures;

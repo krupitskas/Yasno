@@ -111,10 +111,10 @@ float4 main(RS2PS input) : SV_Target
 		Texture2D albedo_texture = ResourceDescriptorHeap[pbr_material.albedo_texture_index];
 		base_color *= albedo_texture.Sample(g_linear_sampler, uv);
 
-		if(base_color.a < 0.5)
-		{
-			discard;
-		}
+		//if(base_color.a < 0.1)
+		//{
+		//	discard;
+		//}
 	}
 
 	if (pbr_material.texture_enable_bitmask & (1 << METALLIC_ROUGHNESS_ENABLED_BIT))
@@ -170,5 +170,5 @@ float4 main(RS2PS input) : SV_Target
 
 	float3 f = C_ambient + C_diffuse * in_shadow + emissive.xyz; //  + cubeMapSample.xyz + Specular
 
-	return float4(f.xyz, 1.0);
+	return float4(base_color + emissive.xyz, 1.0);
 }

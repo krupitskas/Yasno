@@ -330,9 +330,7 @@ namespace ysn
 
 		auto* camera_data = static_cast<CameraParameters*>(data);
 
-		DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-		view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_render_scene.camera->GetViewMatrix());
-		view_projection = XMMatrixMultiply(view_projection, m_render_scene.camera->GetProjectionMatrix());
+		DirectX::XMMATRIX view_projection = XMMatrixMultiply(m_render_scene.camera->GetViewMatrix(), m_render_scene.camera->GetProjectionMatrix());
 
 		DirectX::XMVECTOR det;
 
@@ -406,24 +404,33 @@ namespace ysn
 		if (!m_generate_mips_pass.Initialize(renderer))
 			return "Can't initialize generate mips pass";
 
+		// Setup camera
+		if (!CreateGpuCameraBuffer())
+		{
+			LogError << "Yasno app can't create GPU camera buffer\n";
+			return false;
+		}
+
+		m_render_scene.camera = std::make_shared<ysn::Camera>(DirectX::XMVectorSet(0, 0, 3, 1));
+		m_render_scene.camera_controler.p_camera = m_render_scene.camera;
+
 		bool load_result = false;
 
 		{
 		    LoadingParameters loading_parameters;
-		    loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		    load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+		    //load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
-		//{
-		//	LoadingParameters loading_parameters;
-		//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-		//}
+		{
+			LoadingParameters loading_parameters;
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		}
 
-		//{
-		//	LoadingParameters loading_parameters;
-		//	loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-		//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
-		//}
+		{
+			LoadingParameters loading_parameters;
+			//loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+		}
 
 		//{
 		//	LoadingParameters loading_parameters;
@@ -435,10 +442,15 @@ namespace ysn
 			
 			LoadingParameters loading_parameters;
 			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"), loading_parameters); // Texture coordinate test
-			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
 
 			//loading_parameters.model_modifier = DirectX::XMMatrixScaling(10.f, 10.f, 10.f);
 			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), loading_parameters); // Boombox with axes
+		}
+
+		if(!load_result)
+		{
+			return std::unexpected("Can't load scenes\n");
 		}
 
 		// Build mips
@@ -621,7 +633,7 @@ namespace ysn
 								instance_data.material_id = primitive.material_id;
 							}
 
-							instance_data.model_matrix = model.transforms[mesh_id].transform;
+							instance_data.model_matrix = model.transforms[mesh_id];
 							instance_data.vertices_before = total_vertices;
 							instance_data.indices_before = total_indices;
 
@@ -716,11 +728,6 @@ namespace ysn
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
 		m_velocity_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
-		if (!CreateGpuCameraBuffer())
-		{
-			LogError << "Yasno app can't create GPU camera buffer\n";
-			return false;
-		}
 
 		if (!CreateGpuSceneParametersBuffer())
 		{
@@ -762,11 +769,6 @@ namespace ysn
 
 		// Setup techniques
 		m_shadow_pass.Initialize(Application::Get().GetRenderer());
-
-		// Setup camera
-		m_render_scene.camera = std::make_shared<ysn::Camera>();
-		m_render_scene.camera->SetPosition({ 0, 0, -5 });
-		m_render_scene.camera_controler.p_camera = m_render_scene.camera;
 
 		game_input.Initialize(m_window->GetWindowHandle());
 

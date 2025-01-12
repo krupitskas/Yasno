@@ -50,15 +50,15 @@ VS2RS main(IA2VS input)
 	PerInstanceData instance_data = per_instance_data[instance_id];
 
 	VS2RS output;
-	output.position = mul(float4(input.position, 1.0), instance_data.model_matrix);
+	output.position = mul(instance_data.model_matrix, float4(input.position, 1.0));
 
 #ifndef SHADOW_PASS
 	output.position_shadow_space = mul(shadow_matrix, output.position);
 #endif
 
 	output.position = mul(camera.view_projection, output.position);
-	output.normal = mul(float4(input.normal, 1.0), instance_data.model_matrix).xyz;
-	output.tangent.xyz = mul(float4(input.tangent.xyz, 1.0), instance_data.model_matrix).xyz;
+	output.normal = mul(instance_data.model_matrix, float4(input.normal, 1.0)).xyz; // TODO: FIX IT
+	output.tangent.xyz = mul(instance_data.model_matrix, float4(input.tangent.xyz, 1.0)).xyz;
 	output.tangent.w = input.tangent.w;
     output.texcoord_0 = input.texcoord_0;
 

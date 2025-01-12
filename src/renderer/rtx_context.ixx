@@ -193,7 +193,7 @@ void ysn::RtxContext::CreateAccelerationStructures(wil::com_ptr<DxGraphicsComman
 		for (int i = 0; i < model.meshes.size(); i++)
 		{
 			const ysn::Mesh& mesh = model.meshes[i];
-			const ysn::NodeTransform& transform = model.transforms[i];
+			const auto& transform = model.transforms[i];
 
 			for (auto& primitive : mesh.primitives)
 			{
@@ -213,7 +213,7 @@ void ysn::RtxContext::CreateAccelerationStructures(wil::com_ptr<DxGraphicsComman
 
 				TlasInput tlas_input;
 				tlas_input.blas = blas_buffers.result;
-				tlas_input.transform = transform.transform;
+				tlas_input.transform = transform;
 				tlas_input.instance_id = primitive.index;
 
 				instances.emplace_back(tlas_input);

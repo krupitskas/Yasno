@@ -571,7 +571,8 @@ namespace ysn
 
 		m_command_buffer = command_buffer_result.value();
 
-		UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		// TODO: move back
+		// UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 		return true;
 	}

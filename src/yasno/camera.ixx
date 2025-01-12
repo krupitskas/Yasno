@@ -13,32 +13,35 @@ export namespace ysn
 
 	struct Camera
 	{
-		Camera();
+		Camera(XMVECTOR position = { 0.0f, 0.0f, 0.0f, 1.0f }, XMVECTOR focus_point = { 0.0f, 0.0f, 0.0f, 1.0f });
 
-		DirectX::XMMATRIX GetViewMatrix() const;
-		DirectX::XMMATRIX GetPrevViewMatrix() const;
+		XMMATRIX GetViewMatrix() const;
+		XMMATRIX GetPrevViewMatrix() const;
 		// TODO: Previous View Matrix
-		DirectX::XMMATRIX GetProjectionMatrix() const;
+		XMMATRIX GetProjectionMatrix() const;
 
 		void Update();
 		void SetAspectRatio(float AspectRatio);
 
-		float GetFov() const;
-		void SetFov(float Fov);
+		//float GetFov() const;
+		//void SetFov(float Fov);
 
-		DirectX::XMFLOAT3 GetPosition() const;
-		void SetPosition(DirectX::XMFLOAT3 Position);
-		void Move(DirectX::XMFLOAT3 Position);
+		XMFLOAT3 GetPosition() const;
+		void SetPosition(XMFLOAT3 Position);
+		void Move(XMFLOAT3 Position);
 
 		// Right handed coodrinate space
-		DirectX::XMFLOAT3 GetForwardVector() const; // Z forward
-		DirectX::XMFLOAT3 GetRightVector() const;   // -X left
-		DirectX::XMFLOAT3 GetUpVector() const;      // Y up
+		XMFLOAT3 GetForwardVector() const; // Z forward
+		XMFLOAT3 GetRightVector() const;   // -X left
+		XMFLOAT3 GetUpVector() const;      // Y up
 
 		void SetYaw(float Yaw);
 		void SetPitch(float Pitch);
 
-		// NOTE: Turns falls after Update() called!
+		float GetYaw() const;
+		float GetPitch() const;
+
+		// NOTE: Become false after Update() has been called
 		bool IsMoved();
 
 		float fov = 45.0f;
@@ -51,13 +54,13 @@ export namespace ysn
 		float m_pitch = 0.0f; // Vertical rotation
 		float m_yaw = 0.0f;   // Horizontal rotation
 
-		DirectX::XMFLOAT3 m_position;
-		DirectX::XMFLOAT3 m_forward_vector;
-		DirectX::XMFLOAT3 m_right_vector;
+		XMFLOAT3 m_position;
+		XMFLOAT3 m_forward_vector;
+		XMFLOAT3 m_right_vector;
 
-		DirectX::XMMATRIX m_view_matrix;
-		DirectX::XMMATRIX m_prev_view_matrix;
-		DirectX::XMMATRIX m_projection_matrix;
+		XMMATRIX m_view_matrix;
+		XMMATRIX m_prev_view_matrix;
+		XMMATRIX m_projection_matrix;
 
 		float m_mouse_sensetivity = 1.0f;
 
@@ -70,13 +73,28 @@ module :private;
 
 namespace ysn
 {
-	Camera::Camera()
+	Camera::Camera(XMVECTOR position, XMVECTOR focus_point)
 	{
+		XMStoreFloat3(&m_position, position);
+
+		XMVECTOR direction = XMVectorSubtract(focus_point, position);
+		direction = XMVector3Normalize(direction);
+
+		XMStoreFloat3(&m_forward_vector, direction);
+
+		float dir_X = XMVectorGetX(direction);
+		float dir_Y = XMVectorGetY(direction);
+		float dir_Z = XMVectorGetZ(direction);
+
+		m_yaw = XMConvertToDegrees(std::atan2(dir_X, dir_Z));
+		m_pitch = XMConvertToDegrees(std::asin(-dir_Y));
+
 		m_projection_matrix = XMMatrixIdentity();
 		m_view_matrix = XMMatrixIdentity();
-		m_position = XMFLOAT3(0, 0, 0);
-		m_forward_vector = XMFLOAT3(0, 0, 1);
-		m_right_vector = XMFLOAT3(1, 0, 0);
+		m_prev_view_matrix = XMMatrixIdentity();
+		m_forward_vector = XMFLOAT3(0, 0, 0);
+		m_right_vector = XMFLOAT3(0, 0, 0);
+
 	}
 
 	XMMATRIX Camera::GetViewMatrix() const
@@ -96,9 +114,9 @@ namespace ysn
 
 	void Camera::Update()
 	{
-		m_forward_vector.x = XMScalarSin(XMConvertToRadians(m_yaw)) * XMScalarCos(XMConvertToRadians(m_pitch));
-		m_forward_vector.y = XMScalarSin(XMConvertToRadians(m_pitch));
-		m_forward_vector.z = XMScalarCos(XMConvertToRadians(m_yaw)) * XMScalarCos(XMConvertToRadians(m_pitch));
+		m_forward_vector.x = XMScalarCos(XMConvertToRadians(m_pitch)) * XMScalarSin(XMConvertToRadians(m_yaw));
+		m_forward_vector.y = -XMScalarSin(XMConvertToRadians(m_pitch));
+		m_forward_vector.z = XMScalarCos(XMConvertToRadians(m_pitch)) * XMScalarCos(XMConvertToRadians(m_yaw));
 
 		const XMVECTOR Position = XMVectorSet(m_position.x, m_position.y, m_position.z, 1.0);
 		const XMVECTOR FocusPosition =
@@ -157,9 +175,9 @@ namespace ysn
 		return Vector3::Up;
 	}
 
-	void Camera::SetYaw(const float Yaw)
+	void Camera::SetYaw(const float yaw)
 	{
-		m_yaw = Yaw;
+		m_yaw = yaw;
 
 		m_is_moved = true;
 	}
@@ -169,6 +187,16 @@ namespace ysn
 		m_pitch = Pitch;
 
 		m_is_moved = true;
+	}
+
+	float Camera::GetYaw() const
+	{
+		return m_yaw;
+	}
+
+	float Camera::GetPitch() const
+	{
+		return m_pitch;
 	}
 
 	bool Camera::IsMoved()

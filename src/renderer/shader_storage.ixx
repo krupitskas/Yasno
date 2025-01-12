@@ -323,8 +323,8 @@ namespace ysn
 		}
 
 		// Strip reflection data and pdbs, store them separately
-		arguments.push_back(L"-Qstrip_debug");
-		arguments.push_back(L"-Qstrip_reflect");
+		//arguments.push_back(L"-Qstrip_debug");
+		//arguments.push_back(L"-Qstrip_reflect");
 
 		std::ifstream shader_file(parameters.shader_path);
 		if (shader_file.good() == false)

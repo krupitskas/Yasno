@@ -632,9 +632,55 @@ static void BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 
 	for (const tinygltf::Node& gltf_node : gltf_model.nodes)
 	{
+		if(gltf_node.mesh == -1)
+		{
+			// TODO: Support cameras and other shit
+			continue;
+		}
+
+		DirectX::XMMATRIX matrix_result;
+
 		if (gltf_node.matrix.empty())
 		{
-			model.transforms.push_back(loading_parameters.model_modifier);
+			DirectX::XMVECTOR quaternion = DirectX::XMQuaternionIdentity();
+			DirectX::XMVECTOR translation = DirectX::XMVectorZero();
+			DirectX::XMVECTOR scaling = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+
+			if (gltf_node.rotation.size() == 4) {
+				quaternion = DirectX::XMVectorSet(
+					static_cast<float>(gltf_node.rotation[0]),
+					static_cast<float>(gltf_node.rotation[1]),
+					static_cast<float>(gltf_node.rotation[2]),
+					static_cast<float>(gltf_node.rotation[3])
+				);
+			}
+
+			if (gltf_node.translation.size() == 3) {
+				translation = DirectX::XMVectorSet(
+					static_cast<float>(gltf_node.translation[0]),
+					static_cast<float>(gltf_node.translation[1]),
+					static_cast<float>(gltf_node.translation[2]),
+					1.0f
+				);
+			}
+
+			if (gltf_node.scale.size() == 3) {
+				scaling = DirectX::XMVectorSet(
+					static_cast<float>(gltf_node.scale[0]),
+					static_cast<float>(gltf_node.scale[1]),
+					static_cast<float>(gltf_node.scale[2]),
+					0.0f
+				);
+			}
+
+			// Compute matrices
+			DirectX::XMMATRIX rotation_matrix = DirectX::XMMatrixRotationQuaternion(quaternion);
+			DirectX::XMMATRIX scaling_matrix = DirectX::XMMatrixScalingFromVector(scaling);
+			DirectX::XMMATRIX translation_matrix = DirectX::XMMatrixTranslationFromVector(translation);
+
+			matrix_result = scaling_matrix * rotation_matrix * translation_matrix;
+
+			model.transforms.push_back(matrix_result * loading_parameters.model_modifier);
 		}
 		else
 		{
@@ -643,15 +689,23 @@ static void BuildNodes(ysn::Model& model, const tinygltf::Model& gltf_model, con
 			// Convert to floats
 			for (int i = 0; i < gltf_node.matrix.size(); i++)
 			{
-				float_array[0] = static_cast<float>(gltf_node.matrix[i]);
+				float_array[i] = static_cast<float>(gltf_node.matrix[i]);
 			}
 
 			DirectX::XMMATRIX model_matrix(float_array.data());
 
-			// Apply loading modifier
-			model_matrix *= loading_parameters.model_modifier;
+			matrix_result = model_matrix;
 
-			model.transforms.push_back(model_matrix);
+			model.transforms.push_back(model_matrix * loading_parameters.model_modifier);
+		}
+	}
+
+	for (int i = 0; i < gltf_model.nodes.size(); i++)
+	{
+		for(const auto& child_index : gltf_model.nodes[i].children)
+		{
+			// TODO: Support cameras and other shit
+			model.transforms[gltf_model.nodes[child_index].mesh] *= model.transforms[i];
 		}
 	}
 }
@@ -696,7 +750,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 		}
 		else
 		{
-			material.rasterizer_desc.CullMode = D3D12_CULL_MODE_FRONT;
+			material.rasterizer_desc.CullMode = D3D12_CULL_MODE_BACK;
 		}
 
 		material.rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -705,6 +759,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 		material.rasterizer_desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
 		material.rasterizer_desc.ForcedSampleCount = 0;
 		material.rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		material.rasterizer_desc.FrontCounterClockwise = TRUE; 
 
 		const tinygltf::PbrMetallicRoughness& gltf_pbr_material = gltf_material.pbrMetallicRoughness;
 		SurfaceShaderParameters shader_parameters = {};
@@ -733,7 +788,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 			texture.SetName("Albedo Texture");
 		}
 
-		if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index > 0)
+		if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 		{
 			shader_parameters.texture_enable_bitmask |= 1 << METALLIC_ROUGHNESS_ENABLED_BIT;
 
@@ -747,7 +802,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 			texture.SetName("Metallic Roughness Texture");
 		}
 
-		if (gltf_material.normalTexture.index > 0)
+		if (gltf_material.normalTexture.index >= 0)
 		{
 			shader_parameters.texture_enable_bitmask |= 1 << NORMAL_ENABLED_BIT;
 
@@ -760,7 +815,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 			texture.SetName("Normals Texture");
 		}
 
-		if (gltf_material.occlusionTexture.index > 0)
+		if (gltf_material.occlusionTexture.index >= 0)
 		{
 			shader_parameters.texture_enable_bitmask |= 1 << OCCLUSION_ENABLED_BIT;
 
@@ -773,7 +828,7 @@ static uint32_t BuildMaterials(ysn::Model& model, const tinygltf::Model& gltf_mo
 			texture.SetName("Occlusion Texture");
 		}
 
-		if (gltf_material.emissiveTexture.index > 0)
+		if (gltf_material.emissiveTexture.index >= 0)
 		{
 			shader_parameters.texture_enable_bitmask |= 1 << EMISSIVE_ENABLED_BIT;
 

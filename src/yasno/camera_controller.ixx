@@ -40,8 +40,6 @@ export namespace ysn
 		float mouse_speed = 5.0f;
 
 	private:
-		float m_yaw = 0.0f;
-		float m_pitch = 0.0f;
 		float m_movement_boost = 5.0;
 		float m_mouse_sensetivity = 0.1f;
 	};
@@ -185,10 +183,10 @@ namespace ysn
 		// 	m_yaw += DirectX::XM_2PI;
 		// }
 
-		m_yaw -= MousePositionX * m_mouse_sensetivity;
-		m_pitch -= MousePositionY * m_mouse_sensetivity;
+		float new_yaw = p_camera->GetYaw() - MousePositionX * m_mouse_sensetivity;
+		float new_pitch = p_camera->GetPitch() + MousePositionY * m_mouse_sensetivity;
 
-		p_camera->SetYaw(m_yaw);
-		p_camera->SetPitch(m_pitch);
+		p_camera->SetYaw(new_yaw);
+		p_camera->SetPitch(new_pitch);
 	}
 }
