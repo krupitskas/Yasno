@@ -76,6 +76,7 @@ namespace ysn
 	enum class RadianceShaderParameters : uint8_t
 	{
 		ViewProjectionMatrix,
+		Parameters,
 		InputTexture,
 		ParametersCount
 	};
@@ -298,6 +299,7 @@ namespace ysn
 
 		CD3DX12_ROOT_PARAMETER root_parameters[(uint8_t)RadianceShaderParameters::ParametersCount] = {};
 		root_parameters[(uint8_t)RadianceShaderParameters::ViewProjectionMatrix].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[(uint8_t)RadianceShaderParameters::Parameters].InitAsConstants(sizeof(float) / sizeof(float), 1);
 		root_parameters[(uint8_t)RadianceShaderParameters::InputTexture].InitAsDescriptorTable(1, &source_texture_srv);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler(
@@ -449,9 +451,10 @@ namespace ysn
 		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
 
-		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_cubemap.srv.gpu);
+		command_list.list->SetGraphicsRootDescriptorTable((uint8_t)RadianceShaderParameters::InputTexture
+														  , parameters.source_cubemap.srv.gpu);
 
-		const uint32_t max_mip_levels = 5;
+		const uint32_t max_mip_levels = parameters.target_radiance->GetDesc().MipLevels;
 
 		for (uint32_t mip = 0; mip < max_mip_levels; mip++)
 		{
@@ -474,7 +477,8 @@ namespace ysn
 				float data[16];
 				XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
 
-				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
+				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
+				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::Parameters, 1, &roughness, 0);
 				command_list.list->OMSetRenderTargets(1, &parameters.target_radiance.rtv[mip][face].cpu, FALSE, nullptr);
 				command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 			}

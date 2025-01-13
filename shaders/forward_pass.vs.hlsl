@@ -15,10 +15,11 @@ struct IA2VS
 
 struct VertexToPixel
 {
-	float4 position : SV_POSITION;
+	float4 pixel_position : SV_POSITION;
+	float4 world_position : POSITION_0;
 
 #ifndef SHADOW_PASS
-	float4 position_shadow_space : POSITION;
+	float4 position_shadow_space : POSITION_1;
 #endif
 
 	float3 normal : NORMAL;
@@ -75,16 +76,16 @@ VertexToPixel main(IA2VS input)
 	PerInstanceData instance_data = per_instance_data[instance_id];
 
 	VertexToPixel output;
-	output.position = mul(instance_data.model_matrix, float4(input.position, 1.0));
+	output.world_position = mul(instance_data.model_matrix, float4(input.position, 1.0));
 
 	float3x3 normal_matrix = transpose(Inverse3x3((float3x3)instance_data.model_matrix));
 	output.normal = mul(normal_matrix, input.normal);
 
 #ifndef SHADOW_PASS
-	output.position_shadow_space = mul(shadow_matrix, output.position);
+	output.position_shadow_space = mul(shadow_matrix, output.world_position);
 #endif
 
-	output.position = mul(camera.view_projection, output.position);
+	output.pixel_position = mul(camera.view_projection, output.world_position);
 	output.tangent.xyz = mul(instance_data.model_matrix, float4(input.tangent.xyz, 1.0)).xyz;
 	output.tangent.w = input.tangent.w;
     output.texcoord_0 = input.texcoord_0;

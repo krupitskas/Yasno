@@ -411,7 +411,7 @@ namespace ysn
 			return false;
 		}
 
-		m_render_scene.camera = std::make_shared<ysn::Camera>(DirectX::XMVectorSet(0, 0, 3, 1));
+		m_render_scene.camera = std::make_shared<ysn::Camera>(DirectX::XMVectorSet(0, 0, 23, 1));
 		m_render_scene.camera_controler.p_camera = m_render_scene.camera;
 
 		bool load_result = false;
@@ -708,7 +708,7 @@ namespace ysn
 
 		{
 			LoadTextureParameters parameter;
-			parameter.filename = "assets/HDRI/photo_studio_loft_hall_4k.hdr";
+			parameter.filename = "assets/HDRI/newport_loft.hdr";
 			parameter.command_list = command_list.list;
 			parameter.generate_mips = false;
 			parameter.is_srgb = false;
@@ -774,7 +774,7 @@ namespace ysn
 
 		// Post init
 		const auto cubemap_texture_result = CreateCubemapTexture("Cubemap Source", 512);
-		const auto irradiance_result = CreateCubemapTexture("Irradiance Cubemap", 512);
+		const auto irradiance_result = CreateCubemapTexture("Irradiance Cubemap", 32);
 		const auto radiance_result = CreateCubemapTexture("Radiance cubemap", 128, true);
 
 		if (!cubemap_texture_result)
