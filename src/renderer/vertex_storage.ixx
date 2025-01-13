@@ -18,14 +18,14 @@ export namespace ysn
 	{
 		XMFLOAT3 position;
 		XMFLOAT3 normal;
-		XMFLOAT4 tangent;
+		//XMFLOAT4 tangent;
 		XMFLOAT2 uv0;
 
 		Vertex& operator=(const Vertex& v)
 		{
 			position = v.position;
 			normal = v.normal;
-			tangent = v.tangent;
+			//tangent = v.tangent;
 			uv0 = v.uv0;
 			return *this;
 		}
@@ -41,13 +41,13 @@ export namespace ysn
 		static std::vector<D3D12_INPUT_ELEMENT_DESC> GetVertexLayoutDesc();
 	};
 
-	struct VertexPosTexCoord
-	{
-		XMFLOAT3 pos;
-		XMFLOAT2 tex_coord;
+	//struct VertexPosTexCoord
+	//{
+	//	XMFLOAT3 pos;
+	//	XMFLOAT2 tex_coord;
 
-		static std::vector<D3D12_INPUT_ELEMENT_DESC> GetVertexLayoutDesc();
-	};
+	//	static std::vector<D3D12_INPUT_ELEMENT_DESC> GetVertexLayoutDesc();
+	//};
 
 	struct VertexStorage
 	{
@@ -76,11 +76,11 @@ namespace ysn
 			 .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			 .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
 
-		result.push_back(
-			{ .SemanticName = "TANGENT",
-			 .Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
-			 .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-			 .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
+		//result.push_back(
+		//	{ .SemanticName = "TANGENT",
+		//	 .Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
+		//	 .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+		//	 .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
 
 		result.push_back(
 			{ .SemanticName = "TEXCOORD_",
@@ -116,27 +116,27 @@ namespace ysn
 		return result;
 	}
 
-	std::vector<D3D12_INPUT_ELEMENT_DESC> ysn::VertexPosTexCoord::GetVertexLayoutDesc()
-	{
-		std::vector<D3D12_INPUT_ELEMENT_DESC> elements_desc;
+	//std::vector<D3D12_INPUT_ELEMENT_DESC> ysn::VertexPosTexCoord::GetVertexLayoutDesc()
+	//{
+	//	std::vector<D3D12_INPUT_ELEMENT_DESC> elements_desc;
 
-		D3D12_INPUT_ELEMENT_DESC position = {};
-		position.SemanticName = "POSITION";
-		position.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		position.InputSlot = 0;
-		position.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		position.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	//	D3D12_INPUT_ELEMENT_DESC position = {};
+	//	position.SemanticName = "POSITION";
+	//	position.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	//	position.InputSlot = 0;
+	//	position.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	//	position.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
-		D3D12_INPUT_ELEMENT_DESC texcoord = {};
-		texcoord.SemanticName = "TEXCOORD";
-		texcoord.Format = DXGI_FORMAT_R32G32_FLOAT;
-		texcoord.InputSlot = 0;
-		texcoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		texcoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	//	D3D12_INPUT_ELEMENT_DESC texcoord = {};
+	//	texcoord.SemanticName = "TEXCOORD";
+	//	texcoord.Format = DXGI_FORMAT_R32G32_FLOAT;
+	//	texcoord.InputSlot = 0;
+	//	texcoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	//	texcoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
-		elements_desc.push_back(position);
-		elements_desc.push_back(texcoord);
+	//	elements_desc.push_back(position);
+	//	elements_desc.push_back(texcoord);
 
-		return elements_desc;
-	}
+	//	return elements_desc;
+	//}
 }

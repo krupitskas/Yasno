@@ -107,7 +107,7 @@ namespace ysn
 		GraphicsPsoDesc pso_desc("Convert to cubemap PSO");
 		pso_desc.AddShader({ ShaderType::Vertex, VfsPath(L"shaders/convert_equirectangular_map.vs.hlsl") });
 		pso_desc.AddShader({ ShaderType::Pixel, VfsPath(L"shaders/convert_equirectangular_map.ps.hlsl") });
-		pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+		pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
 		pso_desc.SetRasterizerState(rasterizer_desc);
 		pso_desc.SetBlendState(blend_desc);
 		pso_desc.SetRootSignature(root_signature);

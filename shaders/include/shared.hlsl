@@ -5,10 +5,10 @@
 
 struct VertexLayout
 {
-	float3 position;
-    float3 normal;
-    float4 tangent;
-    float2 texcoord_0;
+	float3 position : POSITION;
+    float3 normal : NORMAL;
+    //float4 tangent;
+    float2 texcoord_0 : TEXCOORD_0;
 };
 
 uint JenkinsHash(uint x)

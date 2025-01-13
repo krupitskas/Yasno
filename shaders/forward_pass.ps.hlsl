@@ -4,11 +4,11 @@
 
 struct RS2PS
 {
+	float4 position_shadow_space : POSITION_1;
+
 	float4 position : SV_POSITION;
 	float4 world_position : POSITION_0;
-	float4 position_shadow_space : POSITION_1;
 	float3 normal : NORMAL;
-	float4 tangent : TANGENT;
 	float2 texcoord_0: TEXCOORD_0;
 };
 
@@ -74,69 +74,45 @@ float ShadowCalculation(float4 position)
 	return in_shadow;
 }
 
-// GGX/Towbridge-Reitz normal distribution function.
-// Uses Disney's reparametrization of alpha = roughness^2.
-float ndfGGX(float cosLh, float roughness)
+float DistributionGGX(float3 N, float3 H, float roughness)
 {
-	float alpha   = roughness * roughness;
-	float alphaSq = alpha * alpha;
+    float a = roughness*roughness;
+    float a2 = a*a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
 
-	float denom = (cosLh * cosLh) * (alphaSq - 1.0) + 1.0;
-	return alphaSq / (PI * denom * denom);
+    float nom   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return nom / denom;
 }
 
-// Single term for separable Schlick-GGX below.
-float gaSchlickG1(float cosTheta, float k)
+float3 fresnelSchlick(float cosTheta, float3 F0)
 {
-	return cosTheta / (cosTheta * (1.0 - k) + k);
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-// Schlick-GGX approximation of geometric attenuation function using Smith's method.
-float gaSchlickGGX(float cosLi, float cosLo, float roughness)
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-	float r = roughness + 1.0;
-	float k = (r * r) / 8.0; // Epic suggests using this roughness remapping for analytic lights.
-	return gaSchlickG1(cosLi, k) * gaSchlickG1(cosLo, k);
-}
-
-// Shlick's approximation of the Fresnel factor.
-float3 fresnelSchlick(float3 F0, float cosTheta)
-{
-	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
-
-//// Returns number of mipmap levels for specular IBL environment map.
-//uint querySpecularTextureLevels()
-//{
-//	uint width, height, levels;
-//	specularTexture.GetDimensions(0, width, height, levels);
-//	return levels;
-//}
-
+    return F0 + (max(1.0 - roughness, F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}   
 
 static const float3 Fdielectric = 0.04;
 static const float Epsilon = 0.00001;
 
 float4 main(RS2PS input) : SV_Target
 {
-	float2 uv = float2(0.0, 0.0);
-	float3 normal = 0;
-	float4 tangent = 0;
-
-	uv = input.texcoord_0;
-	normal = input.normal;
-	tangent = input.tangent;
-
 	PerInstanceData instance_data = per_instance_data[instance_id.id];
-	
 	SurfaceShaderParameters pbr_material = materials_buffer[instance_data.material_id];
 
 	float4 albedo = pbr_material.base_color_factor;
 	float metalness = pbr_material.metallic_factor;
 	float roughness = pbr_material.roughness_factor;
-	float3 normals = normal;
-	float occlusion = 0;
+	float3 normals = normalize(input.normal);
+	float occlusion = 1;
 	float3 emissive = 0;
+	float2 uv = input.texcoord_0;
 
 	if (pbr_material.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BIT))
 	{
@@ -182,74 +158,67 @@ float4 main(RS2PS input) : SV_Target
 		emissive = emissive_texture.Sample(g_linear_sampler, uv).rgb;
 	}
 
-	// End of data fetch
-	
-	// Outgoing light direction (vector from world-space fragment position to the "eye").
-	float3 Lo = normalize(camera.position.xyz - input.world_position.xyz);
-	float3 N = normals;
+	const float3 N = normals;
+	const float3 V = normalize(camera.position.xyz - input.world_position.xyz);
+	const float3 R = reflect(-V, N); 
 
-	float cosLo = max(0.0, dot(N, Lo));
-	float3 Lr = 2.0 * cosLo * N - Lo;
-
-	float3 F0 = lerp(Fdielectric, albedo, metalness);
+	const float3 F0 = lerp(0.04, albedo, metalness); 
 
 	float3 directLighting = 0.0;
 	{
-		float3 Li = -scene_parameters.directional_light_direction.xyz;
-		float3 Lradiance = scene_parameters.directional_light_color.rgb * scene_parameters.directional_light_intensity;
+		const float3 L = -scene_parameters.directional_light_direction.xyz;
+		const float3 H = normalize(V + L);
+		const float3 radiance = scene_parameters.directional_light_color.rgb * scene_parameters.directional_light_intensity;
 
-		// Half-vector between Li and Lo.
-		float3 Lh = normalize(Li + Lo);
+		 float NDF = DistributionGGX(N, H, roughness);   
+		 float G   = GeometrySmith(N, V, L, roughness);    
+		 float3 F  = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-		// Calculate angles between surface normal and various light vectors.
-		float cosLi = max(0.0, dot(N, Li));
-		float cosLh = max(0.0, dot(N, Lh));
+		float3 numerator    = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
+		float3 specular = numerator / denominator;
 
-		float3 F  = fresnelSchlick(F0, max(0.0, dot(Lh, Lo)));
+		// kS is equal to Fresnel
+		float3 kS = F;
 
-		float D = ndfGGX(cosLh, roughness); // normal distribution
+		// for energy conservation, the diffuse and specular light can't
+		// be above 1.0 (unless the surface emits light); to preserve this
+		// relationship the diffuse component (kD) should equal 1.0 - kS.
+		float3 kD = 1.0 - kS;
 
-		float G = gaSchlickGGX(cosLi, cosLo, roughness);
+		// multiply kD by the inverse metalness such that only non-metals 
+		// have diffuse lighting, or a linear blend if partly metal (pure metals
+		// have no diffuse light).
+		kD *= 1.0 - metalness;	                
+      
+		// scale light by NdotL
+		float NdotL = max(dot(N, L), 0.0);        
 
-		// Diffuse scattering happens due to light being refracted multiple times by a dielectric medium.
-		// Metals on the other hand either reflect or absorb energy, so diffuse contribution is always zero.
-		// To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness.
-		float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metalness);
-
-		// Lambert diffuse BRDF.
-		// We don't scale by 1/PI for lighting & material units to be more convenient.
-		// See: https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
-		float3 diffuseBRDF = kd * albedo;
-
-		// Cook-Torrance specular microfacet BRDF.
-		float3 specularBRDF = (F * D * G) / max(Epsilon, 4.0 * cosLi * cosLo);
-
-		directLighting += (diffuseBRDF + specularBRDF) * Lradiance * cosLi;
+		// add to outgoing radiance Lo
+		directLighting += (kD * albedo / PI + specular) * radiance * NdotL; // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
 	}
-
 
 	float3 ambientLighting = 0.0;
 
 	{
-		float3 irradiance = g_input_irradiance.Sample(g_linear_sampler, N).rgb;
-		float3 F = fresnelSchlick(F0, cosLo);
+	    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    
+		float3 kS = F;
+		float3 kD = 1.0 - kS;
+		kD *= 1.0 - metalness;	  
+    
+		float3 irradiance	= g_input_irradiance.SampleLevel(g_linear_sampler, N, 0).rgb;
+		float3 diffuse      = irradiance * albedo.rgb;
 
-		float3 kd = lerp(1.0 - F, 0.0, metalness); // Get diffuse contribution factor (as with direct lighting).
+		const float MAX_REFLECTION_LOD = 8.0; // TODO: task provide
+		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
+		float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-		// Irradiance map contains exitant radiance assuming Lambertian BRDF, no need to scale by 1/PI here either.
-		float3 diffuseIBL = kd * albedo * irradiance;
-
-		// Sample pre-filtered specular reflection environment at correct mipmap level.
-		uint specularTextureLevels = 8; // TODO: provide
-		float3 specularIrradiance = g_input_radiance.SampleLevel(g_linear_sampler, Lr, roughness * specularTextureLevels).rgb;
-
-		// Split-sum approximation factors for Cook-Torrance specular BRDF.
-		float2 specularBRDF = g_input_brdf.Sample(g_linear_sampler, float2(cosLo, roughness)).rg; // special sampler
-
-		float3 specularIBL = (F0 * specularBRDF.x + specularBRDF.y) * specularIrradiance;
-
-		ambientLighting = diffuseIBL + specularIBL;
+		ambientLighting = (kD * diffuse + specular);
 	}
 
-	return float4(directLighting, 1.0); //  + ambientLighting
+	float3 result = ambientLighting * occlusion + directLighting + emissive;
+
+	return float4(result, 1.0);
 }

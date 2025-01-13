@@ -459,7 +459,7 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 {
 	int position_index = -1;
 	int normal_index = -1;
-	int tangent_index = -1;
+	//int tangent_index = -1;
 	int uv0_index = -1;
 
 	if (gltf_primitive.attributes.contains("POSITION"))
@@ -472,10 +472,10 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 		normal_index = gltf_primitive.attributes.at("NORMAL");
 	}
 
-	if (gltf_primitive.attributes.contains("TANGENT"))
-	{
-		tangent_index = gltf_primitive.attributes.at("TANGENT");
-	}
+	//if (gltf_primitive.attributes.contains("TANGENT"))
+	//{
+	//	tangent_index = gltf_primitive.attributes.at("TANGENT");
+	//}
 
 	if (gltf_primitive.attributes.contains("TEXCOORD_0"))
 	{
@@ -518,20 +518,20 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 	}
 
 	// Vertex tangents
-	tinygltf::Accessor tangent_accessor;
-	tinygltf::BufferView tangent_buffer_view;
-	const UINT8* tangent_buffer_address = nullptr;
-	int tangent_stride = -1;
-	if (tangent_index > -1)
-	{
-		tangent_accessor = gltf_model.accessors[tangent_index];
-		tangent_buffer_view = gltf_model.bufferViews[tangent_accessor.bufferView];
-		const tinygltf::Buffer& tangent_buffer = gltf_model.buffers[tangent_buffer_view.buffer];
-		tangent_buffer_address = tangent_buffer.data.data();
-		tangent_stride = tinygltf::GetComponentSizeInBytes(tangent_accessor.componentType) *
-			tinygltf::GetNumComponentsInType(tangent_accessor.type);
-		ysn::AssertMsg(tangent_stride == 16, "GLTF model vertex tangent stride not equals 16");
-	}
+	//tinygltf::Accessor tangent_accessor;
+	//tinygltf::BufferView tangent_buffer_view;
+	//const UINT8* tangent_buffer_address = nullptr;
+	//int tangent_stride = -1;
+	//if (tangent_index > -1)
+	//{
+	//	tangent_accessor = gltf_model.accessors[tangent_index];
+	//	tangent_buffer_view = gltf_model.bufferViews[tangent_accessor.bufferView];
+	//	const tinygltf::Buffer& tangent_buffer = gltf_model.buffers[tangent_buffer_view.buffer];
+	//	tangent_buffer_address = tangent_buffer.data.data();
+	//	tangent_stride = tinygltf::GetComponentSizeInBytes(tangent_accessor.componentType) *
+	//		tinygltf::GetNumComponentsInType(tangent_accessor.type);
+	//	ysn::AssertMsg(tangent_stride == 16, "GLTF model vertex tangent stride not equals 16");
+	//}
 
 	// Vertex texture coordinates
 	tinygltf::Accessor uv0_accessor;
@@ -570,12 +570,12 @@ static uint32_t BuildVertexBuffer(ysn::Primitive& primitive, const tinygltf::Pri
 			memcpy(&v.normal, address, normal_stride);
 		}
 
-		if (tangent_index > -1)
-		{
-			const UINT8* address = tangent_buffer_address + tangent_buffer_view.byteOffset + tangent_accessor.byteOffset +
-				(vertex_index * tangent_stride);
-			memcpy(&v.tangent, address, tangent_stride);
-		}
+		//if (tangent_index > -1)
+		//{
+		//	const UINT8* address = tangent_buffer_address + tangent_buffer_view.byteOffset + tangent_accessor.byteOffset +
+		//		(vertex_index * tangent_stride);
+		//	memcpy(&v.tangent, address, tangent_stride);
+		//}
 
 		if (uv0_index > -1)
 		{

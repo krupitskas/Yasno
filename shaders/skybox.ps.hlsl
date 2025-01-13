@@ -1,8 +1,8 @@
 struct PixelShaderInput
 {
-    float2 TexCoord : TEXCOORD;
-    float4 Position : SV_Position;
-    float3 OriginalPosition : POSITION;
+    float4 Position             : SV_Position;
+    float3 OriginalPosition     : POSITION;
+    float2 TexCoord             : TEXCOORD;
 };
 
 TextureCube g_texture : register(t0);

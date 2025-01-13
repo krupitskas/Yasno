@@ -1,8 +1,4 @@
-struct VertexPosTexCoord
-{
-	float3 Position : POSITION;
-	float2 TexCoord : TEXCOORD;
-};
+#include "shared.hlsl"
 
 struct VertexShaderOutput
 {
@@ -16,13 +12,13 @@ cbuffer ConvertCubemapCamera : register(b0)
 	float4x4 view_projection;
 };
 
-VertexShaderOutput main(VertexPosTexCoord IN)
+VertexShaderOutput main(VertexLayout IN)
 {
 	VertexShaderOutput OUT;
 
-	OUT.LocalPosition = IN.Position;
-	OUT.Position = mul(view_projection, float4(IN.Position, 1.0f));
-	OUT.TexCoord = IN.TexCoord;
+	OUT.LocalPosition = IN.position;
+	OUT.Position = mul(view_projection, float4(IN.position, 1.0f));
+	OUT.TexCoord = IN.texcoord_0;
 
 	return OUT;
 }

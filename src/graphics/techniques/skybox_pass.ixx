@@ -128,7 +128,7 @@ namespace ysn
 		pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		pso_desc.SetSampleMask(UINT_MAX);
 		pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
-		pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+		pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
 
 		auto result_pso = renderer->BuildPso(pso_desc);
 

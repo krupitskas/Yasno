@@ -197,7 +197,7 @@ namespace ysn
 		GraphicsPsoDesc pso_desc("Filter Irradiance Cubemap PSO");
 		pso_desc.AddShader({ ShaderType::Vertex, VfsPath(L"shaders/convolve_cubemap.vs.hlsl") });
 		pso_desc.AddShader({ ShaderType::Pixel, VfsPath(L"shaders/convolve_irradiance.ps.hlsl") });
-		pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+		pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
 		pso_desc.SetRasterizerState(rasterizer_desc);
 		pso_desc.SetBlendState(blend_desc);
 		pso_desc.SetRootSignature(root_signature);
@@ -330,7 +330,7 @@ namespace ysn
 		GraphicsPsoDesc pso_desc("Filter Radiance Cubemap PSO");
 		pso_desc.AddShader({ ShaderType::Vertex, VfsPath(L"shaders/convolve_cubemap.vs.hlsl") });
 		pso_desc.AddShader({ ShaderType::Pixel, VfsPath(L"shaders/convolve_radiance.ps.hlsl") });
-		pso_desc.SetInputLayout(VertexPosTexCoord::GetVertexLayoutDesc());
+		pso_desc.SetInputLayout(Vertex::GetVertexLayoutDesc());
 		pso_desc.SetRasterizerState(rasterizer_desc);
 		pso_desc.SetBlendState(blend_desc);
 		pso_desc.SetRootSignature(root_signature);

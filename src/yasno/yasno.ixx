@@ -26,6 +26,7 @@ import graphics.techniques.generate_mips_pass;
 import graphics.techniques.debug_renderer;
 import graphics.techniques.convolve_cubemap;
 import graphics.render_scene;
+import graphics.mesh;
 import renderer.dxrenderer;
 import renderer.gpu_buffer;
 import renderer.command_queue;
@@ -416,15 +417,74 @@ namespace ysn
 
 		bool load_result = false;
 
+		// Simplify simple primitive creation
+		int rows = 7;
+		int columns = 7;
+		int sphere_counter = 0;
+		float spacing = 2.5;
+
+		if (false)
 		{
-		    LoadingParameters loading_parameters;
-		    //load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			Model model;
+			model.name = "Sphere";
+
+			for (int row = 0; row < rows; row++)
+			{
+				for (int column = 0; column < columns; column++)
+				{
+					ysn::Material material("Sphere Material");
+					material.blend_desc.RenderTarget[0].BlendEnable = false;
+					material.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+					material.rasterizer_desc.CullMode = D3D12_CULL_MODE_NONE;
+					material.rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
+					material.rasterizer_desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+					material.rasterizer_desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+					material.rasterizer_desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+					material.rasterizer_desc.ForcedSampleCount = 0;
+					material.rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+					material.rasterizer_desc.FrontCounterClockwise = TRUE;
+
+					SurfaceShaderParameters shader_params;
+					shader_params.base_color_factor = DirectX::XMFLOAT4(1.0, 1.0, 1.0, 1.0);
+					shader_params.metallic_factor = float(row) / float(rows);
+					shader_params.roughness_factor = std::min(1.0f, std::max(0.05f, float(column) / float(columns)));
+					shader_params.texture_enable_bitmask = 0;
+
+					ysn::Primitive sphere_primitive = ConstructSphere(1.0, 32, 32);
+					sphere_primitive.material_id = sphere_counter;
+
+					Mesh mesh;
+					mesh.name = "Sphere Mesh";
+					mesh.primitives.push_back(sphere_primitive);
+
+					model.meshes.push_back(mesh);
+					model.materials.push_back(material);
+					model.shader_parameters.push_back(shader_params);
+					model.transforms.push_back(DirectX::XMMatrixTranslation((float)(column - (columns / 2.0f)) * spacing, (float)(row - (rows / 2.0f)) * spacing, 0.0f));
+
+
+					m_render_scene.indices_count += sphere_primitive.index_count;
+					m_render_scene.vertices_count += sphere_primitive.vertex_count;
+					m_render_scene.primitives_count += 1;
+					m_render_scene.materials_count += 1;
+
+					sphere_counter += 1;
+
+					load_result = true;
+				}
+			}
+			m_render_scene.models.push_back(model);
 		}
 
-	//{
-	//	LoadingParameters loading_parameters;
-	//	load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
-	//}
+		{
+			LoadingParameters loading_parameters;
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+		}
+
+		{
+			LoadingParameters loading_parameters;
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+		}
 
 		{
 			LoadingParameters loading_parameters;
@@ -439,16 +499,16 @@ namespace ysn
 
 		// TODO: Verify all of this tests
 		{
-			
+
 			LoadingParameters loading_parameters;
 			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"), loading_parameters); // Texture coordinate test
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/EnvironmentTest/glTF/EnvironmentTest.gltf"), loading_parameters); // Env test
 
 			//loading_parameters.model_modifier = DirectX::XMMatrixScaling(10.f, 10.f, 10.f);
 			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf"), loading_parameters); // Boombox with axes
 		}
 
-		if(!load_result)
+		if (!load_result)
 		{
 			return std::unexpected("Can't load scenes\n");
 		}
@@ -1428,7 +1488,7 @@ namespace ysn
 			skybox_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;
 			skybox_parameters.viewport = m_viewport;
 			skybox_parameters.scissors_rect = m_scissors_rect;
-			switch(m_active_skybox_cubemap)
+			switch (m_active_skybox_cubemap)
 			{
 				case SkyboxCubemap::Cubemap:
 					skybox_parameters.cubemap_texture = m_cubemap_texture;
