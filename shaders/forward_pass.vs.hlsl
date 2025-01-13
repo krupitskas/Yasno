@@ -13,7 +13,7 @@ struct IA2VS
     float2 texcoord_0: TEXCOORD_0;
 };
 
-struct VS2RS
+struct VertexToPixel
 {
 	float4 position : SV_POSITION;
 
@@ -70,19 +70,15 @@ float3x3 Inverse3x3(float3x3 mat)
     return inv / det;
 }
 
-VS2RS main(IA2VS input)
+VertexToPixel main(IA2VS input)
 {
 	PerInstanceData instance_data = per_instance_data[instance_id];
 
-	VS2RS output;
+	VertexToPixel output;
 	output.position = mul(instance_data.model_matrix, float4(input.position, 1.0));
 
 	float3x3 normal_matrix = transpose(Inverse3x3((float3x3)instance_data.model_matrix));
-	output.normal = mul(normal_matrix, input.normal);  
-
-#ifndef SHADOW_PASS
-	DrawLine(output.position, output.position + output.normal / 2, float3(0,1,0));
-#endif
+	output.normal = mul(normal_matrix, input.normal);
 
 #ifndef SHADOW_PASS
 	output.position_shadow_space = mul(shadow_matrix, output.position);
