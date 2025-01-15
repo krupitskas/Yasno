@@ -33,10 +33,7 @@ cbuffer SceneParameters : register(b1)
 	uint		shadows_enabled;
 };
 
-cbuffer InstanceId : register(b2)
-{
-    uint instance_id;
-};
+ConstantBuffer<InstanceID> instance_id				: register(b2);
 
 StructuredBuffer<PerInstanceData> per_instance_data : register(t0);
 
@@ -63,7 +60,7 @@ float3x3 Inverse3x3(float3x3 mat)
 
 VertexToPixel main(VertexLayout input)
 {
-	PerInstanceData instance_data = per_instance_data[instance_id];
+	PerInstanceData instance_data = per_instance_data[instance_id.id];
 
 	float3x3 normal_matrix = transpose(Inverse3x3((float3x3)instance_data.model_matrix));
 	
@@ -73,8 +70,14 @@ VertexToPixel main(VertexLayout input)
 	output.pixel_position	= mul(camera.view_projection, output.world_position);
     output.texcoord_0		= input.texcoord_0;
 
-	#ifndef SHADOW_PASS
+#ifndef SHADOW_PASS
 	output.position_shadow_space = mul(shadow_matrix, output.world_position);
+
+	//if(instance_id.id == 55)
+	//{
+	//	DrawLine(output.world_position, output.world_position + normalize(output.normal) * 0.25, float3(255, 0 ,0));
+	//}
+
 #endif
 
 	return output;

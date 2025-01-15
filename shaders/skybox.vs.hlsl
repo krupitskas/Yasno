@@ -25,8 +25,9 @@ VertexShaderOutput main(VertexLayout input)
     output.OriginalPosition = input.position;
     output.TexCoord = input.texcoord_0;
 
-    //DrawAxisAlignedBox(camera_position, float3(1.0, 1.0, 1.0), float3(255,0,0));
-    //DrawSphere(camera_position, 1.0, float3(255,0,0));
+    //DrawAxisAlignedBox(input.position, float3(1.0, 1.0, 1.0), float3(255,0,0));
+    //DrawSphere(input.position - input.normal.xyz * 10, 1.0, float3(255,0,0));
+    //DrawLine(input.position.xyz, input.position.xyz + input.normal.xyz, float3(255,0,0));
 
     return output;
 }

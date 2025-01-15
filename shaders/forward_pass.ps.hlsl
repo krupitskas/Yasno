@@ -216,7 +216,11 @@ float4 main(RS2PS input) : SV_Target
 		ambientLighting = (kD * diffuse + specular);
 	}
 
-	float3 result = ambientLighting * occlusion + directLighting + emissive;
+	float shadow = PCFShadowCalculation(input.position_shadow_space);
 
-	return float4(result, 1.0);
+	// ambientLighting * occlusion  +
+
+	float3 result = directLighting * shadow + emissive;
+
+	return float4(albedo.rgb, 1.0);
 }
