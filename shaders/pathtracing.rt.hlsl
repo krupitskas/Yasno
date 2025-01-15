@@ -1,5 +1,6 @@
 #include "shader_structs.h"
 #include "shared.hlsl"
+#include "brdf.hlsl"
 
 RWTexture2D<float4> result_texture							: register(u0);
 RWTexture2D<float4> accumulation_texture					: register(u1);
@@ -13,6 +14,62 @@ StructuredBuffer<SurfaceShaderParameters> materials_buffer	: register(t3);
 StructuredBuffer<PerInstanceData> per_instance_buffer		: register(t4);
 
 SamplerState linear_sampler									: register(s0);
+
+PTMaterialProperties LoadMaterialProperties(int material_id, float2 uv)
+{
+	PTMaterialProperties result;
+
+	SurfaceShaderParameters mat = materials_buffer[material_id];
+
+	float3 base_color = mat.base_color_factor.rgb;
+	float metalness = mat.metallic_factor;
+	float roughness = mat.roughness_factor;
+	float3 emissive_result = 0.0f;
+
+	if (mat.texture_enable_bitmask & (1 << ALBEDO_ENABLED_BIT))
+	{
+		Texture2D albedo_texture = ResourceDescriptorHeap[mat.albedo_texture_index];
+		base_color *= albedo_texture.SampleLevel(linear_sampler, uv, 0.0f).rgb;
+	}
+
+	if (mat.texture_enable_bitmask & (1 << METALLIC_ROUGHNESS_ENABLED_BIT))
+	{
+		Texture2D m_r_texture = ResourceDescriptorHeap[mat.metallic_roughness_texture_index];
+		float3 m_r_texture_result = m_r_texture.SampleLevel(linear_sampler, uv, 0.0f).rgb;
+
+		metalness *= m_r_texture_result.b;
+		roughness *= m_r_texture_result.g;
+	}
+
+	//if (mat.texture_enable_bitmask & (1 << NORMAL_ENABLED_BIT))
+	//{
+	//	Texture2D normals_texture = ResourceDescriptorHeap[mat.normal_texture_index];
+
+	//}
+
+	//if (mat.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BIT))
+	//{
+	//	Texture2D occlusion_texture = ResourceDescriptorHeap[mat.occlusion_texture_index];
+
+	//}
+
+	if (mat.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BIT))
+	{
+		Texture2D emissive_texture = ResourceDescriptorHeap[mat.emissive_texture_index];
+		float3 emissive_texture_result = emissive_texture.SampleLevel(linear_sampler, uv, 0.0f).rgb;
+
+		emissive_result += emissive_texture_result.rgb;
+	}
+
+	result.base_color = base_color;
+	result.metalness = metalness;
+	result.emissive = emissive_result;
+	result.roughness = roughness;
+	result.transmissivness = 0;
+	result.opacity = 1;
+
+	return result;
+}
 
 [shader("raygeneration")]
 void RayGen()
@@ -30,7 +87,6 @@ void RayGen()
 	uint2 pixel_xy = DispatchRaysIndex().xy;
 	float2 resolution = float2(DispatchRaysDimensions().xy);
 
-
 	float2 d = (((pixel_xy.xy + 0.5f) / resolution.xy) * 2.f - 1.f);
 
 	float aspect_ratio = resolution.x / resolution.y;
@@ -45,11 +101,11 @@ void RayGen()
 
 	float3 radiance = float3(0.0f, 0.0f, 0.0f);
 	float3 throughput = float3(1.0f, 1.0f, 1.0f);
-	float3 sky_value = float3(1.0f, 1.0f, 1.0f);
+	float3 sky_value = float3(10.0f, 10.0f, 10.0f);
 
 	uint rng_state = InitRNG(LaunchIndex, LaunchDimensions, camera.frame_number);
 
-	int max_bounces = 16;
+	int max_bounces = 8;
 
 	for (int bounce = 0; bounce < max_bounces; bounce++)
 	{
@@ -68,9 +124,7 @@ void RayGen()
 
 		if(!payload.has_hit())
 		{
-			result_texture[pixel_xy] = float4(0, 255, 0, 1.f);
-
-			radiance += throughput * sky_value;
+			radiance += throughput * sky_value; // TODO: Sample cubemap here?
 			break;
 		}
 
@@ -90,52 +144,50 @@ void RayGen()
 			shading_normal = -shading_normal;
 		}
 
+		PTMaterialProperties material = LoadMaterialProperties(payload.material_id, payload.uvs);
+
+		radiance += throughput * material.emissive;
+
+		// Sample BRDF to generate the next ray
+		// First, figure out whether to sample diffuse or specular BRDF
+		int brdf_type;
+		if (material.metalness == 1.0f && material.roughness == 0.0f) 
+		{
+			// Fast path for mirrors
+			brdf_type = SPECULAR_TYPE;
+		} 
+		else
+		{
+			// Decide whether to sample diffuse or specular BRDF (based on Fresnel term)
+			float brdf_probability = GetBrdfProbability(material, view_vec, shading_normal);
+
+			if (Rand(rng_state) < brdf_probability)
+			{
+				brdf_type = SPECULAR_TYPE;
+				throughput /= brdf_probability;
+			} 
+			else
+			{
+				brdf_type = DIFFUSE_TYPE;
+				throughput /= (1.0f - brdf_probability);
+			}
+		}
+
 		// Run importance sampling of selected BRDF to generate reflecting ray direction
-		float3 brdf_weight;
+		float3 brdf_weight = 0;
 		float2 u = float2(Rand(rng_state), Rand(rng_state));
 
-		// Ray coming from "below" the hemisphere, goodbye
-		if (dot(shading_normal, view_vec) <= 0.0f)
+		if (!EvalIndirectCombinedBRDF(u, shading_normal, geometry_normal, view_vec, material, brdf_type, ray.Direction, brdf_weight)) 
 		{
 			break;
 		}
 
-		// Transform view direction into local space of our sampling routines 
-		// (local space is oriented so that its positive Z axis points along the shading normal)
-		float4 quat_rot_to_z = GetRotationToZAxis(shading_normal);
-		float3 v_local = RotatePoint(quat_rot_to_z, view_vec);
-		const float3 n_local = float3(0.0f, 0.0f, 1.0f);
+		// Account for surface properties using the BRDF "weight"
+		throughput *= brdf_weight;
 
-		float3 ray_direction_local = float3(0.0f, 0.0f, 0.0f);
-
-		ray_direction_local = SampleHemisphere(u);
-
-		//sampleWeight = data.diffuseReflectance * diffuseTerm(data);
-
-		//// Prevent tracing direction with no contribution
-		//if (Luminance(sampleWeight) == 0.0f)
-		//{
-		//	return false;
-		//}
-
-		// Transform sampled direction Llocal back to V vector space
-		ray_direction_local = normalize(RotatePoint(InvertRotation(quat_rot_to_z), ray_direction_local));
-
-		// Prevent tracing direction "under" the hemisphere (behind the triangle)
-		if (dot(geometry_normal, ray_direction_local) <= 0.0f)
-		{
-			break;
-		}
-
-		// Update ray
+		// Offset a new ray origin from the hitpoint to prevent self-intersections
 		ray.Origin = OffsetRay(payload.hit_position, geometry_normal);
-		ray.Direction = ray_direction_local;
 	}
-
-
-	SurfaceShaderParameters mat = materials_buffer[payload.material_id];
-	Texture2D albedo_texture = ResourceDescriptorHeap[mat.albedo_texture_index];
-	float3 albedo_color = albedo_texture.SampleLevel(linear_sampler, payload.uvs, 0.0f).rgb;
 
 	if(camera.reset_accumulation > 0)
 	{

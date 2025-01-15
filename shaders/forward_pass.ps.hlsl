@@ -147,14 +147,12 @@ float4 main(RS2PS input) : SV_Target
 	if (pbr_material.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BIT))
 	{
 		Texture2D occlusion_texture = ResourceDescriptorHeap[pbr_material.occlusion_texture_index];
-
 		occlusion = occlusion_texture.Sample(g_linear_sampler, uv);
 	}
 
 	if (pbr_material.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BIT))
 	{
 		Texture2D emissive_texture = ResourceDescriptorHeap[pbr_material.emissive_texture_index];
-
 		emissive = emissive_texture.Sample(g_linear_sampler, uv).rgb;
 	}
 

@@ -539,6 +539,7 @@ namespace ysn
 
 			global_root_sig_desc.NumStaticSamplers = 1;
 			global_root_sig_desc.pStaticSamplers = &static_sampler;
+			global_root_sig_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 
 			ID3DBlob* root_signature_blob = nullptr;
 			ID3DBlob* error_blob = nullptr;
