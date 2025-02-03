@@ -14,7 +14,7 @@ export module system.gltf_loader;
 import std;
 import graphics.render_scene;
 import graphics.primitive;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.gpu_texture;
 import renderer.command_queue;
 import system.string_helpers;

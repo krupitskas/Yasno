@@ -93,7 +93,7 @@ float3 tangentToWorld(const float3 v, const float3 N, const float3 S, const floa
 
 float4 main(PixelShaderInput IN) : SV_Target
 {		
-    float3 N = normalize(IN.LocalPosition);
+    float3 N = normalize(IN.LocalPosition) * float3(1, 1, -1); // TODO(LH to RH): Somewhere this is lost
 
 	//return float4(g_input_cubemap.SampleLevel(g_linear_sampler, N, 0).rgb, 1.0);
 

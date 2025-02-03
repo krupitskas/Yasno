@@ -10,7 +10,7 @@ export module renderer.gpu_texture;
 import std;
 import system.application;
 import system.logger;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.gpu_resource;
 import system.helpers;

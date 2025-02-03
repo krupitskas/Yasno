@@ -10,7 +10,7 @@ module;
 export module graphics.techniques.shadow_map_pass;
 
 import std;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.command_queue;
 import graphics.primitive;

@@ -13,7 +13,7 @@ export module graphics.techniques.raytracing_pass;
 
 import std;
 import yasno.camera;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.rtx_context;
 import renderer.descriptor_heap;
 import renderer.shader_storage;

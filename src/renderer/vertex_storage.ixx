@@ -18,7 +18,6 @@ export namespace ysn
 	{
 		XMFLOAT3 position;
 		XMFLOAT3 normal;
-		//XMFLOAT4 tangent;
 		XMFLOAT2 uv0;
 
 		Vertex& operator=(const Vertex& v)

@@ -8,7 +8,7 @@ export module graphics.primitive;
 import std;
 import graphics.aabb;
 import renderer.vertex_storage;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.pso;
 import system.application;
 import system.logger;
@@ -71,51 +71,24 @@ namespace ysn
 		std::vector<uint16_t> indices;
 
 		vertices = {
-			// Front face
-			{{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{-1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}}, // Top-left
-			{{ 1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}}, // Top-right
-			{{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}}, // Bottom-right
-
-			// Back face
-			{{-1.0f, -1.0f,  1.0f}, {0.0f, 0.0f,  1.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{-1.0f,  1.0f,  1.0f}, {0.0f, 0.0f,  1.0f}, {0.0f, 0.0f}}, // Top-left
-			{{ 1.0f,  1.0f,  1.0f}, {0.0f, 0.0f,  1.0f}, {1.0f, 0.0f}}, // Top-right
-			{{ 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f,  1.0f}, {1.0f, 1.0f}}, // Bottom-right
-
-			// Left face
-			{{-1.0f, -1.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{-1.0f,  1.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}}, // Top-left
-			{{-1.0f,  1.0f,  1.0f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Top-right
-			{{-1.0f, -1.0f,  1.0f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}}, // Bottom-right
-
-			// Right face
-			{{ 1.0f, -1.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{ 1.0f,  1.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}}, // Top-left
-			{{ 1.0f,  1.0f,  1.0f}, { 1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, // Top-right
-			{{ 1.0f, -1.0f,  1.0f}, { 1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}}, // Bottom-right
-
-			// Top face
-			{{-1.0f,  1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{-1.0f,  1.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}, // Top-left
-			{{ 1.0f,  1.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // Top-right
-			{{ 1.0f,  1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}}, // Bottom-right
-
-			// Bottom face
-			{{-1.0f, -1.0f, -1.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}}, // Bottom-left
-			{{-1.0f, -1.0f,  1.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}}, // Top-left
-			{{ 1.0f, -1.0f,  1.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}}, // Top-right
-			{{ 1.0f, -1.0f, -1.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}}  // Bottom-right
+			{{-1.0f, -1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}}, // Bottom-left
+			{{ 1.0f, -1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}}, // Bottom-right
+			{{ 1.0f,  1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}}, // Top-right
+			{{-1.0f,  1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}}, // Top-left
+			{{ 1.0f, -1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}}, // Bottom-left
+			{{-1.0f, -1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}}, // Bottom-right
+			{{-1.0f,  1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}}, // Top-right
+			{{ 1.0f,  1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}}  // Top-left
 		};
 
-		// Define indices for each face (two triangles per face)
-		indices = {
-			0,  1,  2,  0,  2,  3,  // Front face
-			4,  6,  5,  4,  7,  6,  // Back face
-			8,  9,  10, 8,  10, 11, // Left face
-			12, 14, 13, 12, 15, 14, // Right face
-			16, 17, 18, 16, 18, 19, // Top face
-			20, 22, 21, 20, 23, 22  // Bottom face
+		indices = 
+		{
+			0, 1, 2, 2, 3, 0, // Front
+			4, 5, 6, 6, 7, 4, // Back
+			5, 0, 3, 3, 6, 5, // Left
+			1, 4, 7, 7, 2, 1, // Right
+			3, 2, 7, 7, 6, 3, // Top
+			5, 4, 1, 1, 0, 5  // Bottom
 		};
 
 		const uint32_t vertex_buffer_size = static_cast<uint32_t>(vertices.size()) * sizeof(Vertex);

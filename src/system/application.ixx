@@ -16,7 +16,7 @@ export module system.application;
 
 import std;
 import renderer.dx_types;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.command_queue;
 import system.logger;
@@ -58,8 +58,8 @@ export namespace ysn
 		wil::com_ptr<DxDevice> GetDevice() const;
 
 		std::shared_ptr<CommandQueue> GetDirectQueue() const;
-		std::shared_ptr<CommandQueue> GetComputeQueue() const;
-		std::shared_ptr<CommandQueue> GetCopyQueue() const;
+		//std::shared_ptr<CommandQueue> GetComputeQueue() const;
+		//std::shared_ptr<CommandQueue> GetCopyQueue() const;
 
 		std::shared_ptr<ysn::DxRenderer> GetRenderer() const;
 
@@ -454,15 +454,15 @@ namespace ysn
 		return m_dx_renderer->GetDirectQueue();
 	}
 
-	std::shared_ptr<CommandQueue> Application::GetComputeQueue() const
-	{
-		return m_dx_renderer->GetComputeQueue();
-	}
+	//std::shared_ptr<CommandQueue> Application::GetComputeQueue() const
+	//{
+	//	return m_dx_renderer->GetComputeQueue();
+	//}
 
-	std::shared_ptr<CommandQueue> Application::GetCopyQueue() const
-	{
-		return m_dx_renderer->GetCopyQueue();
-	}
+	//std::shared_ptr<CommandQueue> Application::GetCopyQueue() const
+	//{
+	//	return m_dx_renderer->GetCopyQueue();
+	//}
 
 	void Application::Flush()
 	{
@@ -844,6 +844,7 @@ namespace ysn
 		swap_chain_desc.Scaling = DXGI_SCALING_STRETCH;
 		swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+
 		// It is recommended to always allow tearing if tearing support is available.
 		swap_chain_desc.Flags = m_tearing_supported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 		ID3D12CommandQueue* command_queue = app.GetDirectQueue()->GetD3D12CommandQueue().get();

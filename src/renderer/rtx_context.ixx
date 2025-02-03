@@ -10,7 +10,7 @@ import std;
 import system.application;
 import system.gltf_loader;
 import graphics.render_scene;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.tlas_generator;
 import renderer.blas_generator;

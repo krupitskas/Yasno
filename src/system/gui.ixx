@@ -13,7 +13,7 @@ module;
 export module system.gui;
 
 import std;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.dx_types;
 import system.application;
 

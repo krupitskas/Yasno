@@ -13,7 +13,7 @@ import system.filesystem;
 import system.logger;
 import system.asserts;
 import renderer.pso;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.gpu_texture;
 import renderer.dx_types;
 
@@ -91,8 +91,6 @@ namespace ysn
 
 	bool GenerateMipsPass::GenerateMips(std::shared_ptr<DxRenderer> renderer, wil::com_ptr<DxGraphicsCommandList> command_list, GpuTexture& gpu_texture)
 	{
-		auto compute_queue = renderer->GetComputeQueue();
-
 		const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
 
 		if (!pso.has_value())

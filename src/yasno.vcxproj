@@ -245,7 +245,7 @@
     <ClCompile Include="renderer\command_signature.ixx">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="renderer\dxrenderer.ixx">
+    <ClCompile Include="renderer\dx_renderer.ixx">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="renderer\depth_buffer.ixx">

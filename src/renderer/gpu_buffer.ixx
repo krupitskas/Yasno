@@ -7,7 +7,7 @@ export module renderer.gpu_buffer;
 
 import std;
 import renderer.gpu_resource;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import system.application;
 import system.logger;
 

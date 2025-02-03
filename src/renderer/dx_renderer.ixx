@@ -5,7 +5,7 @@
 #include <wil/com.h>
 #include <Windows.h>
 
-export module renderer.dxrenderer;
+export module renderer.dx_renderer;
 
 import std;
 import system.string_helpers;
@@ -44,8 +44,8 @@ export namespace ysn
 		}
 
 		std::shared_ptr<CommandQueue> GetDirectQueue() const;
-		std::shared_ptr<CommandQueue> GetComputeQueue() const;
-		std::shared_ptr<CommandQueue> GetCopyQueue() const;
+		//std::shared_ptr<CommandQueue> GetComputeQueue() const;
+		//std::shared_ptr<CommandQueue> GetCopyQueue() const;
 
 		std::shared_ptr<CbvSrvUavDescriptorHeap> GetCbvSrvUavDescriptorHeap() const;
 		std::shared_ptr<SamplerDescriptorHeap> GetSamplerDescriptorHeap() const;
@@ -94,8 +94,8 @@ export namespace ysn
 
 		// Queues
 		std::shared_ptr<CommandQueue> m_direct_command_queue;
-		std::shared_ptr<CommandQueue> m_compute_command_queue;
-		std::shared_ptr<CommandQueue> m_copy_command_queue;
+		//std::shared_ptr<CommandQueue> m_compute_command_queue;
+		//std::shared_ptr<CommandQueue> m_copy_command_queue;
 
 		// Descriptor heaps
 		std::shared_ptr<CbvSrvUavDescriptorHeap> m_cbv_srv_uav_descriptor_heap;
@@ -298,13 +298,13 @@ namespace ysn
 
 		// Create queues
 		m_direct_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-		m_compute_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-		m_copy_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
+		//m_compute_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		//m_copy_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
 
 		// TODO(checks):
 		m_direct_command_queue->Initialize();
-		m_compute_command_queue->Initialize();
-		m_copy_command_queue->Initialize();
+		//m_compute_command_queue->Initialize();
+		//m_copy_command_queue->Initialize();
 
 		// TODO(checks): Save somewhere budgets, make them dynamic?
 		m_cbv_srv_uav_descriptor_heap = std::make_shared<CbvSrvUavDescriptorHeap>(m_device, 1024 * 512, true);
@@ -432,8 +432,8 @@ namespace ysn
 	void DxRenderer::FlushQueues()
 	{
 		m_direct_command_queue->Flush();
-		m_compute_command_queue->Flush();
-		m_copy_command_queue->Flush();
+		//m_compute_command_queue->Flush();
+		//m_copy_command_queue->Flush();
 	}
 
 	std::shared_ptr<CommandQueue> DxRenderer::GetDirectQueue() const
@@ -441,15 +441,15 @@ namespace ysn
 		return m_direct_command_queue;
 	}
 
-	std::shared_ptr<CommandQueue> DxRenderer::GetComputeQueue() const
-	{
-		return m_compute_command_queue;
-	}
+	//std::shared_ptr<CommandQueue> DxRenderer::GetComputeQueue() const
+	//{
+	//	return m_compute_command_queue;
+	//}
 
-	std::shared_ptr<CommandQueue> DxRenderer::GetCopyQueue() const
-	{
-		return m_copy_command_queue;
-	}
+	//std::shared_ptr<CommandQueue> DxRenderer::GetCopyQueue() const
+	//{
+	//	return m_copy_command_queue;
+	//}
 
 	std::shared_ptr<CbvSrvUavDescriptorHeap> DxRenderer::GetCbvSrvUavDescriptorHeap() const
 	{

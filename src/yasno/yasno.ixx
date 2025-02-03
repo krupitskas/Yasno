@@ -27,7 +27,7 @@ import graphics.techniques.debug_renderer;
 import graphics.techniques.convolve_cubemap;
 import graphics.render_scene;
 import graphics.mesh;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.gpu_buffer;
 import renderer.command_queue;
 import renderer.gpu_texture;

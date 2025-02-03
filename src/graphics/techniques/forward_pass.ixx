@@ -14,7 +14,7 @@ import graphics.material;
 import graphics.techniques.shadow_map_pass;
 import renderer.pso;
 import renderer.command_queue;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.gpu_texture;
 import renderer.gpu_buffer;
@@ -232,7 +232,7 @@ namespace ysn
 			// 1 LinearSampler
 			CD3DX12_STATIC_SAMPLER_DESC static_sampler[2];
 			static_sampler[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR);
+			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1, D3D12_FILTER_ANISOTROPIC);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
 			RootSignatureDesc.NumParameters = 12;

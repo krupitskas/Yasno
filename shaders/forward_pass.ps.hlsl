@@ -139,7 +139,7 @@ float4 main(RS2PS input) : SV_Target
 	{
 		Texture2D normal_texture = ResourceDescriptorHeap[pbr_material.normal_texture_index];
 		float3 texture_normals = normal_texture.Sample(g_linear_sampler, uv);
-		texture_normals = 2.0f * texture_normals - 1.0f; // [0,1] ->[-1,1]
+		//texture_normals = 2.0f * texture_normals - 1.0f; // [0,1] ->[-1,1]
 
 		normals *= texture_normals;
 	}
@@ -168,32 +168,22 @@ float4 main(RS2PS input) : SV_Target
 		const float3 H = normalize(V + L);
 		const float3 radiance = scene_parameters.directional_light_color.rgb * scene_parameters.directional_light_intensity;
 
-		 float NDF = DistributionGGX(N, H, roughness);   
-		 float G   = GeometrySmith(N, V, L, roughness);    
-		 float3 F  = fresnelSchlick(max(dot(H, V), 0.0), F0);
+		float NDF = DistributionGGX(N, H, roughness);   
+		float G   = GeometrySmith(N, V, L, roughness);    
+		float3 F  = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
 		float3 numerator    = NDF * G * F;
 		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-		float3 specular = numerator / denominator;
+		float3 spec = numerator / denominator;
 
-		// kS is equal to Fresnel
 		float3 kS = F;
 
-		// for energy conservation, the diffuse and specular light can't
-		// be above 1.0 (unless the surface emits light); to preserve this
-		// relationship the diffuse component (kD) should equal 1.0 - kS.
 		float3 kD = 1.0 - kS;
-
-		// multiply kD by the inverse metalness such that only non-metals 
-		// have diffuse lighting, or a linear blend if partly metal (pure metals
-		// have no diffuse light).
 		kD *= 1.0 - metalness;	                
       
-		// scale light by NdotL
 		float NdotL = max(dot(N, L), 0.0);        
 
-		// add to outgoing radiance Lo
-		directLighting += (kD * albedo / PI + specular) * radiance * NdotL; // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+		directLighting += (kD * albedo / PI + spec) * radiance * NdotL;
 	}
 
 	float3 ambientLighting = 0.0;
@@ -211,16 +201,14 @@ float4 main(RS2PS input) : SV_Target
 		const float MAX_REFLECTION_LOD = 8.0; // TODO: task provide
 		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R,  roughness * MAX_REFLECTION_LOD).rgb;    
 		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
-		float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+		float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
 
-		ambientLighting = (kD * diffuse + specular);
+		ambientLighting = (kD * diffuse);// + spec);
 	}
 
 	float shadow = PCFShadowCalculation(input.position_shadow_space);
 
-	// ambientLighting * occlusion  +
+	float3 result = ambientLighting * occlusion + emissive + directLighting;
 
-	float3 result = directLighting * shadow + emissive;
-
-	return float4(albedo.rgb, 1.0);
+	return float4(result, 1.0);
 }

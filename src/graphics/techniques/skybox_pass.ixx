@@ -7,7 +7,7 @@ export module graphics.techniques.skybox_pass;
 
 import std;
 import graphics.primitive;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.gpu_texture;
 import renderer.gpu_pixel_buffer;

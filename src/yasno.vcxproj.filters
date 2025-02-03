@@ -107,7 +107,7 @@
     <ClCompile Include="system\logger.ixx">
       <Filter>source\system</Filter>
     </ClCompile>
-    <ClCompile Include="renderer\dxrenderer.ixx">
+    <ClCompile Include="renderer\dx_renderer.ixx">
       <Filter>source\renderer</Filter>
     </ClCompile>
     <ClCompile Include="graphics\render_object_id.ixx">

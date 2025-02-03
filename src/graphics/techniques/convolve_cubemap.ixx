@@ -11,7 +11,7 @@ import system.string_helpers;
 import system.filesystem;
 import system.application;
 import system.logger;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.pso;
 import renderer.gpu_texture;
 import renderer.gpu_pixel_buffer;
@@ -68,14 +68,16 @@ namespace ysn
 
 	enum class IrradianceShaderParameters : uint8_t
 	{
-		ViewProjectionMatrix,
+		View,
+		Projection,
 		InputTexture,
 		ParametersCount
 	};
 
 	enum class RadianceShaderParameters : uint8_t
 	{
-		ViewProjectionMatrix,
+		View,
+		Projection,
 		Parameters,
 		InputTexture,
 		ParametersCount
@@ -86,13 +88,6 @@ namespace ysn
 		BrdfTexture,
 		ParametersCount
 	};
-
-	//enum RadianceShaderParameters
-	//{
-	//	ViewProjectionMatrix,
-	//	InputTexture,
-	//	ParametersCount
-	//};
 
 	bool ConvolveCubemap::Initialize()
 	{
@@ -110,14 +105,30 @@ namespace ysn
 		if (!InitializeBrdf())
 			return false;
 
-		const XMVECTOR position = XMVectorSet(0.0, 0.0, 0.0, 1.0);
+		const XMVECTOR eye = XMVectorSet(0.0, 0.0, 0.0, 1.0);
 
-		m_views[0] = XMMatrixLookAtRH(position, XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -X
-		m_views[1] = XMMatrixLookAtRH(position, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +X
-		m_views[2] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)); // +Y
-		m_views[3] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // -Y
-		m_views[4] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +Z
-		m_views[5] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -Z
+		XMVECTOR targets[6] =
+		{
+			XMVectorAdd(eye, XMVectorSet(1.0f,  0.0f,  0.0f, 0.0f)),  // +X
+			XMVectorAdd(eye, XMVectorSet(-1.0f,  0.0f,  0.0f, 0.0f)), // -X
+			XMVectorAdd(eye, XMVectorSet(0.0f,  1.0f,  0.0f, 0.0f)),  // +Y
+			XMVectorAdd(eye, XMVectorSet(0.0f, -1.0f,  0.0f, 0.0f)),  // -Y
+			XMVectorAdd(eye, XMVectorSet(0.0f,  0.0f, -1.0f, 0.0f)),  // -Z
+			XMVectorAdd(eye, XMVectorSet(0.0f,  0.0f,  1.0f, 0.0f)),  // +Z
+		};
+
+		XMVECTOR ups[6] =
+		{
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // +X
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // -X
+			XMVectorSet(0.0f, 0.0f,  1.0f, 0.0f),  // +Y
+			XMVectorSet(0.0f, 0.0f,  -1.0f, 0.0f), // -Y
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // -Z
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // +Z
+		};
+
+		for (int i = 0; i < 6; i++)
+			m_views[i] = XMMatrixLookAtRH(eye, targets[i], ups[i]);
 
 		m_projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(90.f), 1.0f, 0.1f, 10.f);
 
@@ -166,7 +177,8 @@ namespace ysn
 		CD3DX12_DESCRIPTOR_RANGE source_texture_srv(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 
 		CD3DX12_ROOT_PARAMETER root_parameters[(uint8_t)IrradianceShaderParameters::ParametersCount] = {};
-		root_parameters[(uint8_t)IrradianceShaderParameters::ViewProjectionMatrix].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[(uint8_t)IrradianceShaderParameters::View].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[(uint8_t)IrradianceShaderParameters::Projection].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 1);
 		root_parameters[(uint8_t)IrradianceShaderParameters::InputTexture].InitAsDescriptorTable(1, &source_texture_srv);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler(
@@ -201,7 +213,7 @@ namespace ysn
 		pso_desc.SetRasterizerState(rasterizer_desc);
 		pso_desc.SetBlendState(blend_desc);
 		pso_desc.SetRootSignature(root_signature);
-		pso_desc.SetDepthStencilState({.DepthEnable = false});
+		pso_desc.SetDepthStencilState({ .DepthEnable = false });
 		pso_desc.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		pso_desc.SetSampleMask(UINT_MAX);
 		pso_desc.SetRenderTargetFormat(renderer->GetHdrFormat(), renderer->GetDepthBufferFormat());
@@ -298,8 +310,9 @@ namespace ysn
 		CD3DX12_DESCRIPTOR_RANGE source_texture_srv(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 
 		CD3DX12_ROOT_PARAMETER root_parameters[(uint8_t)RadianceShaderParameters::ParametersCount] = {};
-		root_parameters[(uint8_t)RadianceShaderParameters::ViewProjectionMatrix].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
-		root_parameters[(uint8_t)RadianceShaderParameters::Parameters].InitAsConstants(sizeof(float) / sizeof(float), 1);
+		root_parameters[(uint8_t)RadianceShaderParameters::View].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[(uint8_t)RadianceShaderParameters::Projection].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 1);
+		root_parameters[(uint8_t)RadianceShaderParameters::Parameters].InitAsConstants(sizeof(float) / sizeof(float), 2);
 		root_parameters[(uint8_t)RadianceShaderParameters::InputTexture].InitAsDescriptorTable(1, &source_texture_srv);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler(
@@ -391,17 +404,18 @@ namespace ysn
 		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
 
-		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_cubemap.srv.gpu);
+		command_list.list->SetGraphicsRootDescriptorTable((int)IrradianceShaderParameters::InputTexture, parameters.source_cubemap.srv.gpu);
 
 		for (int face = 0; face < 6; face++)
 		{
-			DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-			view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
-			view_projection = XMMatrixMultiply(view_projection, m_projection);
-			float data[16];
-			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
+			float view[16];
+			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(view), m_views[face]);
 
-			command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
+			float projection[16];
+			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(projection), m_projection);
+
+			command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::View, 16, view, 0);
+			command_list.list->SetGraphicsRoot32BitConstants((uint8_t)IrradianceShaderParameters::Projection, 16, projection, 0);
 			command_list.list->OMSetRenderTargets(1, &parameters.target_irradiance.rtv[0][face].cpu, FALSE, nullptr);
 			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 		}
@@ -451,14 +465,13 @@ namespace ysn
 		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
 
-		command_list.list->SetGraphicsRootDescriptorTable((uint8_t)RadianceShaderParameters::InputTexture
-														  , parameters.source_cubemap.srv.gpu);
+		command_list.list->SetGraphicsRootDescriptorTable((uint8_t)RadianceShaderParameters::InputTexture, parameters.source_cubemap.srv.gpu);
 
 		const uint32_t max_mip_levels = parameters.target_radiance->GetDesc().MipLevels;
 
 		for (uint32_t mip = 0; mip < max_mip_levels; mip++)
 		{
-			unsigned int mip_width  = parameters.target_radiance->GetDesc().Width * std::pow(0.5, mip);
+			unsigned int mip_width = parameters.target_radiance->GetDesc().Width * std::pow(0.5, mip);
 			unsigned int mip_height = parameters.target_radiance->GetDesc().Height * std::pow(0.5, mip);
 
 			float roughness = (float)mip / (float)(max_mip_levels - 1); // TODO: provide
@@ -471,13 +484,14 @@ namespace ysn
 
 				command_list.list->RSSetViewports(1, &viewport);
 
-				DirectX::XMMATRIX view_projection = DirectX::XMMatrixIdentity();
-				view_projection = XMMatrixMultiply(DirectX::XMMatrixIdentity(), m_views[face]);
-				view_projection = XMMatrixMultiply(view_projection, m_projection);
-				float data[16];
-				XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
+				float view[16];
+				XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(view), m_views[face]);
 
-				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::ViewProjectionMatrix, 16, data, 0);
+				float projection[16];
+				XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(projection), m_projection);
+
+				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::View, 16, view, 0);
+				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::Projection, 16, projection, 0);
 				command_list.list->SetGraphicsRoot32BitConstants((uint8_t)RadianceShaderParameters::Parameters, 1, &roughness, 0);
 				command_list.list->OMSetRenderTargets(1, &parameters.target_radiance.rtv[mip][face].cpu, FALSE, nullptr);
 				command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);

@@ -7,7 +7,7 @@ module;
 export module graphics.techniques.debug_renderer;
 
 import graphics.primitive;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.descriptor_heap;
 import renderer.vertex_storage;
 import renderer.gpu_buffer;

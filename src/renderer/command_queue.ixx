@@ -20,19 +20,23 @@ export namespace ysn
 	{
 	public:
 		wil::com_ptr<DxGraphicsCommandList> list;
-		// wil::com_ptr<ID3D12CommandAllocator> allocator;
+		wil::com_ptr<ID3D12CommandAllocator> allocator;
 	};
 
 	class CommandQueue
 	{
 	public:
-		CommandQueue(wil::com_ptr<ID3D12Device5> device, D3D12_COMMAND_LIST_TYPE type);
+		CommandQueue(wil::com_ptr<DxDevice> device, D3D12_COMMAND_LIST_TYPE type);
 		virtual ~CommandQueue();
 
 		bool Initialize();
 
 		std::optional<GraphicsCommandList> GetCommandList(std::string name);
 		std::optional<uint64_t> ExecuteCommandList(GraphicsCommandList cmd_list);
+
+		std::optional<uint64_t> ExecuteCommandLists();
+		void CloseCommandList(GraphicsCommandList cmd_list);
+
 		std::optional<uint64_t> Signal();
 
 		bool IsFenceComplete(uint64_t fence_value);
@@ -53,18 +57,17 @@ export namespace ysn
 			wil::com_ptr<ID3D12CommandAllocator> cmd_allocator;
 		};
 
-		using CommandAllocatorQueue = std::queue<CommandAllocatorEntry>;
-		using CommandListQueue = std::queue<GraphicsCommandList>;
+		wil::com_ptr<ID3D12Device5> m_device;
 
 		D3D12_COMMAND_LIST_TYPE m_cmd_list_type;
-		wil::com_ptr<ID3D12Device5> m_device;
 		wil::com_ptr<ID3D12CommandQueue> m_command_queue;
+
 		wil::com_ptr<ID3D12Fence> m_fence;
 		HANDLE m_fence_event;
 		uint64_t m_fence_value;
 
-		CommandAllocatorQueue m_cmd_allocator_queue;
-		CommandListQueue m_cmd_list_queue;
+		std::queue<CommandAllocatorEntry> m_cmd_allocator_queue;
+		std::queue<GraphicsCommandList> m_cmd_list_queue;
 	};
 
 }
@@ -244,6 +247,35 @@ namespace ysn
 		}
 
 		return cmd_list;
+	}
+
+	std::optional<uint64_t> CommandQueue::ExecuteCommandLists()
+	{
+
+		std::vector<ID3D12CommandList*> submit_lists;
+
+		//for()
+
+		//ID3D12CommandList* const ppCommandLists[] = submit_lists.data();
+
+		m_command_queue->ExecuteCommandLists(submit_lists.size(), submit_lists.data());
+
+		const auto signal_result = Signal();
+
+		if (!signal_result.has_value())
+		{
+			return std::nullopt;
+		}
+	}
+	
+	void CommandQueue::CloseCommandList(GraphicsCommandList cmd_list)
+	{
+		if constexpr (!IsReleaseActive())
+		{
+			PIXEndEvent(cmd_list.list.get());
+		}
+
+		cmd_list.list->Close();
 	}
 
 	std::optional<uint64_t> CommandQueue::ExecuteCommandList(GraphicsCommandList cmd_list)

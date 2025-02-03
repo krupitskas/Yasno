@@ -11,7 +11,7 @@ import system.string_helpers;
 import system.filesystem;
 import system.application;
 import system.logger;
-import renderer.dxrenderer;
+import renderer.dx_renderer;
 import renderer.pso;
 import renderer.gpu_texture;
 import renderer.gpu_pixel_buffer;
@@ -56,7 +56,8 @@ namespace ysn
 
 	enum ShaderParameters
 	{
-		ViewProjectionMatrix,
+		View,
+		Projection,
 		InputTexture,
 		ParametersCount
 	};
@@ -76,7 +77,8 @@ namespace ysn
 		CD3DX12_DESCRIPTOR_RANGE source_texture_srv(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 
 		CD3DX12_ROOT_PARAMETER root_parameters[ShaderParameters::ParametersCount] = {};
-		root_parameters[ShaderParameters::ViewProjectionMatrix].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[ShaderParameters::View].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 0);
+		root_parameters[ShaderParameters::Projection].InitAsConstants(sizeof(XMMATRIX) / sizeof(float), 1);
 		root_parameters[ShaderParameters::InputTexture].InitAsDescriptorTable(1, &source_texture_srv);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler(
@@ -125,14 +127,30 @@ namespace ysn
 
 		m_pso_id = *result_pso;
 
-		const XMVECTOR position = XMVectorSet(0.0, 0.0, 0.0, 1.0);
+		const XMVECTOR eye = XMVectorSet(0.0, 0.0, 0.0, 1.0);
 
-		m_views[0] = XMMatrixLookAtRH(position, XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -X
-		m_views[1] = XMMatrixLookAtRH(position, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +X
-		m_views[2] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)); // +Y
-		m_views[3] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // -Y
-		m_views[4] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));  // +Z
-		m_views[5] = XMMatrixLookAtRH(position, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // -Z
+		XMVECTOR targets[6] =
+		{
+			XMVectorAdd(eye, XMVectorSet(1.0f,  0.0f,  0.0f, 0.0f)),  // +X
+			XMVectorAdd(eye, XMVectorSet(-1.0f,  0.0f,  0.0f, 0.0f)), // -X
+			XMVectorAdd(eye, XMVectorSet(0.0f,  1.0f,  0.0f, 0.0f)),  // +Y
+			XMVectorAdd(eye, XMVectorSet(0.0f, -1.0f,  0.0f, 0.0f)),  // -Y
+			XMVectorAdd(eye, XMVectorSet(0.0f,  0.0f, -1.0f, 0.0f)),  // -Z
+			XMVectorAdd(eye, XMVectorSet(0.0f,  0.0f,  1.0f, 0.0f)),  // +Z
+		};
+
+		XMVECTOR ups[6] =
+		{
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // +X
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // -X
+			XMVectorSet(0.0f, 0.0f,  1.0f, 0.0f),  // +Y
+			XMVectorSet(0.0f, 0.0f,  -1.0f, 0.0f), // -Y
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // -Z
+			XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f),  // +Z
+		};
+
+		for (int i = 0; i < 6; i++)
+			m_views[i] = XMMatrixLookAtRH(eye, targets[i], ups[i]);
 
 		m_projection = XMMatrixPerspectiveFovRH(XMConvertToRadians(90.f), 1.0f, 0.1f, 10.f);
 
@@ -174,16 +192,18 @@ namespace ysn
 		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
 
-		command_list.list->SetGraphicsRootDescriptorTable(1, parameters.source_texture.descriptor_handle.gpu);
+		command_list.list->SetGraphicsRootDescriptorTable(ShaderParameters::InputTexture, parameters.source_texture.descriptor_handle.gpu);
 
 		for (int face = 0; face < 6; face++)
 		{
-			DirectX::XMMATRIX view_projection = XMMatrixMultiply(m_views[face], m_projection);
+			float view[16];
+			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(view), m_views[face]);
 
-			float data[16];
-			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(data), view_projection);
+			float projection[16];
+			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(projection), m_projection);
 
-			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::ViewProjectionMatrix, 16, data, 0);
+			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::View, 16, view, 0);
+			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::Projection, 16, projection, 0);
 			command_list.list->OMSetRenderTargets(1, &parameters.target_cubemap.rtv[0][face].cpu, FALSE, nullptr);
 			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 		}
