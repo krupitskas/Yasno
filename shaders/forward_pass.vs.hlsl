@@ -62,11 +62,11 @@ VertexToPixel main(VertexLayout input)
 {
 	PerInstanceData instance_data = per_instance_data[instance_id.id];
 
-	float3x3 normal_matrix = transpose(Inverse3x3((float3x3)instance_data.model_matrix));
+	float3x3 model_normal_matrix = transpose(Inverse3x3((float3x3)instance_data.model_matrix));
 	
 	VertexToPixel output;
 	output.world_position	= mul(instance_data.model_matrix, float4(input.position, 1.0));
-	output.normal			= mul(normal_matrix, input.normal);
+	output.normal			= mul(model_normal_matrix, input.normal);
 	output.pixel_position	= mul(camera.view_projection, output.world_position);
     output.texcoord_0		= input.texcoord_0;
 

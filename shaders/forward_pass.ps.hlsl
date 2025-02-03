@@ -138,10 +138,10 @@ float4 main(RS2PS input) : SV_Target
 	if (pbr_material.texture_enable_bitmask & (1 << NORMAL_ENABLED_BIT))
 	{
 		Texture2D normal_texture = ResourceDescriptorHeap[pbr_material.normal_texture_index];
-		float3 texture_normals = normal_texture.Sample(g_linear_sampler, uv);
-		//texture_normals = 2.0f * texture_normals - 1.0f; // [0,1] ->[-1,1]
-
-		normals *= texture_normals;
+		
+		float3 tangent_normal = normal_texture.Sample(g_linear_sampler, uv).xyz * 2.0 - 1.0;
+		//float3 tangent_normal = normal_texture.Sample(g_linear_sampler, uv).xyz * 2.0 - 1.0;
+		normals = normalize(normals + tangent_normal);
 	}
 
 	if (pbr_material.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BIT))
@@ -199,16 +199,17 @@ float4 main(RS2PS input) : SV_Target
 		float3 diffuse      = irradiance * albedo.rgb;
 
 		const float MAX_REFLECTION_LOD = 8.0; // TODO: task provide
-		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+
+		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R, roughness * MAX_REFLECTION_LOD).rgb;    
 		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
 		float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
 
-		ambientLighting = (kD * diffuse);// + spec);
+		ambientLighting = (kD * diffuse + spec);
 	}
 
 	float shadow = PCFShadowCalculation(input.position_shadow_space);
 
-	float3 result = ambientLighting * occlusion + emissive + directLighting;
+	float3 result = ambientLighting * occlusion + emissive ; // + directLighting
 
 	return float4(result, 1.0);
 }
