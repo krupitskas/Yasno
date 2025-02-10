@@ -26,13 +26,11 @@ import system.asserts;
 
 namespace ysn
 {
-// Data structure to match the command signature used for ExecuteIndirect.
 	struct IndirectCommand
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
 		D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
 		D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
-
 		D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
 	};
 }
@@ -70,6 +68,7 @@ export namespace ysn
 		CameraParametersSrv,
 		SceneParametersSrv,
 		PerInstanceDataSrv,
+
 		Count
 	};
 
@@ -93,7 +92,6 @@ export namespace ysn
 
 		// Indirect data
 		wil::com_ptr<ID3D12RootSignature> m_indirect_root_signature;
-		std::vector<IndirectCommand> m_indirect_commands;
 		wil::com_ptr<ID3D12CommandSignature> m_command_signature;
 		GpuBuffer m_command_buffer;
 		PsoId indirect_pso_id = 0;
@@ -317,8 +315,7 @@ namespace ysn
 		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 		command_list->RSSetViewports(1, &render_parameters.viewport);
 		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-		command_list->OMSetRenderTargets(
-			1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
+		command_list->OMSetRenderTargets(1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -351,8 +348,7 @@ namespace ysn
 						command_list->IASetPrimitiveTopology(primitive.topology);
 
 						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
-						command_list->SetGraphicsRootConstantBufferView(
-							1, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(1, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
 						command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
 
 						command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
@@ -439,26 +435,23 @@ namespace ysn
 			root_params[2].Descriptor.RegisterSpace = 0;
 
 			// 0 ShadowSampler
-			// 1 LinearSampler
+			// 1 Aniso
 			CD3DX12_STATIC_SAMPLER_DESC static_sampler[2];
-			static_sampler[0] = CD3DX12_STATIC_SAMPLER_DESC(
-				0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(
-				1,
-				D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-				D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-				D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-				D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-				0,
-				0,
-				D3D12_COMPARISON_FUNC_NONE);
+			static_sampler[0] = CD3DX12_STATIC_SAMPLER_DESC(0, 
+															D3D12_FILTER_MIN_MAG_MIP_POINT,
+															D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+															D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+															D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+			static_sampler[1] = CD3DX12_STATIC_SAMPLER_DESC(1);
 
 			D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
 			RootSignatureDesc.NumParameters = (UINT)IndirectRootParameters::Count;
 			RootSignatureDesc.pParameters = &root_params[0];
-			RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED // For bindless rendering
-				| D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+			RootSignatureDesc.Flags = 
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED  |
+				D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+
 			RootSignatureDesc.pStaticSamplers = &static_sampler[0];
 			RootSignatureDesc.NumStaticSamplers = 2;
 
@@ -473,6 +466,7 @@ namespace ysn
 
 		// Create command signature
 		D3D12_INDIRECT_ARGUMENT_DESC argument_desc[4] = {};
+
 		argument_desc[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
 		argument_desc[0].ConstantBufferView.RootParameterIndex = 0;
 
@@ -538,10 +532,12 @@ namespace ysn
 		indirect_pso_id = *result_pso;
 
 		// Create commands
-		m_indirect_commands.reserve(render_scene.primitives_count);
+		//m_indirect_commands.resize(render_scene.primitives_count);
 
 		D3D12_GPU_VIRTUAL_ADDRESS instance_data_buffer_gpu_address = instance_buffer.GPUVirtualAddress();
 		UINT command_index = 0;
+
+		std::vector<IndirectCommand> m_indirect_commands;
 
 		// Fill commands
 		for (auto& model : render_scene.models)
@@ -576,8 +572,8 @@ namespace ysn
 
 		m_command_buffer_size = command_index * sizeof(IndirectCommand);
 
-		GpuBufferCreateInfo create_info{
-			.size = m_command_buffer_size, .heap_type = D3D12_HEAP_TYPE_DEFAULT, .state = D3D12_RESOURCE_STATE_COPY_DEST };
+		GpuBufferCreateInfo create_info{ .size = m_command_buffer_size,
+			.heap_type = D3D12_HEAP_TYPE_DEFAULT, .state = D3D12_RESOURCE_STATE_COPY_DEST };
 
 		const auto command_buffer_result = CreateGpuBuffer(create_info, "RenderInstance Buffer");
 
@@ -587,9 +583,9 @@ namespace ysn
 			return false;
 		}
 
-		m_command_buffer = std::move(command_buffer_result.value());
+		m_command_buffer = command_buffer_result.value();
 
-		UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
 
 		return true;
 	}
@@ -605,41 +601,32 @@ namespace ysn
 
 		auto command_list = cmd_list_res.value();
 
-		ID3D12DescriptorHeap* pDescriptorHeaps[] = {
-			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
-		};
-		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-		command_list->RSSetViewports(1, &render_parameters.viewport);
-		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-		command_list->OMSetRenderTargets(
-			1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
-
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			command_list->ResourceBarrier(1, &barrier);
 		}
-
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-		vertex_buffer_view.BufferLocation = render_scene.vertices_buffer.GPUVirtualAddress();
-		vertex_buffer_view.StrideInBytes = sizeof(Vertex);
-		vertex_buffer_view.SizeInBytes = render_scene.vertices_count * sizeof(Vertex);
-
-		D3D12_INDEX_BUFFER_VIEW indices_index_buffer;
-		indices_index_buffer.BufferLocation = render_scene.indices_buffer.GPUVirtualAddress();
-		indices_index_buffer.Format = DXGI_FORMAT_R32_UINT;
-		indices_index_buffer.SizeInBytes = render_scene.indices_count * sizeof(uint32_t);
-
-		command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO: Bake it somewhere?
-		command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-		command_list->IASetIndexBuffer(&indices_index_buffer);
 
 		const std::optional<Pso> pso = renderer->GetPso(indirect_pso_id);
 
 		if (pso.has_value())
 		{
+			ID3D12DescriptorHeap* pDescriptorHeaps[] = {
+				render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
+			};
+			command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+			command_list->RSSetViewports(1, &render_parameters.viewport);
+			command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+			command_list->OMSetRenderTargets(
+				1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
+
 			command_list->SetPipelineState(pso.value().pso.get());
 			command_list->SetGraphicsRootSignature(m_indirect_root_signature.get());
+			command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			command_list->IASetVertexBuffers(0, 1, &render_scene.vertex_buffer_view);
+			command_list->IASetIndexBuffer(&render_scene.index_buffer_view);
+
+
+			// render_scene.primitives_count
 			command_list->ExecuteIndirect(m_command_signature.get(), render_scene.primitives_count, m_command_buffer.Resource(), 0, nullptr, 0);
 		}
 		else
@@ -648,8 +635,7 @@ namespace ysn
 		}
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 			command_list->ResourceBarrier(1, &barrier);
 		}
 

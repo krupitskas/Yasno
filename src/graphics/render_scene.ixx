@@ -54,10 +54,12 @@ export namespace ysn
 		// Temp GPU resources for indices and vertices
 		uint32_t indices_count = 0;
 		GpuBuffer indices_buffer;
+		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 
 		// Vertices
 		uint32_t vertices_count = 0;
 		GpuBuffer vertices_buffer;
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
 
 		// Materials
 		uint32_t materials_count = 0;

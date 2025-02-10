@@ -105,7 +105,7 @@ void RayGen()
 
 	uint rng_state = InitRNG(LaunchIndex, LaunchDimensions, camera.frame_number);
 
-	int max_bounces = 8;
+	int max_bounces = 4;
 
 	for (int bounce = 0; bounce < max_bounces; bounce++)
 	{

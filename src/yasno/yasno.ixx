@@ -519,6 +519,7 @@ namespace ysn
 			for (GpuTexture& texture : model.textures)
 				m_generate_mips_pass.GenerateMips(renderer, command_list, texture);
 
+		// Build scene buffers
 		{
 			// Index buffer
 			{
@@ -559,8 +560,7 @@ namespace ysn
 					}
 				}
 
-				UploadToGpuBuffer(
-					command_list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+				UploadToGpuBuffer(command_list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_INDEX_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			}
 
 			// Vertex Buffer
@@ -589,8 +589,7 @@ namespace ysn
 					{
 						for (auto& primitive : mesh.primitives)
 						{
-							primitive.vertex_buffer_view.BufferLocation =
-								m_render_scene.vertices_buffer.GPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
+							primitive.vertex_buffer_view.BufferLocation = m_render_scene.vertices_buffer.GPUVirtualAddress() + all_vertices_buffer.size() * sizeof(Vertex);
 							primitive.vertex_buffer_view.SizeInBytes = UINT(primitive.vertices.size() * sizeof(Vertex));
 							primitive.vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 
@@ -602,8 +601,7 @@ namespace ysn
 					}
 				}
 
-				UploadToGpuBuffer(
-					command_list, m_render_scene.vertices_buffer, all_vertices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+				UploadToGpuBuffer(command_list, m_render_scene.vertices_buffer, all_vertices_buffer.data(), {}, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			}
 
 			// Material buffer
@@ -634,8 +632,7 @@ namespace ysn
 					}
 				}
 
-				UploadToGpuBuffer(
-					command_list, m_render_scene.materials_buffer, all_materials_buffer.data(), {}, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+				UploadToGpuBuffer(command_list, m_render_scene.materials_buffer, all_materials_buffer.data(), {}, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 				// Create SRV
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -789,7 +786,6 @@ namespace ysn
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
 		m_velocity_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
-
 		if (!CreateGpuSceneParametersBuffer())
 		{
 			LogError << "Yasno app can't create GPU scene parameters buffer\n";
@@ -821,6 +817,22 @@ namespace ysn
 		if (capture_loading_pix)
 		{
 			AssertMsg(PIXEndCapture(false) != S_OK, "PIXEndCapture failed");
+		}
+
+		{
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+			index_buffer_view.BufferLocation = m_render_scene.indices_buffer.GPUVirtualAddress();
+			index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
+			index_buffer_view.SizeInBytes = m_render_scene.indices_count * sizeof(uint32_t);
+
+			m_render_scene.index_buffer_view = index_buffer_view;
+
+			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+			vertex_buffer_view.BufferLocation = m_render_scene.vertices_buffer.GPUVirtualAddress();
+			vertex_buffer_view.StrideInBytes = sizeof(Vertex);
+			vertex_buffer_view.SizeInBytes = m_render_scene.vertices_count * sizeof(Vertex);
+
+			m_render_scene.vertex_buffer_view = vertex_buffer_view;
 		}
 
 		m_is_content_loaded = true;
@@ -1310,6 +1322,9 @@ namespace ysn
 					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 215, 0, 255));
 					ImGui::Text("Pathtracing");
 					ImGui::Checkbox("Temporal Accumulation", &m_is_rtx_accumulation_enabled);
+
+					ImGui::Text(std::format("Frames accumulated {}", m_rtx_frames_accumulated).c_str());
+
 					ImGui::PopStyleColor();
 				}
 			}
@@ -1450,7 +1465,7 @@ namespace ysn
 		}
 		else
 		{
-			if (m_is_rtx_accumulation_enabled || !m_reset_rtx_accumulation)
+			if (m_is_rtx_accumulation_enabled && !m_reset_rtx_accumulation)
 			{
 				m_rtx_frames_accumulated += 1;
 			}

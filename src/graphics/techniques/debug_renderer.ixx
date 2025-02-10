@@ -21,7 +21,7 @@ import system.logger;
 
 namespace ysn
 {
-	struct IndirectCommand
+	struct IndirectCommandDebug
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
 		D3D12_DRAW_ARGUMENTS draw_arguments;
@@ -200,21 +200,21 @@ namespace ysn
 		D3D12_COMMAND_SIGNATURE_DESC command_signature_desc = {};
 		command_signature_desc.pArgumentDescs = argument_desc;
 		command_signature_desc.NumArgumentDescs = _countof(argument_desc);
-		command_signature_desc.ByteStride = sizeof(IndirectCommand);
+		command_signature_desc.ByteStride = sizeof(IndirectCommandDebug);
 
 		if (auto result =
-				renderer->GetDevice()->CreateCommandSignature(&command_signature_desc, root_signature, IID_PPV_ARGS(&m_command_signature));
+			renderer->GetDevice()->CreateCommandSignature(&command_signature_desc, root_signature, IID_PPV_ARGS(&m_command_signature));
 			result != S_OK)
 		{
 			LogError << "Debug render pass can't create command signature\n";
 			return false;
 		}
 
-		std::vector<IndirectCommand> indirect_commands;
+		std::vector<IndirectCommandDebug> indirect_commands;
 
 		for (int i = 0; i < g_max_debug_render_commands_count; i++)
 		{
-			IndirectCommand command;
+			IndirectCommandDebug command;
 			command.camera_parameters_cbv = camera_gpu_buffer->GetGPUVirtualAddress();
 			command.draw_arguments.VertexCountPerInstance = 2;
 			command.draw_arguments.InstanceCount = 1;
@@ -225,7 +225,7 @@ namespace ysn
 		}
 
 		GpuBufferCreateInfo create_info{
-			.size = g_max_debug_render_commands_count * sizeof(IndirectCommand),
+			.size = g_max_debug_render_commands_count * sizeof(IndirectCommandDebug),
 			.heap_type = D3D12_HEAP_TYPE_DEFAULT,
 			.state = D3D12_RESOURCE_STATE_COPY_DEST };
 
@@ -279,8 +279,7 @@ namespace ysn
 			m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.Resource(), 0, counter_buffer.Resource(), 0);
 
 		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				counter_buffer.Resource(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(counter_buffer.Resource(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
 			parameters.cmd_list->ResourceBarrier(1, &barrier);
 		}
 
