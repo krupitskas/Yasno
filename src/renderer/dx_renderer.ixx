@@ -113,9 +113,9 @@ export namespace ysn
 
 module :private;
 
-std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
+std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter(bool& allow_tearing)
 {
-	wil::com_ptr<IDXGIFactory4> dxgi_factory;
+	wil::com_ptr<IDXGIFactory5> dxgi_factory;
 
 	UINT create_factory_flags = 0;
 
@@ -160,6 +160,11 @@ std::optional<wil::com_ptr<DxAdapter>> CreateDXGIAdapter()
 	}
 
 	dxgi_factory->EnumAdapters1(best_adapter_index, dxgi_adapter.addressof());
+
+	bool tearing;
+	dxgi_factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing, sizeof(tearing));
+
+	allow_tearing = tearing;
 
 	return dxgi_adapter.query<DxAdapter>();
 }
@@ -248,19 +253,6 @@ std::optional<wil::com_ptr<DxDevice>> CreateDevice(wil::com_ptr<DxAdapter> adapt
 	return device;
 }
 
-bool CheckTearingSupport()
-{
-	bool allow_tearing = false;
-
-	wil::com_ptr<IDXGIFactory5> factory;
-	if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))))
-	{
-		factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
-	}
-
-	return allow_tearing;
-}
-
 namespace ysn
 {
 	bool DxRenderer::Initialize()
@@ -276,7 +268,7 @@ namespace ysn
 			dx_debug_interface->EnableDebugLayer();
 		}
 
-		const auto dxgi_adapter = CreateDXGIAdapter();
+		const auto dxgi_adapter = CreateDXGIAdapter(m_tearing_supported);
 
 		if (!dxgi_adapter.has_value())
 		{
@@ -293,8 +285,6 @@ namespace ysn
 		}
 
 		m_device = device_result.value();
-
-		m_tearing_supported = CheckTearingSupport();
 
 		// Create queues
 		m_direct_command_queue = std::make_shared<CommandQueue>(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
