@@ -1106,13 +1106,14 @@ namespace ysn
 		totalTime += e.ElapsedTime;
 		m_frame_number += 1;
 
-		// if (totalTime > 1.0)
-		//{
-		//	engine_stats::fps = uint32_t(m_frame_number / totalTime);
+		if (totalTime > 1.0)
+		{
+			engine_stats::fps = uint32_t(m_frame_number / totalTime);
+			engine_stats::frame_ms = e.ElapsedTime;
 
-		//	frameCount = 0;
-		//	totalTime = 0.0;
-		//}
+			m_frame_number = 0;
+			totalTime = 0.0;
+		}
 
 		auto kb = game_input.keyboard->GetState();
 
@@ -1280,7 +1281,11 @@ namespace ysn
 
 			if (ImGui::CollapsingHeader("System"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Vsync", &m_vsync);
+				static bool vsync = m_window->IsVSync();
+				if (ImGui::Checkbox("Vsync", &vsync))
+				{
+					m_window->SetVSync(vsync);
+				}
 			}
 
 			ImGui::End();
@@ -1289,7 +1294,8 @@ namespace ysn
 		{
 			ImGui::Begin(STATS_NAME.c_str());
 
-			// ImGui::Text(std::format("FPS: {}", engine_stats::fps).c_str());
+			ImGui::Text(std::format("frame ms: {:.3f}", engine_stats::frame_ms * 1000.f).c_str());
+			ImGui::Text(std::format("fps: {}", engine_stats::fps).c_str());
 
 			if (ImGui::CollapsingHeader("Mode"), ImGuiTreeNodeFlags_DefaultOpen)
 			{

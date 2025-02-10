@@ -206,12 +206,12 @@ export namespace ysn
 
 	private:
 		HWND m_hwnd;
+		bool m_vsync_active = false;
 
 		std::wstring m_WindowName;
 
 		int m_client_height;
 		int m_client_width;
-		bool m_vsync_active = false;
 		bool m_Fullscreen;
 		bool m_IsCursorHidden = false;
 
