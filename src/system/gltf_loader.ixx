@@ -17,6 +17,7 @@ import graphics.primitive;
 import renderer.dx_renderer;
 import renderer.gpu_texture;
 import renderer.command_queue;
+import renderer.dx_types;
 import system.string_helpers;
 import system.math;
 import system.application;
@@ -39,7 +40,7 @@ using namespace Microsoft::WRL;
 
 struct LoadGltfContext
 {
-	ysn::GraphicsCommandList copy_cmd_list;
+	wil::com_ptr<DxGraphicsCommandList> copy_cmd_list;
 	std::vector<wil::com_ptr<ID3D12Resource>> staging_resources;
 };
 
@@ -254,7 +255,7 @@ static bool BuildImages(ysn::Model& model, LoadGltfContext& build_context, const
 		src_copy_location.PlacedFootprint = footprint;
 
 		// Copy texture to GPU
-		build_context.copy_cmd_list.list->CopyTextureRegion(&dst_copy_location, 0, 0, 0, &src_copy_location, nullptr);
+		build_context.copy_cmd_list->CopyTextureRegion(&dst_copy_location, 0, 0, 0, &src_copy_location, nullptr);
 	}
 
 	return true;
@@ -876,7 +877,9 @@ namespace ysn
 		const BuildMeshResult mesh_result = BuildMeshes(model, gltf_model);
 		BuildNodes(model, gltf_model, loading_parameters);
 
-		auto fence_value = command_queue->ExecuteCommandList(load_gltf_context.copy_cmd_list);
+		command_queue->CloseCommandList(load_gltf_context.copy_cmd_list);
+
+		auto fence_value = command_queue->ExecuteCommandLists();
 
 		if (!fence_value.has_value())
 		{

@@ -176,23 +176,23 @@ namespace ysn
 		if (!command_list_result.has_value())
 			return false;
 
-		GraphicsCommandList command_list = command_list_result.value();
+		auto command_list = command_list_result.value();
 
 		CD3DX12_RESOURCE_BARRIER barrier_before = CD3DX12_RESOURCE_BARRIER::Transition(
 			parameters.target_cubemap.Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		command_list.list->ResourceBarrier(1, &barrier_before);
+		command_list->ResourceBarrier(1, &barrier_before);
 
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
-		command_list.list->RSSetViewports(1, &m_viewport);
-		command_list.list->RSSetScissorRects(1, &m_scissors_rect);
-		command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		command_list.list->SetPipelineState(pso_object.pso.get());
-		command_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
-		command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
-		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
+		command_list->RSSetViewports(1, &m_viewport);
+		command_list->RSSetScissorRects(1, &m_scissors_rect);
+		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		command_list->SetPipelineState(pso_object.pso.get());
+		command_list->SetGraphicsRootSignature(pso_object.root_signature.get());
+		command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		command_list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
+		command_list->IASetIndexBuffer(&cube.index_buffer_view);
 
-		command_list.list->SetGraphicsRootDescriptorTable(ShaderParameters::InputTexture, parameters.source_texture.descriptor_handle.gpu);
+		command_list->SetGraphicsRootDescriptorTable(ShaderParameters::InputTexture, parameters.source_texture.descriptor_handle.gpu);
 
 		for (int face = 0; face < 6; face++)
 		{
@@ -202,17 +202,17 @@ namespace ysn
 			float projection[16];
 			XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(projection), m_projection);
 
-			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::View, 16, view, 0);
-			command_list.list->SetGraphicsRoot32BitConstants(ShaderParameters::Projection, 16, projection, 0);
-			command_list.list->OMSetRenderTargets(1, &parameters.target_cubemap.rtv[0][face].cpu, FALSE, nullptr);
-			command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
+			command_list->SetGraphicsRoot32BitConstants(ShaderParameters::View, 16, view, 0);
+			command_list->SetGraphicsRoot32BitConstants(ShaderParameters::Projection, 16, projection, 0);
+			command_list->OMSetRenderTargets(1, &parameters.target_cubemap.rtv[0][face].cpu, FALSE, nullptr);
+			command_list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 		}
 
 		CD3DX12_RESOURCE_BARRIER barrier_after = CD3DX12_RESOURCE_BARRIER::Transition(
 			parameters.target_cubemap.Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		command_list.list->ResourceBarrier(1, &barrier_after);
+		command_list->ResourceBarrier(1, &barrier_after);
 
-		renderer->GetDirectQueue()->ExecuteCommandList(command_list);
+		renderer->GetDirectQueue()->CloseCommandList(command_list);
 
 		return true;
 	}

@@ -32,6 +32,7 @@ namespace ysn
 		D3D12_GPU_VIRTUAL_ADDRESS camera_parameters_cbv;
 		D3D12_GPU_VIRTUAL_ADDRESS scene_parameters_cbv;
 		D3D12_GPU_VIRTUAL_ADDRESS per_instance_data_cbv;
+
 		D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
 	};
 }
@@ -308,21 +309,21 @@ namespace ysn
 		if (!cmd_list_res.has_value())
 			return false;
 
-		GraphicsCommandList command_list = cmd_list_res.value();
+		auto command_list = cmd_list_res.value();
 
 		ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
 		};
-		command_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-		command_list.list->RSSetViewports(1, &render_parameters.viewport);
-		command_list.list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-		command_list.list->OMSetRenderTargets(
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+		command_list->RSSetViewports(1, &render_parameters.viewport);
+		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+		command_list->OMSetRenderTargets(
 			1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			command_list.list->ResourceBarrier(1, &barrier);
+			command_list->ResourceBarrier(1, &barrier);
 		}
 
 		uint32_t instance_id = 0;
@@ -337,43 +338,43 @@ namespace ysn
 				{
 					const Primitive& primitive = mesh.primitives[primitive_id];
 
-					command_list.list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
+					command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
 					// TODO: check for -1 as pso_id
 					const std::optional<Pso> pso = renderer->GetPso(primitive.pso_id);
 
 					if (pso.has_value())
 					{
-						command_list.list->SetGraphicsRootSignature(pso.value().root_signature.get());
-						command_list.list->SetPipelineState(pso.value().pso.get());
+						command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+						command_list->SetPipelineState(pso.value().pso.get());
 
-						command_list.list->IASetPrimitiveTopology(primitive.topology);
+						command_list->IASetPrimitiveTopology(primitive.topology);
 
-						command_list.list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
-						command_list.list->SetGraphicsRootConstantBufferView(
+						command_list->SetGraphicsRootConstantBufferView(0, render_parameters.camera_gpu_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(
 							1, render_parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-						command_list.list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
+						command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
 
-						command_list.list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
+						command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(4, render_scene.materials_buffer_srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(5, render_parameters.shadow_map_buffer.srv_handle.gpu);
 
-						command_list.list->SetGraphicsRootDescriptorTable(6, render_parameters.cubemap_texture.srv.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(7, render_parameters.irradiance_texture.srv.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(9, render_parameters.brdf_texture_handle.gpu);
+						command_list->SetGraphicsRootDescriptorTable(6, render_parameters.cubemap_texture.srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(7, render_parameters.irradiance_texture.srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(8, render_parameters.radiance_texture.srv.gpu);
+						command_list->SetGraphicsRootDescriptorTable(9, render_parameters.brdf_texture_handle.gpu);
 
-						command_list.list->SetGraphicsRootDescriptorTable(10, render_parameters.debug_vertices_buffer_uav.gpu);
-						command_list.list->SetGraphicsRootDescriptorTable(11, render_parameters.debug_counter_buffer_uav.gpu);
+						command_list->SetGraphicsRootDescriptorTable(10, render_parameters.debug_vertices_buffer_uav.gpu);
+						command_list->SetGraphicsRootDescriptorTable(11, render_parameters.debug_counter_buffer_uav.gpu);
 
 						if (primitive.index_count)
 						{
-							command_list.list->IASetIndexBuffer(&primitive.index_buffer_view);
-							command_list.list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+							command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+							command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
 						}
 						else
 						{
-							command_list.list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
+							command_list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
 						}
 					}
 					else
@@ -389,10 +390,10 @@ namespace ysn
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			command_list.list->ResourceBarrier(1, &barrier);
+			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		render_parameters.command_queue->ExecuteCommandList(command_list);
+		render_parameters.command_queue->CloseCommandList(command_list);
 
 		return true;
 	}
@@ -474,10 +475,13 @@ namespace ysn
 		D3D12_INDIRECT_ARGUMENT_DESC argument_desc[4] = {};
 		argument_desc[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
 		argument_desc[0].ConstantBufferView.RootParameterIndex = 0;
+
 		argument_desc[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
 		argument_desc[1].ConstantBufferView.RootParameterIndex = 1;
+
 		argument_desc[2].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
 		argument_desc[2].ConstantBufferView.RootParameterIndex = 2;
+
 		argument_desc[3].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
 		D3D12_COMMAND_SIGNATURE_DESC command_signature_desc = {};
@@ -583,10 +587,9 @@ namespace ysn
 			return false;
 		}
 
-		m_command_buffer = command_buffer_result.value();
+		m_command_buffer = std::move(command_buffer_result.value());
 
-		// TODO: move back
-		// UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		UploadToGpuBuffer(cmd_list, m_command_buffer, m_indirect_commands.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 		return true;
 	}
@@ -600,21 +603,21 @@ namespace ysn
 		if (!cmd_list_res.has_value())
 			return false;
 
-		GraphicsCommandList command_list = cmd_list_res.value();
+		auto command_list = cmd_list_res.value();
 
 		ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
 		};
-		command_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-		command_list.list->RSSetViewports(1, &render_parameters.viewport);
-		command_list.list->RSSetScissorRects(1, &render_parameters.scissors_rect);
-		command_list.list->OMSetRenderTargets(
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+		command_list->RSSetViewports(1, &render_parameters.viewport);
+		command_list->RSSetScissorRects(1, &render_parameters.scissors_rect);
+		command_list->OMSetRenderTargets(
 			1, &render_parameters.hdr_rtv_descriptor_handle.cpu, FALSE, &render_parameters.dsv_descriptor_handle.cpu);
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			command_list.list->ResourceBarrier(1, &barrier);
+			command_list->ResourceBarrier(1, &barrier);
 		}
 
 		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
@@ -627,20 +630,17 @@ namespace ysn
 		indices_index_buffer.Format = DXGI_FORMAT_R32_UINT;
 		indices_index_buffer.SizeInBytes = render_scene.indices_count * sizeof(uint32_t);
 
-		command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO: Bake it somewhere?
-		command_list.list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-		command_list.list->IASetIndexBuffer(&indices_index_buffer);
+		command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO: Bake it somewhere?
+		command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+		command_list->IASetIndexBuffer(&indices_index_buffer);
 
 		const std::optional<Pso> pso = renderer->GetPso(indirect_pso_id);
 
 		if (pso.has_value())
 		{
-			command_list.list->SetPipelineState(pso.value().pso.get());
-			command_list.list->SetGraphicsRootSignature(m_indirect_root_signature.get());
-
-			// Argument buffer overflow. [ EXECUTION ERROR #744: EXECUTE_INDIRECT_INVALID_PARAMETERS]
-			command_list.list->ExecuteIndirect(
-				m_command_signature.get(), render_scene.primitives_count, m_command_buffer.Resource(), 0, nullptr, 0);
+			command_list->SetPipelineState(pso.value().pso.get());
+			command_list->SetGraphicsRootSignature(m_indirect_root_signature.get());
+			command_list->ExecuteIndirect(m_command_signature.get(), render_scene.primitives_count, m_command_buffer.Resource(), 0, nullptr, 0);
 		}
 		else
 		{
@@ -650,10 +650,10 @@ namespace ysn
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				render_parameters.shadow_map_buffer.buffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			command_list.list->ResourceBarrier(1, &barrier);
+			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		render_parameters.command_queue->ExecuteCommandList(command_list);
+		render_parameters.command_queue->CloseCommandList(command_list);
 
 		return true;
 	}

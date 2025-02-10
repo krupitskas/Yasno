@@ -16,13 +16,6 @@ import renderer.dx_types;
 
 export namespace ysn
 {
-	class GraphicsCommandList
-	{
-	public:
-		wil::com_ptr<DxGraphicsCommandList> list;
-		wil::com_ptr<ID3D12CommandAllocator> allocator;
-	};
-
 	class CommandQueue
 	{
 	public:
@@ -31,11 +24,11 @@ export namespace ysn
 
 		bool Initialize();
 
-		std::optional<GraphicsCommandList> GetCommandList(std::string name);
-		std::optional<uint64_t> ExecuteCommandList(GraphicsCommandList cmd_list);
+		std::optional<wil::com_ptr<DxGraphicsCommandList>> GetCommandList(const std::string& debug_name);
+		//std::optional<uint64_t> ExecuteCommandList(wil::com_ptr<DxGraphicsCommandList> cmd_list);
 
 		std::optional<uint64_t> ExecuteCommandLists();
-		void CloseCommandList(GraphicsCommandList cmd_list);
+		void CloseCommandList(wil::com_ptr<DxGraphicsCommandList> cmd_list);
 
 		std::optional<uint64_t> Signal();
 
@@ -47,7 +40,7 @@ export namespace ysn
 
 	protected:
 		std::optional<wil::com_ptr<ID3D12CommandAllocator>> CreateCommandAllocator();
-		GraphicsCommandList CreateCommandList(wil::com_ptr<ID3D12CommandAllocator> allocator);
+		wil::com_ptr<DxGraphicsCommandList> CreateCommandList(wil::com_ptr<ID3D12CommandAllocator> allocator);
 
 	private:
 		// Keep track of command allocators that are "in-flight"
@@ -66,8 +59,12 @@ export namespace ysn
 		HANDLE m_fence_event;
 		uint64_t m_fence_value;
 
-		std::queue<CommandAllocatorEntry> m_cmd_allocator_queue;
-		std::queue<GraphicsCommandList> m_cmd_list_queue;
+		// To reuse objects
+		std::queue<CommandAllocatorEntry> m_cmd_allocator_pool;
+		std::queue<wil::com_ptr<DxGraphicsCommandList>> m_cmd_list_pool;
+
+		// In execution order
+		std::vector<wil::com_ptr<DxGraphicsCommandList>> m_cmd_list_queue;
 	};
 
 }
@@ -76,7 +73,6 @@ module :private;
 
 namespace ysn
 {
-
 	CommandQueue::CommandQueue(wil::com_ptr<ID3D12Device5> device, D3D12_COMMAND_LIST_TYPE type) :
 		m_cmd_list_type(type), m_device(device), m_fence_value(0)
 	{
@@ -143,11 +139,11 @@ namespace ysn
 		return cmd_allocator;
 	}
 
-	GraphicsCommandList CommandQueue::CreateCommandList(wil::com_ptr<ID3D12CommandAllocator> allocator)
+	wil::com_ptr<DxGraphicsCommandList> CommandQueue::CreateCommandList(wil::com_ptr<ID3D12CommandAllocator> allocator)
 	{
-		GraphicsCommandList gfx_cmd_list;
+		wil::com_ptr<DxGraphicsCommandList> gfx_cmd_list;
 
-		if (HRESULT hr = m_device->CreateCommandList(0, m_cmd_list_type, allocator.get(), nullptr, IID_PPV_ARGS(&gfx_cmd_list.list));
+		if (HRESULT hr = m_device->CreateCommandList(0, m_cmd_list_type, allocator.get(), nullptr, IID_PPV_ARGS(&gfx_cmd_list));
 			hr != S_OK)
 		{
 			LogFatal << "Can't create command list: " << ConvertHrToString(hr) << " \n";
@@ -185,15 +181,15 @@ namespace ysn
 		return true;
 	}
 
-	std::optional<GraphicsCommandList> CommandQueue::GetCommandList(std::string name)
+	std::optional<wil::com_ptr<DxGraphicsCommandList>> CommandQueue::GetCommandList(const std::string& debug_name)
 	{
 		wil::com_ptr<ID3D12CommandAllocator> cmd_allocator;
-		GraphicsCommandList cmd_list;
+		wil::com_ptr<DxGraphicsCommandList> cmd_list;
 
-		if (!m_cmd_allocator_queue.empty() && IsFenceComplete(m_cmd_allocator_queue.front().fence_value))
+		if (!m_cmd_allocator_pool.empty() && IsFenceComplete(m_cmd_allocator_pool.front().fence_value))
 		{
-			cmd_allocator = m_cmd_allocator_queue.front().cmd_allocator;
-			m_cmd_allocator_queue.pop();
+			cmd_allocator = m_cmd_allocator_pool.front().cmd_allocator;
+			m_cmd_allocator_pool.pop();
 
 			HRESULT result = cmd_allocator->Reset();
 
@@ -216,12 +212,12 @@ namespace ysn
 			cmd_allocator = new_cmd_allocator.value();
 		}
 
-		if (!m_cmd_list_queue.empty())
+		if (!m_cmd_list_pool.empty())
 		{
-			cmd_list = m_cmd_list_queue.front();
-			m_cmd_list_queue.pop();
+			cmd_list = m_cmd_list_pool.front();
+			m_cmd_list_pool.pop();
 
-			HRESULT result = cmd_list.list->Reset(cmd_allocator.get(), nullptr);
+			HRESULT result = cmd_list->Reset(cmd_allocator.get(), nullptr);
 
 			if (result != S_OK)
 			{
@@ -234,7 +230,7 @@ namespace ysn
 			cmd_list = CreateCommandList(cmd_allocator);
 		}
 
-		if (auto result = cmd_list.list->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), cmd_allocator.get()); result != S_OK)
+		if (auto result = cmd_list->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), cmd_allocator.get()); result != S_OK)
 		{
 			LogFatal << "Can't write allocator into cmd list: " << ConvertHrToString(result) << "\n";
 			return std::nullopt;
@@ -242,8 +238,8 @@ namespace ysn
 
 		if constexpr (!IsReleaseActive())
 		{
-			cmd_list.list->SetName(std::wstring(name.begin(), name.end()).c_str());
-			PIXBeginEvent(cmd_list.list.get(), PIX_COLOR_DEFAULT, name.c_str());
+			cmd_list->SetName(std::wstring(debug_name.begin(), debug_name.end()).c_str());
+			PIXBeginEvent(cmd_list.get(), PIX_COLOR_DEFAULT, debug_name.c_str());
 		}
 
 		return cmd_list;
@@ -251,12 +247,12 @@ namespace ysn
 
 	std::optional<uint64_t> CommandQueue::ExecuteCommandLists()
 	{
-
 		std::vector<ID3D12CommandList*> submit_lists;
 
-		//for()
-
-		//ID3D12CommandList* const ppCommandLists[] = submit_lists.data();
+		for (int i = 0; i < m_cmd_list_queue.size(); i++)
+		{
+			submit_lists.push_back(m_cmd_list_queue[i].get());
+		}
 
 		m_command_queue->ExecuteCommandLists(submit_lists.size(), submit_lists.data());
 
@@ -266,52 +262,38 @@ namespace ysn
 		{
 			return std::nullopt;
 		}
-	}
-	
-	void CommandQueue::CloseCommandList(GraphicsCommandList cmd_list)
-	{
-		if constexpr (!IsReleaseActive())
+
+		for (int i = 0; i < m_cmd_list_queue.size(); i++)
 		{
-			PIXEndEvent(cmd_list.list.get());
+			ID3D12CommandAllocator* cmd_allocator = nullptr;
+			UINT dataSize = sizeof(ID3D12CommandAllocator);
+
+			if (auto result = m_cmd_list_queue[i]->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &cmd_allocator); result != S_OK)
+			{
+				LogError << "Can't retrieve cmd allocator from cmd list: " << ConvertHrToString(result) << "\n";
+				return std::nullopt;
+			}
+
+			m_cmd_allocator_pool.emplace(CommandAllocatorEntry{ signal_result.value(), cmd_allocator });
+			m_cmd_list_pool.push(m_cmd_list_queue[i]);
+
+			cmd_allocator->Release();
 		}
 
-		cmd_list.list->Close();
-	}
-
-	std::optional<uint64_t> CommandQueue::ExecuteCommandList(GraphicsCommandList cmd_list)
-	{
-		if constexpr (!IsReleaseActive())
-		{
-			PIXEndEvent(cmd_list.list.get());
-		}
-
-		cmd_list.list->Close();
-
-		ID3D12CommandList* const ppCommandLists[] = { cmd_list.list.get() };
-
-		ID3D12CommandAllocator* cmd_allocator = nullptr;
-		UINT dataSize = sizeof(ID3D12CommandAllocator);
-
-		if (auto result = cmd_list.list->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &cmd_allocator); result != S_OK)
-		{
-			LogError << "Can't retrieve cmd allocator from cmd list: " << ConvertHrToString(result) << "\n";
-			return std::nullopt;
-		}
-
-		m_command_queue->ExecuteCommandLists(1, ppCommandLists);
-
-		const auto signal_result = Signal();
-
-		if (!signal_result.has_value())
-		{
-			return std::nullopt;
-		}
-
-		m_cmd_allocator_queue.emplace(CommandAllocatorEntry{ signal_result.value(), cmd_allocator });
-		m_cmd_list_queue.push(cmd_list);
-
-		cmd_allocator->Release();
+		m_cmd_list_queue.clear();
 
 		return signal_result.value();
+	}
+
+	void CommandQueue::CloseCommandList(wil::com_ptr<DxGraphicsCommandList> cmd_list)
+	{
+		if constexpr (!IsReleaseActive())
+		{
+			PIXEndEvent(cmd_list.get());
+		}
+
+		cmd_list->Close();
+
+		m_cmd_list_queue.push_back(cmd_list);
 	}
 }

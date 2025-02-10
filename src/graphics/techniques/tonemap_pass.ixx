@@ -155,7 +155,7 @@ namespace ysn
 		if (!command_list_result.has_value())
 			return false;
 
-		GraphicsCommandList command_list = command_list_result.value();
+		auto command_list = command_list_result.value();
 
 		const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
 		if (!pso.has_value())
@@ -163,24 +163,24 @@ namespace ysn
 
 		auto& pso_object = pso.value();
 
-		command_list.list->SetPipelineState(pso_object.pso.get());
-		command_list.list->SetComputeRootSignature(pso_object.root_signature.get());
+		command_list->SetPipelineState(pso_object.pso.get());
+		command_list->SetComputeRootSignature(pso_object.root_signature.get());
 
 		ID3D12DescriptorHeap* ppHeaps[] = { parameters->cbv_srv_uav_heap->GetHeapPtr() };
-		command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			parameters->scene_color_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		command_list.list->ResourceBarrier(1, &barrier);
+		command_list->ResourceBarrier(1, &barrier);
 
-		command_list.list->SetComputeRootDescriptorTable(0, parameters->hdr_uav_descriptor_handle.gpu);
-		command_list.list->SetComputeRootDescriptorTable(1, parameters->backbuffer_uav_descriptor_handle.gpu);
-		command_list.list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
+		command_list->SetComputeRootDescriptorTable(0, parameters->hdr_uav_descriptor_handle.gpu);
+		command_list->SetComputeRootDescriptorTable(1, parameters->backbuffer_uav_descriptor_handle.gpu);
+		command_list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
 
-		command_list.list->Dispatch(
+		command_list->Dispatch(
 			UINT(std::ceil(parameters->backbuffer_width / (float)8)), UINT(std::ceil(parameters->backbuffer_height / (float)8)), 1);
 
-		parameters->command_queue->ExecuteCommandList(command_list);
+		parameters->command_queue->CloseCommandList(command_list);
 
 		return true;
 	}

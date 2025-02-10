@@ -32,7 +32,7 @@ export namespace ysn
 {
 	struct DebugRendererParameters
 	{
-		GraphicsCommandList cmd_list;
+		wil::com_ptr<DxGraphicsCommandList> cmd_list;
 		D3D12_VIEWPORT viewport;
 		D3D12_RECT scissors_rect;
 		wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
@@ -267,30 +267,30 @@ namespace ysn
 		vertex_buffer_view.StrideInBytes = sizeof(DebugRenderVertex);
 		vertex_buffer_view.SizeInBytes = g_max_debug_render_vertices_count * sizeof(DebugRenderVertex);
 
-		parameters.cmd_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
-		parameters.cmd_list.list->RSSetViewports(1, &parameters.viewport);
-		parameters.cmd_list.list->RSSetScissorRects(1, &parameters.scissors_rect);
-		parameters.cmd_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-		parameters.cmd_list.list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+		parameters.cmd_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+		parameters.cmd_list->RSSetViewports(1, &parameters.viewport);
+		parameters.cmd_list->RSSetScissorRects(1, &parameters.scissors_rect);
+		parameters.cmd_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		parameters.cmd_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
 
-		parameters.cmd_list.list->SetPipelineState(pso_object.pso.get());
-		parameters.cmd_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
-		parameters.cmd_list.list->ExecuteIndirect(
+		parameters.cmd_list->SetPipelineState(pso_object.pso.get());
+		parameters.cmd_list->SetGraphicsRootSignature(pso_object.root_signature.get());
+		parameters.cmd_list->ExecuteIndirect(
 			m_command_signature.get(), g_max_debug_render_commands_count, m_command_buffer.Resource(), 0, counter_buffer.Resource(), 0);
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				counter_buffer.Resource(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
-			parameters.cmd_list.list->ResourceBarrier(1, &barrier);
+			parameters.cmd_list->ResourceBarrier(1, &barrier);
 		}
 
 		// Zero out counter
-		parameters.cmd_list.list->CopyBufferRegion(counter_buffer.Resource(), 0, m_counter_buffer_zero.Resource(), 0, sizeof(UINT));
+		parameters.cmd_list->CopyBufferRegion(counter_buffer.Resource(), 0, m_counter_buffer_zero.Resource(), 0, sizeof(UINT));
 
 		{
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				counter_buffer.Resource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			parameters.cmd_list.list->ResourceBarrier(1, &barrier);
+			parameters.cmd_list->ResourceBarrier(1, &barrier);
 		}
 
 		return true;

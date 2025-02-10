@@ -159,29 +159,29 @@ namespace ysn
 		if (!command_list_result.has_value())
 			return false;
 
-		GraphicsCommandList command_list = command_list_result.value();
+		auto command_list = command_list_result.value();
 
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
-		command_list.list->RSSetViewports(1, &parameters->viewport);
-		command_list.list->RSSetScissorRects(1, &parameters->scissors_rect);
-		command_list.list->OMSetRenderTargets(1, &parameters->hdr_rtv_descriptor_handle.cpu, FALSE, &parameters->dsv_descriptor_handle.cpu);
-		command_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		command_list.list->SetPipelineState(pso_object.pso.get());
-		command_list.list->SetGraphicsRootSignature(pso_object.root_signature.get());
-		command_list.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		command_list.list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
+		command_list->RSSetViewports(1, &parameters->viewport);
+		command_list->RSSetScissorRects(1, &parameters->scissors_rect);
+		command_list->OMSetRenderTargets(1, &parameters->hdr_rtv_descriptor_handle.cpu, FALSE, &parameters->dsv_descriptor_handle.cpu);
+		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		command_list->SetPipelineState(pso_object.pso.get());
+		command_list->SetGraphicsRootSignature(pso_object.root_signature.get());
+		command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		command_list->IASetVertexBuffers(0, 1, &cube.vertex_buffer_view);
 
-		command_list.list->SetGraphicsRootConstantBufferView(
+		command_list->SetGraphicsRootConstantBufferView(
 			ShaderInputParameters::CameraBuffer, parameters->camera_gpu_buffer->GetGPUVirtualAddress());
-		command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::InputTexture, parameters->cubemap_texture.srv.gpu);
-		command_list.list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVertices, parameters->debug_vertices_buffer_uav.gpu);
-		command_list.list->SetGraphicsRootDescriptorTable(
+		command_list->SetGraphicsRootDescriptorTable(ShaderInputParameters::InputTexture, parameters->cubemap_texture.srv.gpu);
+		command_list->SetGraphicsRootDescriptorTable(ShaderInputParameters::DebugVertices, parameters->debug_vertices_buffer_uav.gpu);
+		command_list->SetGraphicsRootDescriptorTable(
 			ShaderInputParameters::DebugVerticesCount, parameters->debug_counter_buffer_uav.gpu);
 
-		command_list.list->IASetIndexBuffer(&cube.index_buffer_view);
-		command_list.list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
+		command_list->IASetIndexBuffer(&cube.index_buffer_view);
+		command_list->DrawIndexedInstanced(cube.index_count, 1, 0, 0, 0);
 
-		renderer->GetDirectQueue()->ExecuteCommandList(command_list);
+		renderer->GetDirectQueue()->CloseCommandList(command_list);
 
 		return true;
 	}

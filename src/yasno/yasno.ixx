@@ -25,6 +25,7 @@ import graphics.techniques.forward_pass;
 import graphics.techniques.generate_mips_pass;
 import graphics.techniques.debug_renderer;
 import graphics.techniques.convolve_cubemap;
+import graphics.techniques.workgraph;
 import graphics.render_scene;
 import graphics.mesh;
 import renderer.dx_renderer;
@@ -390,7 +391,7 @@ namespace ysn
 		if (!cmd_list_res)
 			return false;
 
-		GraphicsCommandList command_list = cmd_list_res.value();
+		auto command_list = cmd_list_res.value();
 
 		bool capture_loading_pix = false;
 
@@ -516,7 +517,7 @@ namespace ysn
 		// Build mips
 		for (Model& model : m_render_scene.models)
 			for (GpuTexture& texture : model.textures)
-				m_generate_mips_pass.GenerateMips(renderer, command_list.list, texture);
+				m_generate_mips_pass.GenerateMips(renderer, command_list, texture);
 
 		{
 			// Index buffer
@@ -559,7 +560,7 @@ namespace ysn
 				}
 
 				UploadToGpuBuffer(
-					command_list.list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+					command_list, m_render_scene.indices_buffer, all_indices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			}
 
 			// Vertex Buffer
@@ -602,7 +603,7 @@ namespace ysn
 				}
 
 				UploadToGpuBuffer(
-					command_list.list, m_render_scene.vertices_buffer, all_vertices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+					command_list, m_render_scene.vertices_buffer, all_vertices_buffer.data(), {}, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			}
 
 			// Material buffer
@@ -634,7 +635,7 @@ namespace ysn
 				}
 
 				UploadToGpuBuffer(
-					command_list.list, m_render_scene.materials_buffer, all_materials_buffer.data(), {}, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+					command_list, m_render_scene.materials_buffer, all_materials_buffer.data(), {}, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 				// Create SRV
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -710,7 +711,7 @@ namespace ysn
 				}
 
 				UploadToGpuBuffer(
-					command_list.list, m_render_scene.instance_buffer, per_instance_data_buffer.data(), {}, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+					command_list, m_render_scene.instance_buffer, per_instance_data_buffer.data(), {}, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 				// Create SRV
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -739,7 +740,7 @@ namespace ysn
 			}
 		}
 
-		m_rtx_context.CreateAccelerationStructures(command_list.list, m_render_scene);
+		m_rtx_context.CreateAccelerationStructures(command_list, m_render_scene);
 
 		if (!m_tonemap_pass.Initialize())
 		{
@@ -769,7 +770,7 @@ namespace ysn
 		{
 			LoadTextureParameters parameter;
 			parameter.filename = "assets/HDRI/newport_loft.hdr";
-			parameter.command_list = command_list.list;
+			parameter.command_list = command_list;
 			parameter.generate_mips = false;
 			parameter.is_srgb = false;
 			const auto env_texture = LoadTextureFromFile(parameter);
@@ -796,19 +797,21 @@ namespace ysn
 		}
 
 		if (!m_forward_pass.Initialize(
-			m_render_scene, m_camera_gpu_buffer, m_scene_parameters_gpu_buffer, m_render_scene.instance_buffer, command_list.list))
+			m_render_scene, m_camera_gpu_buffer, m_scene_parameters_gpu_buffer, m_render_scene.instance_buffer, command_list))
 		{
 			LogError << "Can't initialize forward pass\n";
 			return false;
 		}
 
-		if (!m_debug_renderer.Initialize(command_list.list, m_camera_gpu_buffer))
+		if (!m_debug_renderer.Initialize(command_list, m_camera_gpu_buffer))
 		{
 			LogError << "Can't initialize debug renderer\n";
 			return false;
 		}
 
-		const auto fence_res = command_queue->ExecuteCommandList(command_list);
+		command_queue->CloseCommandList(command_list);
+
+		const auto fence_res = command_queue->ExecuteCommandLists();
 
 		if (!fence_res)
 			return false;
@@ -1360,25 +1363,29 @@ namespace ysn
 		UpdateGpuCameraBuffer();
 		UpdateGpuSceneParametersBuffer();
 
+		// Do it once
+		if(m_is_first_frame)
 		{
-			ConvertToCubemapParameters parameters;
-			parameters.camera_buffer = m_camera_gpu_buffer;
-			parameters.source_texture = m_environment_texture;
-			parameters.target_cubemap = m_cubemap_texture;
+			{
+				ConvertToCubemapParameters parameters;
+				parameters.camera_buffer = m_camera_gpu_buffer;
+				parameters.source_texture = m_environment_texture;
+				parameters.target_cubemap = m_cubemap_texture;
 
-			m_convert_to_cubemap_pass.Render(parameters);
-		}
+				m_convert_to_cubemap_pass.Render(parameters);
+			}
 
-		{
-			ConvolveCubemapParameters parameters;
-			parameters.camera_buffer = m_camera_gpu_buffer;
-			parameters.source_cubemap = m_cubemap_texture;
-			parameters.target_irradiance = m_irradiance_cubemap_texture;
-			parameters.target_radiance = m_radiance_cubemap_texture;
+			{
+				ConvolveCubemapParameters parameters;
+				parameters.camera_buffer = m_camera_gpu_buffer;
+				parameters.source_cubemap = m_cubemap_texture;
+				parameters.target_irradiance = m_irradiance_cubemap_texture;
+				parameters.target_radiance = m_radiance_cubemap_texture;
 
-			m_cubemap_filter_pass.ConvolveRadiance(parameters);
-			m_cubemap_filter_pass.ConvolveIrradiance(parameters);
-			m_cubemap_filter_pass.ComputeBRDF();
+				m_cubemap_filter_pass.ConvolveRadiance(parameters);
+				m_cubemap_filter_pass.ConvolveIrradiance(parameters);
+				m_cubemap_filter_pass.ComputeBRDF();
+			}
 		}
 
 		if (m_is_raster)
@@ -1388,19 +1395,19 @@ namespace ysn
 				if (!cmd_list_res)
 					return;
 
-				GraphicsCommandList command_list = cmd_list_res.value();
+				auto command_list = cmd_list_res.value();
 
 				FLOAT clear_color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 					current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-				command_list.list->ResourceBarrier(1, &barrier);
+				command_list->ResourceBarrier(1, &barrier);
 
-				command_list.list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
-				command_list.list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
-				command_list.list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
+				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
+				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-				command_queue->ExecuteCommandList(command_list);
+				command_queue->CloseCommandList(command_list);
 			}
 
 			{
@@ -1451,7 +1458,7 @@ namespace ysn
 			if (!cmd_list_res)
 				return;
 
-			GraphicsCommandList command_list = cmd_list_res.value();
+			auto command_list = cmd_list_res.value();
 
 			// Clear the render targets.
 			{
@@ -1459,11 +1466,11 @@ namespace ysn
 
 				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 					current_back_buffer.get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-				command_list.list->ResourceBarrier(1, &barrier);
+				command_list->ResourceBarrier(1, &barrier);
 
-				command_list.list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
-				command_list.list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
-				command_list.list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+				command_list->ClearRenderTargetView(backbuffer_handle, clear_color, 0, nullptr);
+				command_list->ClearRenderTargetView(m_hdr_rtv_descriptor_handle.cpu, clear_color, 0, nullptr);
+				command_list->ClearDepthStencilView(m_depth_dsv_descriptor_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 			}
 
 			m_ray_tracing_pass.Execute(
@@ -1471,13 +1478,13 @@ namespace ysn
 				m_rtx_context,
 				m_hdr_uav_descriptor_handle,
 				m_scene_color_buffer_1_handle,
-				command_list.list,
+				command_list,
 				GetClientWidth(),
 				GetClientHeight(),
 				m_scene_color_buffer,
 				m_camera_gpu_buffer);
 
-			command_queue->ExecuteCommandList(command_list);
+			command_queue->CloseCommandList(command_list);
 		}
 
 		if (m_is_raster)
@@ -1544,35 +1551,36 @@ namespace ysn
 			CD3DX12_RESOURCE_BARRIER barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
 				current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
 
-			cmd_list.list->ResourceBarrier(1, &barrier0);
-			cmd_list.list->ResourceBarrier(1, &barrier1);
+			cmd_list->ResourceBarrier(1, &barrier0);
+			cmd_list->ResourceBarrier(1, &barrier1);
 
-			cmd_list.list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, &sourceRegion);
+			cmd_list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, &sourceRegion);
 
 			CD3DX12_RESOURCE_BARRIER barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
 				current_back_buffer.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			CD3DX12_RESOURCE_BARRIER barrier3 = CD3DX12_RESOURCE_BARRIER::Transition(
 				m_back_buffer.get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-			cmd_list.list->ResourceBarrier(1, &barrier2);
-			cmd_list.list->ResourceBarrier(1, &barrier3);
+			cmd_list->ResourceBarrier(1, &barrier2);
+			cmd_list->ResourceBarrier(1, &barrier3);
 
 			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				m_scene_color_buffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			cmd_list.list->ResourceBarrier(1, &barrier);
+			cmd_list->ResourceBarrier(1, &barrier);
 
-			command_queue->ExecuteCommandList(cmd_list);
+			command_queue->CloseCommandList(cmd_list);
 		}
 
 		// Debug geometry
 		{
 			const auto cmd_list_res = command_queue->GetCommandList("Debug Geometry");
+
 			if (!cmd_list_res)
 				return;
 
 			const auto cmd_list = cmd_list_res.value();
 
-			cmd_list.list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
+			cmd_list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
 
 			DebugRendererParameters parameters;
 			parameters.viewport = m_viewport;
@@ -1582,7 +1590,7 @@ namespace ysn
 
 			m_debug_renderer.RenderDebugGeometry(parameters);
 
-			command_queue->ExecuteCommandList(cmd_list);
+			command_queue->CloseCommandList(cmd_list);
 		}
 
 		{
@@ -1593,12 +1601,12 @@ namespace ysn
 			const auto cmd_list = cmd_list_res.value();
 
 			ID3D12DescriptorHeap* ppHeaps[] = { Application::Get().GetRenderer()->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
-			cmd_list.list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			cmd_list.list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
+			cmd_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			cmd_list->OMSetRenderTargets(1, &backbuffer_handle, FALSE, &m_depth_dsv_descriptor_handle.cpu);
 
-			ImguiRenderFrame(cmd_list.list);
+			ImguiRenderFrame(cmd_list);
 
-			command_queue->ExecuteCommandList(cmd_list);
+			command_queue->CloseCommandList(cmd_list);
 		}
 
 		// Present
@@ -1607,19 +1615,23 @@ namespace ysn
 			if (!cmd_list_res)
 				return;
 
-			GraphicsCommandList command_list = cmd_list_res.value();
+			auto command_list = cmd_list_res.value();
 
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-			command_list.list->ResourceBarrier(1, &barrier);
+			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-			const auto execute_res = command_queue->ExecuteCommandList(command_list);
+			command_list->ResourceBarrier(1, &barrier);
+
+			command_queue->CloseCommandList(command_list);
+
+			const auto execute_res = command_queue->ExecuteCommandLists();
+
 			if (!execute_res)
 				return;
 
 			m_fence_values[current_backbuffer_index] = execute_res.value();
 
 			const auto present_res = m_window->Present();
+
 			if (!present_res)
 				return;
 

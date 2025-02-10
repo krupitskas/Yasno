@@ -183,6 +183,7 @@
     <ClCompile Include="graphics\techniques\convolve_cubemap.ixx" />
     <ClCompile Include="graphics\techniques\debug_renderer.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
+    <ClCompile Include="graphics\techniques\workgraph.ixx" />
     <ClCompile Include="main.cxx" />
     <ClCompile Include="renderer\blas_generator.ixx" />
     <ClCompile Include="renderer\command_context.ixx" />

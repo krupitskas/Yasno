@@ -265,9 +265,9 @@ namespace ysn
 
 	void ShadowMapPass::InitializeOrthProjection(DirectX::SimpleMath::Vector3 direction)
 	{
+		// TODO: Move to RH
 		DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(-100.0f, 100.0f, -100.0f, 100.0f, 0.1f, 100.f);
-		DirectX::XMMATRIX view =
-			DirectX::XMMatrixLookAtLH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
+		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
 
 		shadow_matrix = view * projection;
 	}
@@ -287,17 +287,17 @@ namespace ysn
 		if (!command_list_result.has_value())
 			return false;
 
-		GraphicsCommandList command_list = command_list_result.value();
+		auto command_list = command_list_result.value();
 
 		ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 			renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
 		};
-		command_list.list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
-		command_list.list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
-		command_list.list->RSSetViewports(1, &Viewport);
-		command_list.list->RSSetScissorRects(1, &ScissorRect);
-		command_list.list->OMSetRenderTargets(0, nullptr, FALSE, &shadow_map_buffer.dsv_handle.cpu);
+		command_list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+		command_list->RSSetViewports(1, &Viewport);
+		command_list->RSSetScissorRects(1, &ScissorRect);
+		command_list->OMSetRenderTargets(0, nullptr, FALSE, &shadow_map_buffer.dsv_handle.cpu);
 
 		{
 			void* data = nullptr;
@@ -319,33 +319,33 @@ namespace ysn
 				{
 					const Primitive& primitive = mesh.primitives[primitive_id];
 
-					command_list.list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
+					command_list->IASetVertexBuffers(0, 1, &primitive.vertex_buffer_view);
 
 					// TODO: check for -1 as pso_id
 					const std::optional<Pso> pso = renderer->GetPso(primitive.shadow_pso_id);
 
 					if (pso.has_value())
 					{
-						command_list.list->SetGraphicsRootSignature(pso.value().root_signature.get());
-						command_list.list->SetPipelineState(pso.value().pso.get());
+						command_list->SetGraphicsRootSignature(pso.value().root_signature.get());
+						command_list->SetPipelineState(pso.value().pso.get());
 
-						command_list.list->IASetPrimitiveTopology(primitive.topology);
+						command_list->IASetPrimitiveTopology(primitive.topology);
 
-						command_list.list->SetGraphicsRootConstantBufferView(0, m_camera_buffer->GetGPUVirtualAddress());
-						command_list.list->SetGraphicsRootConstantBufferView(
+						command_list->SetGraphicsRootConstantBufferView(0, m_camera_buffer->GetGPUVirtualAddress());
+						command_list->SetGraphicsRootConstantBufferView(
 							1, parameters.scene_parameters_gpu_buffer->GetGPUVirtualAddress());
-						command_list.list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
+						command_list->SetGraphicsRoot32BitConstant(2, instance_id, 0); // InstanceID
 
-						command_list.list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu); // PerInstanceData
+						command_list->SetGraphicsRootDescriptorTable(3, render_scene.instance_buffer_srv.gpu); // PerInstanceData
 
 						if (primitive.index_count)
 						{
-							command_list.list->IASetIndexBuffer(&primitive.index_buffer_view);
-							command_list.list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
+							command_list->IASetIndexBuffer(&primitive.index_buffer_view);
+							command_list->DrawIndexedInstanced(primitive.index_count, 1, 0, 0, 0);
 						}
 						else
 						{
-							command_list.list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
+							command_list->DrawInstanced(primitive.vertex_count, 1, 0, 0);
 						}
 					}
 					else
@@ -358,7 +358,7 @@ namespace ysn
 			}
 		}
 
-		parameters.command_queue->ExecuteCommandList(command_list);
+		parameters.command_queue->CloseCommandList(command_list);
 
 		return true;
 	}

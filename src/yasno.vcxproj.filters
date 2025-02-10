@@ -218,6 +218,9 @@
     <ClCompile Include="graphics\techniques\convolve_cubemap.ixx">
       <Filter>source\graphics\techniques</Filter>
     </ClCompile>
+    <ClCompile Include="graphics\techniques\workgraph.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

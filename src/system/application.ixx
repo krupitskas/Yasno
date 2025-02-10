@@ -211,7 +211,7 @@ export namespace ysn
 
 		int m_client_height;
 		int m_client_width;
-		bool m_vsync_active;
+		bool m_vsync_active = false;
 		bool m_Fullscreen;
 		bool m_IsCursorHidden = false;
 
@@ -230,7 +230,7 @@ export namespace ysn
 		UINT m_current_backbuffer_index;
 
 		RECT m_window_rect;
-		bool m_tearing_supported;
+		bool m_tearing_supported = true;
 	};
 
 }
