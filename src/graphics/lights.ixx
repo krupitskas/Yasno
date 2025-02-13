@@ -16,8 +16,8 @@ export namespace ysn
 	struct DirectionalLight
 	{
 		DirectX::XMFLOAT4 color = { 1.0f, 1.0, 1.0f, 0.0f };
-		DirectX::XMFLOAT4 direction = { 0.0f, 1.0, 0.15f, 0.0f };
-		float intensity = 10.0f;
+		DirectX::XMFLOAT4 direction = { 0.0f, 1.0, 0.45f, 0.0f };
+		float intensity = 1.0f;
 
 		bool cast_shadow = true;
 	};

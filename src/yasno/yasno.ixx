@@ -1621,11 +1621,10 @@ namespace ysn
 
 			CD3DX12_RESOURCE_BARRIER barrier0 = CD3DX12_RESOURCE_BARRIER::Transition(
 				m_back_buffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+			cmd_list->ResourceBarrier(1, &barrier0);
 
 			CD3DX12_RESOURCE_BARRIER barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
 				current_back_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
-
-			cmd_list->ResourceBarrier(1, &barrier0);
 			cmd_list->ResourceBarrier(1, &barrier1);
 
 			cmd_list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, &sourceRegion);

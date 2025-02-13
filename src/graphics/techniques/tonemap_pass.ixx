@@ -163,6 +163,10 @@ namespace ysn
 
 		auto& pso_object = pso.value();
 
+		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			parameters->scene_color_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		command_list->ResourceBarrier(1, &barrier);
+
 		command_list->SetPipelineState(pso_object.pso.get());
 		command_list->SetComputeRootSignature(pso_object.root_signature.get());
 
