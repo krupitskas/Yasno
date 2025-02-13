@@ -9,6 +9,6 @@ export namespace engine_stats
 	//uint32_t triangle_count = 0; // draw.indexCount / 3;
 	//uint32_t drawcall_count = 0; // increase per draw call
 
-// Frustum culling stats
-// Occlusion culling stats
+	// Frustum culling stats
+	// Occlusion culling stats
 };

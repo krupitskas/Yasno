@@ -189,9 +189,14 @@
     <ClCompile Include="external\implementation.ixx" />
     <ClCompile Include="graphics\color.ixx" />
     <ClCompile Include="graphics\lights.ixx" />
+    <ClCompile Include="graphics\techniques\bilateral_upscale.ixx" />
     <ClCompile Include="graphics\techniques\convolve_cubemap.ixx" />
     <ClCompile Include="graphics\techniques\debug_renderer.ixx" />
+    <ClCompile Include="graphics\techniques\depth_downscale.ixx" />
+    <ClCompile Include="graphics\techniques\gaussian_blur.ixx" />
     <ClCompile Include="graphics\techniques\generate_mips_pass.ixx" />
+    <ClCompile Include="graphics\techniques\motion_vectors.ixx" />
+    <ClCompile Include="graphics\techniques\taa.ixx" />
     <ClCompile Include="graphics\techniques\volumetric_fog.ixx" />
     <ClCompile Include="graphics\techniques\workgraph.ixx" />
     <ClCompile Include="main.cxx" />

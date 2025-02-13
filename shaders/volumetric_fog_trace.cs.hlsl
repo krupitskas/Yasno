@@ -1,4 +1,5 @@
 #include "shader_structs.h"
+#include "shared.hlsl"
 
 Texture2D<float>	ShadowMapTexture	: register(t0);
 Texture2D<float>	DepthTexture		: register(t1);
@@ -8,20 +9,38 @@ ConstantBuffer<VolumetricFogParameters> fog_parameters		: register(b0);
 ConstantBuffer<CameraParameters>		camera				: register(b1);
 ConstantBuffer<GpuSceneParameters>		scene_parameters	: register(b2);
 
-//float ShadowCalculation(float3 position)
-//{
-//	float3 projected_coordinate;
-//	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
-//	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
-//	projected_coordinate.z = position.z / position.w;
+float GetDitherValue(int2 coord)
+{
+	const float4x4 dither_pattern =
+		{ { 0.0f, 0.5f, 0.125f, 0.625f},
+		{ 0.75f, 0.22f, 0.875f, 0.375f},
+		{ 0.1875f, 0.6875f, 0.0625f, 0.5625},
+		{ 0.9375f, 0.4375f, 0.8125f, 0.3125} 
+	};
 
-//	float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy);
+    return dither_pattern[coord.x % 4][coord.y % 4];
+}
 
-//	float current_depth = projected_coordinate.z + 0.01;
-//	float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
+// Mie scaterring approximated with Henyey-Greenstein phase function.
+float HGPhaseFunction(float VdotL, float g)
+{
+    float result = 1.0f - g * g;
+    float denominator = saturate(1.0f + g * g - (2.0f * g) * VdotL);
+    result /= (4.0f * PI * pow(denominator, 1.5f));
+    return result;
+}
 
-//	return in_shadow;
-//}
+float CalcTransmittance(float absorption)
+{
+    return 1.0 - exp(absorption);
+}
+
+float ShlickPhaseFunction(float VdotL, float g)
+{
+    float k = 1.55 * g - 0.55 * g * g * g;
+    float p_theta = (1 - k*k) / (1 + k * VdotL) * (1 + k * VdotL);
+    return p_theta;
+}
 
 [numthreads(VolumetricFogDispatchX, VolumetricFogDispatchY, VolumetricFogDispatchZ)]
 void main(uint3 threadId : SV_DispatchThreadID)
@@ -57,6 +76,8 @@ void main(uint3 threadId : SV_DispatchThreadID)
 
 	const float ray_step_size = raymarch_distance / fog_parameters.num_steps;
 
+	const float dither_value = GetDitherValue(threadId.xy);
+
 	const int shadow_dim = 4096; // TODO: provide
 
 	// Fog parameters
@@ -70,11 +91,14 @@ void main(uint3 threadId : SV_DispatchThreadID)
 	float3 fog_accum = float3(0, 0, 0); // Accumulated fog color
 	float transmittance = 1.0;          // Transmittance (how much light passes through)
 
+	// One step dithered forward
+	float3 camera_pos_dither = camera.position + ray_dir * ray_step_size * dither_value;
+
     for (int i = 0; i < fog_parameters.num_steps; i++)
     {
 		float t = i * ray_step_size;
 
-		float3 sample_pos = camera_pos + ray_dir * t;
+		float3 sample_pos = camera_pos_dither + ray_dir * t;
 		
 		float density = fog_density; // Replace with actual density sampling
 

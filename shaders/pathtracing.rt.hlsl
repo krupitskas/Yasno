@@ -204,7 +204,7 @@ void RayGen()
 		accumulated_color = previous_color + radiance;
 		accumulation_texture[pixel_xy] = float4(accumulated_color, 1.0f);
 
-		result_color = accumulated_color / camera.rtx_frames_accumulated;
+		result_color = accumulated_color / ( camera.rtx_frames_accumulated + 1);
 	}
 	else
 	{

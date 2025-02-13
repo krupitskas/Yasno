@@ -224,6 +224,21 @@
     <ClCompile Include="graphics\techniques\volumetric_fog.ixx">
       <Filter>source\graphics\techniques</Filter>
     </ClCompile>
+    <ClCompile Include="graphics\techniques\depth_downscale.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\techniques\gaussian_blur.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\techniques\bilateral_upscale.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\techniques\motion_vectors.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\techniques\taa.ixx">
+      <Filter>source\graphics\techniques</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
