@@ -47,7 +47,7 @@ export namespace ysn
 		wil::com_ptr<ID3D12Resource> parameters_buffer;
 
 		float exposure = 1.0f;
-		TonemapMethod tonemap_method = TonemapMethod::Reinhard;
+		TonemapMethod tonemap_method = TonemapMethod::Aces;
 	private:
 		PsoId m_pso_id;
 	};
