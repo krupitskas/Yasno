@@ -102,6 +102,19 @@ struct TonemapParameters
 };
 CHECK_STRUCT_ALIGNMENT(TonemapParameters);
 
+#define VolumetricFogDispatchX 8
+#define VolumetricFogDispatchY 4
+#define VolumetricFogDispatchZ 1
+
+struct VolumetricFogParameters
+{
+    uint display_width;
+    uint display_height;
+    float num_steps;
+    float pad;
+};
+CHECK_STRUCT_ALIGNMENT(TonemapParameters);
+
 struct GenerateMipsConstantBuffer
 {
     uint src_mip_level;     // Texture level of source mip

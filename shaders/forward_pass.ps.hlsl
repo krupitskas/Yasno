@@ -43,17 +43,21 @@ float PCFShadowCalculation(float4 position)
 	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
 	projected_coordinate.z = position.z / position.w;
 
-	float current_depth = projected_coordinate.z + 0.005;
+	float current_depth = projected_coordinate.z + 0.0015;
 
-	for(int x = -1; x <= 1; ++x)
+	int pcf_size = 1;
+
+	for(int x = -pcf_size; x <= pcf_size; ++x)
 	{
-		for(int y = -1; y <= 1; ++y)
+		for(int y = -pcf_size; y <= pcf_size; ++y)
 		{
 			float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy + float2(x, y) * texel_size).r;
-			shadow_value += current_depth > closest_depth ? 1.0 : 0.0;        
+
+			shadow_value += current_depth + 0.001 > closest_depth ? 1.0 : 0.0;        
 		}    
 	}
-	shadow_value /= 9.0;
+
+	shadow_value /= (2 * pcf_size + 1) * (2 * pcf_size + 1);
 
 	return shadow_value;
 }
@@ -67,9 +71,7 @@ float ShadowCalculation(float4 position)
 
 	float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy);
 
-	float current_depth = projected_coordinate.z + 0.005;
-
-	float in_shadow = current_depth > closest_depth ? 1.0 : 0.0;  
+	float in_shadow = projected_coordinate.z - 0.0025f > closest_depth ? 1.0 : 0.0;  
 
 	return in_shadow;
 }
@@ -186,7 +188,8 @@ float4 main(RS2PS input) : SV_Target
 		directLighting += (kD * albedo / PI + spec) * radiance * NdotL;
 	}
 
-	float3 ambientLighting = 0.0;
+	float3 ambient_diffuse = 0.0;
+	float3 ambient_spec = 0.0;
 
 	{
 	    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
@@ -204,12 +207,13 @@ float4 main(RS2PS input) : SV_Target
 		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
 		float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
 
-		ambientLighting = (kD * diffuse + spec);
+		ambient_diffuse = kD * diffuse;
+		ambient_spec = spec;
 	}
 
-	float shadow = PCFShadowCalculation(input.position_shadow_space);
+	const float shadow_modifier = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space) : 1.0f;
 
-	float3 result = ambientLighting * occlusion + emissive ; // + directLighting
+	float3 result = (ambient_diffuse + ambient_spec) * occlusion * shadow_modifier + emissive + ambient_diffuse * 0.1; // + directLighting
 
 	return float4(result, 1.0);
 }

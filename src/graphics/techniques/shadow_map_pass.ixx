@@ -265,10 +265,8 @@ namespace ysn
 
 	void ShadowMapPass::InitializeOrthProjection(DirectX::SimpleMath::Vector3 direction)
 	{
-		// TODO: Move to RH
-		DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(-100.0f, 100.0f, -100.0f, 100.0f, 0.1f, 100.f);
-		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
-
+		DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterRH(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 20.f);
+		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtRH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
 		shadow_matrix = view * projection;
 	}
 

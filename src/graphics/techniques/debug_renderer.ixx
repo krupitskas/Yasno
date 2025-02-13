@@ -32,9 +32,9 @@ export namespace ysn
 {
 	struct DebugRendererParameters
 	{
-		wil::com_ptr<DxGraphicsCommandList> cmd_list;
 		D3D12_VIEWPORT viewport;
 		D3D12_RECT scissors_rect;
+		wil::com_ptr<DxGraphicsCommandList> cmd_list;
 		wil::com_ptr<ID3D12Resource> camera_gpu_buffer;
 	};
 

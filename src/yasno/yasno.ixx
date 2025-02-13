@@ -26,6 +26,7 @@ import graphics.techniques.generate_mips_pass;
 import graphics.techniques.debug_renderer;
 import graphics.techniques.convolve_cubemap;
 import graphics.techniques.workgraph;
+import graphics.techniques.volumetric_fog;
 import graphics.render_scene;
 import graphics.mesh;
 import renderer.dx_renderer;
@@ -109,6 +110,7 @@ export namespace ysn
 		DescriptorHandle m_scene_color_buffer_1_handle;
 		DescriptorHandle m_backbuffer_uav_descriptor_handle;
 		DescriptorHandle m_depth_dsv_descriptor_handle;
+		DescriptorHandle m_depth_srv_descriptor_handle;
 		DescriptorHandle m_hdr_rtv_descriptor_handle;
 
 		RtxContext m_rtx_context;
@@ -146,6 +148,7 @@ export namespace ysn
 		GenerateMipsPass m_generate_mips_pass;
 		DebugRenderer m_debug_renderer;
 		ConvolveCubemap m_cubemap_filter_pass;
+		VolumetricFog m_volumetric_fog;
 	};
 }
 
@@ -334,14 +337,12 @@ namespace ysn
 
 		DirectX::XMMATRIX view_projection = XMMatrixMultiply(m_render_scene.camera->GetViewMatrix(), m_render_scene.camera->GetProjectionMatrix());
 
-		DirectX::XMVECTOR det;
-
 		camera_data->view_projection = view_projection;
 		camera_data->view = m_render_scene.camera->GetViewMatrix();
 		camera_data->previous_view = m_render_scene.camera->GetPrevViewMatrix();
 		camera_data->projection = m_render_scene.camera->GetProjectionMatrix();
-		camera_data->view_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetViewMatrix());
-		camera_data->projection_inverse = XMMatrixInverse(&det, m_render_scene.camera->GetProjectionMatrix());
+		camera_data->view_inverse = XMMatrixInverse(nullptr, m_render_scene.camera->GetViewMatrix());
+		camera_data->projection_inverse = XMMatrixInverse(nullptr, m_render_scene.camera->GetProjectionMatrix());
 		camera_data->position = m_render_scene.camera->GetPosition();
 		camera_data->frame_number = m_frame_number;
 		camera_data->rtx_frames_accumulated = m_rtx_frames_accumulated;
@@ -784,6 +785,7 @@ namespace ysn
 		m_scene_color_buffer_1_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_backbuffer_uav_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_depth_dsv_descriptor_handle = renderer->GetDsvDescriptorHeap()->GetNewHandle();
+		m_depth_srv_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 		m_velocity_descriptor_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
 		if (!CreateGpuSceneParametersBuffer())
@@ -804,6 +806,13 @@ namespace ysn
 			LogError << "Can't initialize debug renderer\n";
 			return false;
 		}
+
+		if (!m_volumetric_fog.Initialize())
+		{
+			LogError << "Can't initialize volumetric renderer\n";
+			return false;
+		}
+		
 
 		command_queue->CloseCommandList(command_list);
 
@@ -945,6 +954,15 @@ namespace ysn
 			dsv.Flags = D3D12_DSV_FLAG_NONE;
 
 			device->CreateDepthStencilView(m_depth_buffer.get(), &dsv, m_depth_dsv_descriptor_handle.cpu);
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
+			srv.Format = DXGI_FORMAT_R32_FLOAT;
+			srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv.Texture2D.MipLevels = 1;
+			srv.Texture2D.MostDetailedMip = 0;
+			srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			device->CreateShaderResourceView(m_depth_buffer.get(), &srv, m_depth_srv_descriptor_handle.cpu);
 		}
 
 		return true;
@@ -1266,9 +1284,15 @@ namespace ysn
 				}
 			}
 
+			if (ImGui::CollapsingHeader("Volumetric Fog"), ImGuiTreeNodeFlags_DefaultOpen)
+			{
+				ImGui::Checkbox("Fog Enabled", &m_volumetric_fog.is_pass_active);
+				ImGui::InputInt("Fog Samples", &m_volumetric_fog.num_samples, 4, 256);
+			}
+
 			if (ImGui::CollapsingHeader("Shadows"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
-				ImGui::Checkbox("Enabled", &m_render_scene.directional_light.cast_shadow);
+				ImGui::Checkbox("Shadows Enabled", &m_render_scene.directional_light.cast_shadow);
 			}
 
 			if (ImGui::CollapsingHeader("Tonemapping"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -1284,6 +1308,8 @@ namespace ysn
 
 				ImGui::InputFloat("Exposure", &m_tonemap_pass.exposure, 0.0, 1000.0);
 			}
+
+
 
 			if (ImGui::CollapsingHeader("Camera"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
@@ -1381,9 +1407,22 @@ namespace ysn
 			m_shadow_pass.Render(m_render_scene, parameters);
 		}
 
-		UpdateGpuCameraBuffer();
-		UpdateGpuSceneParametersBuffer();
+		{
+			const auto command_list_result = command_queue->GetCommandList("Update GPU Data");
 
+			if (!command_list_result.has_value())
+				return;
+
+			auto command_list = command_list_result.value();
+
+			UpdateGpuCameraBuffer();
+			UpdateGpuSceneParametersBuffer();
+
+			m_volumetric_fog.PrepareData(command_list, GetClientWidth(), GetClientHeight());
+
+			command_queue->CloseCommandList(command_list);
+		}
+		
 		// Do it once
 		if(m_is_first_frame)
 		{
@@ -1478,7 +1517,6 @@ namespace ysn
 			const auto cmd_list_res = command_queue->GetCommandList("RTX Pass");
 			if (!cmd_list_res)
 				return;
-
 			auto command_list = cmd_list_res.value();
 
 			// Clear the render targets.
@@ -1533,6 +1571,21 @@ namespace ysn
 			skybox_parameters.debug_counter_buffer_uav = m_debug_renderer.counter_uav;
 
 			m_skybox_pass.RenderSkybox(&skybox_parameters);
+		}
+
+		if (m_is_raster)
+		{
+			VolumetricFogPassInput pass_input;
+			pass_input.camera_gpu_buffer = m_camera_gpu_buffer;
+			pass_input.scene_color_buffer = m_scene_color_buffer;
+			pass_input.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer; 
+			pass_input.hdr_uav_descriptor_handle = m_hdr_uav_descriptor_handle;
+			pass_input.depth_srv = m_depth_srv_descriptor_handle;
+			pass_input.shadow_map_buffer = m_shadow_pass.shadow_map_buffer;
+			pass_input.backbuffer_width = GetClientWidth();
+			pass_input.backbuffer_height = GetClientHeight();
+
+			m_volumetric_fog.Render(pass_input);
 		}
 
 		{

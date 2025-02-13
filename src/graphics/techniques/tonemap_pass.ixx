@@ -169,10 +169,6 @@ namespace ysn
 		ID3D12DescriptorHeap* ppHeaps[] = { parameters->cbv_srv_uav_heap->GetHeapPtr() };
 		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			parameters->scene_color_buffer.get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		command_list->ResourceBarrier(1, &barrier);
-
 		command_list->SetComputeRootDescriptorTable(0, parameters->hdr_uav_descriptor_handle.gpu);
 		command_list->SetComputeRootDescriptorTable(1, parameters->backbuffer_uav_descriptor_handle.gpu);
 		command_list->SetComputeRootConstantBufferView(2, parameters_buffer->GetGPUVirtualAddress());
